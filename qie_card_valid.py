@@ -1,44 +1,68 @@
-import os, re
-
-# Configuration things
-n_bx = 7
-n_samples = n_bx*4-4
-n_channel = 14
-ip_uhtr = "192.168.29.40"		# The IP address of the uHTR you want to contact
+from re import search
+from subprocess import Popen, PIPE
+from hcal_teststand import uhtr_commands
 
 # Read data from the uHTR
-uhtr_script = '''## BEGIN uhtr script ##
-0
-link
-init
-1
-92
-status
-spy
-{0}
-0
-0
-{1}
-quit
-exit
-exit
-## END uhtr script ##'''.format(n_channel, n_samples)
-with open("qie_card_valid.txt", "w") as out:
-	out.write(uhtr_script)
-#print "---"
-#print uhtr_script
-#print "---"
-raw_output = "{0}\n{1}".format("=========", os.popen("uHTRtool.exe {0} -s qie_card_valid.txt".format(ip_uhtr)).read())
-#raw_output = open("qie_card_valid_out.txt").read()
-with open("qie_card_valid_out.txt", "w") as out:
-	out.write(raw_output)
+def get_data_from_uhtr(ip, n, ch):
+	log = ""
+	commands = [
+		'0',
+		'link',
+		'init',
+		'1',
+		'92',
+		'status',
+		'spy',
+		'{0}'.format(ch),
+		'0',
+		'0',
+		'{0}'.format(n),
+		'quit',
+		'exit',
+		'exit',
+	]
+	uhtr_out = uhtr_commands(ip, commands)
+	raw_output = uhtr_out["output"]
+	log += uhtr_out["log"]
+#	with open("qie_card_valid_out.txt", "w") as out:
+#		out.write(log + raw_output)
+	return uhtr_out
+
+# Parse uHTRTool.exe data
+def parse_uhtr_raw(raw):
+	n = 0
+	raw_data = []
+	for line in raw.split("\n"):
+		if search("\s*\d+\s*[0123456789ABCDEF]{5}", line):
+			raw_data.append(line.strip())
+	data = {
+		"cid": [],
+		"adc": [],
+		"tdc_le": [],
+		"tdc_te": [],
+	}
+	for line in raw_data:
+		cid_match = search("CAPIDS", line)
+		if cid_match:
+			data["cid"].append([int(i) for i in line.split()[-4:]])
+		adc_match = search("ADCs", line)
+		if adc_match:
+			data["adc"].append([int(i) for i in line.split()[-4:]])
+		tdc_le_match = search("LE-TDC", line)
+		if tdc_le_match:
+			data["tdc_le"].append([int(i) for i in line.split()[-4:]])
+		tdc_te_match = search("TE-TDC", line)
+		if tdc_te_match:
+			data["tdc_te"].append([int(i) for i in line.split()[-4:]])
+	data["links"] = active_links(raw)
+	return data
 
 # Some functions that parse "raw_output"
-def active_channels(raw):		# Produces a list of activated channels
+def active_links(raw):		# Produces a list of activated links from the raw input of the uHTRTool.exe
 	active = []
 	n_times = 0
 	for line in raw.split("\n"):
-		if re.search("^BadCounter(\s*(X|ON)){12}", line):
+		if search("^BadCounter(\s*(X|ON)){12}", line):
 #			print line
 			n_times += 1
 			statuses = line.split()[1:]
@@ -48,76 +72,106 @@ def active_channels(raw):		# Produces a list of activated channels
 	if n_times < 2:
 		print ">> ERROR: No correct \"status\" was called on the link."
 	elif n_times > 2:
-		print ">> ERROR: Hm, \"status\" was called on the link multiple times, so the active channel list might be unreliable. (n_times = {0})".format(n_times)
+		print ">> ERROR: Hm, \"status\" was called on the link multiple times, so the active link list might be unreliable. (n_times = {0})".format(n_times)
 	if (n_times % 2 != 0):
 		print ">> ERROR: Uh, there were an odd number of \"status\" lines."
 	return list(set(active))
 
-
-# Parse uHTR data
-n = 0
-raw_data = []
-for line in raw_output.split("\n"):
-	if re.search("\s*\d+\s*[0123456789ABCDEF]{5}", line):
-		raw_data.append(line.strip())
-data = {
-	"cid": [],
-	"adc": [],
-	"tdc_le": [],
-	"tdc_te": [],
-}
-for line in raw_data:
-	cid_match = re.search("CAPIDS", line)
-	if cid_match:
-		data["cid"].append([int(i) for i in line.split()[-4:]])
-	adc_match = re.search("ADCs", line)
-	if adc_match:
-		data["adc"].append([int(i) for i in line.split()[-4:]])
-	tdc_le_match = re.search("LE-TDC", line)
-	if tdc_le_match:
-		data["tdc_le"].append([int(i) for i in line.split()[-4:]])
-	tdc_te_match = re.search("TE-TDC", line)
-	if tdc_te_match:
-		data["tdc_te"].append([int(i) for i in line.split()[-4:]])
-data["channels"] = active_channels(raw_output)
-
 # Functions to analyze this "data" dictionary
-def check_cid(d):		# Check if the CIDs are rotating. This function returns (1) if the CIDs are rotating correctly, (0) if they aren't, and (-1) if there is no CID data in the input.
-	start = -1
-	n_error = 0
-	check = 0
-	try:
-		if ( len(set(d["cid"][0])) == 1 ):		# Check that all CIDs start at the same value.
-			start = list(set(d["cid"][0]))[0]
-		if start != -1:
-	#		print start
-			for i in range(4):		# Loop over each channel.
-				for j in range(len(d["cid"])):		# Loop over the BXs.
-					if ( (j + start) % 4  != d["cid"][j][i] ):
-						n_error += 1
-	#					print j
-	#					print d["cid"][j]
-		else:
-			">> ERROR: The CIDs don't all start at the same value!"
-	except Exception as ex:
-#		print ex
-		check = -1
-	if ( n_error == 0 and check != -1 ):
-		check = 1
+# Split this into check_cid_rotating(d) and check_cid_synched(d)
+def check_cid(d):
+	check = 1
+	rotating_check = check_cid_rotating(d)
+	z_rotate = rotating_check["check"]
+	synched_check = check_cid_synched(d)
+	z_synch = synched_check["check"]
+	if (z_rotate):
+		print "[O]: The CIDs are rotating correctly."
+	else:
+		check = 0
+		print "[X]: The CIDs are NOT rotating correctly."
+		print ">> The check values for each channel are {0}.".format(rotating_check["check_cid"])
+	if (z_synch):
+		print "[O]: The CIDs are synched across the channels."
+	else:
+		print "[X]: The CIDs are NOT synched across the channels."
+		print ">> The check value for the synch is {0}.".format(z_synch)
+		print ">> The error log is below:\n\n{0}".format(synched_check["log"])
+		print ">> ------------------------------------------"
 	return check
 
-#print raw_data
-#print len(raw_data)
-#print data["cid"]
-#print data["adc"]
-#print data["tdc_le"]
-#print data["tdc_te"]
-print ">> The activated channels are {0}.".format(data["channels"])
-print ">> You're checking {0} bunch crossings. (You asked to check {1}, n_samples = {2})".format(len(data["cid"]), n_bx, n_samples)
-z_cid = check_cid(data)
-if (z_cid == 1):
-	print ">> The CIDs are rotating correctly."
-elif (z_cid == 0):
-	print ">> DANGER: The CIDs are not rotating correctly."
-elif (z_cid == -1):
-	print ">> ERROR: There was no CID data recorded."
+def check_cid_synched(d):		# Check if the CIDs are synched (equal across all channels for each BX). This function returns (1) if the CIDs are synched, (0) if they aren't, and (-1) if there is a problem with the CID data in the input.
+	log = ""
+	check = 0
+	n_bx = 0
+	n_error = 0
+	try:
+		n_bx = len(d["cid"])
+	except Exception as ex:
+		print "ERROR (check_cid_synched): Something is weird with the data. Maybe there is no data?"
+		check = -1
+	if (n_bx > 0):
+		for j in range(n_bx):
+			if ( len(set(d["cid"][j])) != 1 ):
+				n_error += 1
+				log += "ERROR (BX {0}): The CIDs are {1}.\n".format(j, d["cid"][j])
+		if (n_error == 0 and check != -1):
+			check = 1
+	else:
+		check = -1
+	return {
+			"check": check,
+			"log": log,
+		}
+
+def check_cid_rotating(d):		# Check if the CIDs are rotating. This function returns (1) if the CIDs are rotating correctly, (0) if they aren't, and (-1) if there is a problem with the CID data in the input.
+	log = ""
+	check_cid = []
+	check_total = 0
+	for i in range(4):		# Loop over channels
+		check = 0
+		start = -1
+		n_error = 0
+		try:
+			start = d["cid"][0][i]
+		except Exception as ex:
+			print "ERROR (check_cid_rotating): Something is weird with the channel {0} data. Maybe there is no data?".format(i)
+		if start != -1:
+			for j in range(len(d["cid"])):		# Loop over the BXs.
+				if ( (j + start) % 4  != d["cid"][j][i] ):
+					n_error += 1
+					log += "ERROR (channel {0}): BX{1} expected CID of {2} but saw {3}.".format(i, j, (j + start) % 4, d["cid"][j][i])
+		else:
+			print "ERROR: The check couldn't be completed."
+			check = -1
+		if ( n_error == 0 and check != -1 ):
+			check = 1
+		check_cid.append(check)
+	if (len(list(set(check_cid))) == 1):
+		check_total = list(set(check_cid))[0]
+	else:
+		check_total = 0
+	return {
+		"check_cid": check_cid,
+		"check": check_total,
+		"log": log,
+	}
+
+if __name__ == "__main__":
+	n_bx = 7
+	n_samples = n_bx*4-4
+	i_link = 14
+	ip_uhtr = "192.168.29.40"		# The IP address of the uHTR you want to contact
+	uhtr_read = get_data_from_uhtr(ip_uhtr, n_samples, i_link)
+	data = parse_uhtr_raw(uhtr_read["output"])
+#	print data["cid"]
+#	print data["adc"]
+#	print data["tdc_le"]
+#	print data["tdc_te"]
+	print "The activated links are {0}.".format(data["links"])
+	print "You're checking {0} bunch crossings. (You asked to check {1}, n_samples = {2})".format(len(data["cid"]), n_bx, n_samples)
+	z_cid = check_cid(data)
+	if (z_cid == 1):
+		print "[O]: All checks were successful."
+	else:
+		print "[X]: At least one check failed!"
