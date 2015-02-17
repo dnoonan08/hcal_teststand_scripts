@@ -3,7 +3,7 @@ This is a collection of scripts to use on the HCAL teststands. The scripts shoul
 
 # Installation
 
-* Running `git clone git@github.com:elliot-hughes/hcal_teststand_scripts.git` will create a directory called `hcal_teststand_scripts` with the scripts inside
+* Running `git clone git@github.com:elliot-hughes/hcal_teststand_scripts.git` will create a directory called `hcal_teststand_scripts` with the scripts inside.
 
 # Running Scripts
 
@@ -15,4 +15,4 @@ This is a collection of scripts to use on the HCAL teststands. The scripts shoul
 Here are short summaries of what the different scripts do:
 
 * `versions.py`: Displays software and firmware versions of the different teststand components.
-* `qie_card_valid.py`: Determines if a QIE card is operating correctly. This is very incomplete code; so far it just tests that the card's CIDs are rotating. 
+* `qie_card_valid.py`: Determines if a QIE card is operating correctly. This is very incomplete code; so far it just tests that the card's CIDs are rotating and synched. 
