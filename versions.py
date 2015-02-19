@@ -147,7 +147,7 @@ def get_bridge_info(crate_port, slot):
 			match = search("{0} # ((0x)?[0-9a-f]+)".format(data[info][0]), raw_output)		# For some reason the software verion number is printed on stderr...
 			data[info][1] = int(match.group(1), 16)
 		except Exception as ex:
-			log += 'Trying to find the result of "{0}" resulted in: {1}\n'.format(command, ex)
+			log += 'Trying to find the result of "{0}" resulted in: {1}\n'.format(data[info][0], ex)
 	if (log == ""):
 		log = "Empty"
 	version_fw = "{0:02d}.{1:02d}.{2:04d}".format(data["version_fw_major"][1], data["version_fw_minor"][1], data["version_fw_svn"][1])
@@ -183,7 +183,7 @@ def get_igloo_info(crate_port, slot):
 			match = search("{0} # ((0x)?[0-9a-f]+)".format(data[info][0]), raw_output)		# For some reason the software verion number is printed on stderr...
 			data[info][1] = int(match.group(1), 16)
 		except Exception as ex:
-			log += 'Trying to find the result of "{0}" resulted in: {1}\n'.format(command, ex)
+			log += 'Trying to find the result of "{0}" resulted in: {1}\n'.format(data[info][0], ex)
 	if (log == ""):
 		log = "Empty"
 	version_fw_top = "{0:02d}.{1:02d}".format(data["version_fw_major_top"][1], data["version_fw_minor_top"][1])

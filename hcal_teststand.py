@@ -21,15 +21,25 @@ def uhtr_commands(ip, cmds):
 		"log": log,
 	}
 
-def ngccm_commands(crate_port, cmd):
+def ngccm_commands(crate_port, cmds):		# This executes ngccm commands in the slowest way, in order to read all of the output.
 	raw_output = ""
-	if isinstance(cmd, str):
-		raw_output_temp = Popen(['printf "{0}" | ngccm -z -c -p {1}'.format(cmd + "\nquit", crate_port)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
-		raw_output += raw_output_temp[0] #+ raw_output_temp[1]
-	elif isinstance(cmd, list):
-		for c in cmd:
-			raw_output_temp = Popen(['printf "{0}" | ngccm -z -c -p {1}'.format(c + "\nquit", crate_port)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
-			raw_output += raw_output_temp[0] + raw_output_temp[1]
+	if isinstance(cmds, str):
+		cmds = [cmds]
+	for c in cmds:
+		raw_output_temp = Popen(['printf "{0}" | ngccm -z -c -p {1}'.format(c + "\nquit", crate_port)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
+		raw_output += raw_output_temp[0] + raw_output_temp[1]
+	return raw_output
+
+def ngccm_commands_fast(crate_port, cmds):		# This executes ngccm commands in a fast way, but some "get" results might not appear in the output.
+	raw_output = ""
+	if isinstance(cmds, str):
+		cmds = [cmds]
+	cmd = ""
+	for c in cmds:
+		cmd += "{0}\n".format(c)
+	cmd += "quit\n"
+	raw_output_temp = Popen(['printf "{0}" | ngccm -z -c -p {1}'.format(cmd, crate_port)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
+	raw_output += raw_output_temp[0] + raw_output_temp[1]
 	return raw_output
 
 if __name__ == "__main__":
