@@ -128,11 +128,41 @@ def print_uhtr_info(ip):
 	print "\tFW type (back): {0} ({1})".format(uhtr_info["version_fw_type_back"][0], uhtr_info["version_fw_type_back"][1])
 	print "\tSW version: ? (it's not currently possible to find out)"
 
-def print_ngccm_info():
-#	ngccm_info = get_ngccm_info()
+def get_ngccm_info(port):
+	log =""
+	raw_output = ngccm_commands(port, "get HF1-mezz_reg4")
+	version_fw_mez_major = -1
+	version_fw_mez_minor = -1
+	try:
+		match = search("get HF1-mezz_reg4 # '((0x)?[0-9a-f]+\s){3}((0x)?[0-9a-f]+)'", raw_output)
+#		print match.group(0)
+#		print match.group(3)
+		version_str_x = "{0:#08x}".format(int(match.group(3),16))
+		version_fw_mez_major = int(version_str_x[-2:], 16)
+		version_fw_mez_minor = int(version_str_x[-4:-2], 16)
+		
+	except Exception as ex:
+#		print raw_output
+		log += 'Trying to find the result of "get HF1-mezz_reg4" resulted in: {0}\n'.format(ex)
+		match = search("\n(get HF1-mezz_reg4.*)\n", raw_output)
+		if match:
+			log+='The data string was "{0}".'.format(match.group(0).strip())
+	return {
+		"version_fw_mez_major":	version_fw_mez_major,
+		"version_fw_mez_minor":	version_fw_mez_minor,
+		"version_sw":	"?",
+		"log":			log,
+	}
+
+def print_ngccm_info(port):
+	ngccm_info = get_ngccm_info(port)
 	print "* ngCCM  ================================="
-	print "\tFW version (mezzanine): ?"
-	print "\tSW version: ?"
+	if (ngccm_info["version_fw_mez_major"] == -1):
+		print "\tERROR: There was a problem fetching the ngCCM information."
+		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(ngccm_info["log"])
+	else:
+		print "\tFW version (mezzanine): {0:02d}.{1:02d}".format(ngccm_info["version_fw_mez_major"], ngccm_info["version_fw_mez_minor"])
+		print "\tSW version: {0}".format(ngccm_info["version_sw"])
 
 def get_bridge_info(crate_port, slot):
 	data = {
@@ -214,11 +244,11 @@ if __name__ == "__main__":
 	slot = 2
 	ip_uhtr = "192.168.29.40"
 #	print "=========================================="
-	print_amc_info()
-	print_glib_info(crate_port)
-	print_uhtr_info(ip_uhtr)
-	print_ngccm_info()
-	print_bridge_info(crate_port, slot)
-	print_igloo_info(crate_port, slot)
+#	print_amc_info()
+#	print_glib_info(crate_port)
+#	print_uhtr_info(ip_uhtr)
+	print_ngccm_info(crate_port)
+#	print_bridge_info(crate_port, slot)
+#	print_igloo_info(crate_port, slot)
 #	print "=========================================="
 #	get_bridge_info()
