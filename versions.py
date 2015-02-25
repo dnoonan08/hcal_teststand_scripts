@@ -244,11 +244,11 @@ if __name__ == "__main__":
 	slot = 2
 	ip_uhtr = "192.168.29.40"
 #	print "=========================================="
-#	print_amc_info()
-#	print_glib_info(crate_port)
-#	print_uhtr_info(ip_uhtr)
+	print_amc_info()
+	print_glib_info(crate_port)
+	print_uhtr_info(ip_uhtr)
 	print_ngccm_info(crate_port)
-#	print_bridge_info(crate_port, slot)
-#	print_igloo_info(crate_port, slot)
+	print_bridge_info(crate_port, slot)
+	print_igloo_info(crate_port, slot)
 #	print "=========================================="
 #	get_bridge_info()
