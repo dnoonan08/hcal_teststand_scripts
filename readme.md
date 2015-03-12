@@ -8,11 +8,12 @@ This is a collection of scripts to use on the HCAL teststands. The scripts shoul
 ## Running Scripts
 
 * `cd hcal_teststand_scripts`
-* Before running the scripts, you should run `source setup.sh`
+* Before running the scripts, you should modify and then run `source setup.sh`
 * `python [script_name].py`
 
 ## Documentation
 Here are short summaries of what the different scripts do:
 
+* `pedestals.py`: Reads in 100 BXs and prints the average ADC and standard deviation for each QIE. This script can also find a channel map between QIE numbering and uHTR numbering, a function that should be moved into a different module some time.
+* `qie_card_valid.py`: Determines if a QIE card is operating correctly. This is very incomplete code; so far it just tests that the card's CIDs are rotating and synched.
 * `versions.py`: Displays software and firmware versions of the different teststand components.
-* `qie_card_valid.py`: Determines if a QIE card is operating correctly. This is very incomplete code; so far it just tests that the card's CIDs are rotating and synched. 

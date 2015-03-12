@@ -94,6 +94,7 @@ def check_cid(d):
 	if (z_synch):
 		print "[O]: The CIDs are synched across the channels."
 	else:
+		check = 0
 		print "[X]: The CIDs are NOT synched across the channels."
 		print ">> The check value for the synch is {0}.".format(z_synch)
 		print ">> The error log is below:\n\n{0}".format(synched_check["log"])
@@ -158,12 +159,14 @@ def check_cid_rotating(d):		# Check if the CIDs are rotating. This function retu
 	}
 
 if __name__ == "__main__":
-	n_bx = 7
+	n_bx = 100
 	n_samples = n_bx*4-4
-	i_link = 14
-	ip_uhtr = "192.168.29.40"		# The IP address of the uHTR you want to contact
+	i_link = 2
+#	ip_uhtr = "192.168.29.40"		# The IP address of the uHTR you want to contact (For B904)
+	ip_uhtr = "192.168.100.16"		# The IP address of the uHTR you want to contact (USE THIS ONE FOR THE BHM)
 	uhtr_read = get_data_from_uhtr(ip_uhtr, n_samples, i_link)
 	data = parse_uhtr_raw(uhtr_read["output"])
+#	print uhtr_read["output"]
 #	print data["cid"]
 #	print data["adc"]
 #	print data["tdc_le"]

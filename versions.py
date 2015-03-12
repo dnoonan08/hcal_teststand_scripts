@@ -1,9 +1,10 @@
 from re import search
 from subprocess import Popen, PIPE
-from hcal_teststand import uhtr_commands, ngccm_commands
+from hcal_teststand import *
+
 
 def get_amc_info():
-	raw_output = Popen(['printf "fv\nq" | AMC13Tool2.exe -c ~elaird/AMC13_sn54.xml'], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
+	raw_output = Popen(['printf "fv\nq" | AMC13Tool2.exe -c configuration/amc13_config.xml'], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
 #	print raw_output[0]
 #	print raw_output[1]
 	version_sw = 0
@@ -54,7 +55,7 @@ def get_glib_info(crate_port):
 			match = search("{0} # ((0x)?[0-9a-f]+)".format(data[info][0]), raw_output)		# For some reason the software verion number is printed on stderr...
 			data[info][1] = int(match.group(1), 16)
 		except Exception as ex:
-			log += 'Trying to find the result of "{0}" resulted in: {1}\n'.format(command, ex)
+			log += 'Trying to find the result of "{0}" resulted in: {1}\n'.format(data[info][0], ex)
 	if (log == ""):
 		log = "Empty"
 	version_fw = "{0:02d}{1:02d}{2:02d}".format(data["version_fw_y"][1], data["version_fw_m"][1], data["version_fw_d"][1])
@@ -85,7 +86,7 @@ def get_uhtr_info(ip):
 	log = ""
 	raw_output = uhtr_commands(ip, ["0", "exit", "exit"])["output"]
 	try:
-		match = search("Front Firmware revision : (HF-\d+) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
+		match = search("Front Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
 #		match = search("Front Firmware revision : HF-\d+ \(\d+\) [0-9a-f]{2}\.[0-9a-f]{2}\.[0-9a-f]{2}", raw_output)
 		data["version_fw_type_front"][0] = match.group(1)
 		data["version_fw_type_front"][1] = int(match.group(2))
@@ -93,18 +94,18 @@ def get_uhtr_info(ip):
 		data["version_fw_front"][1] = int(match.group(4), 16)
 		data["version_fw_front"][2] = int(match.group(5), 16)
 	except Exception as ex:
-		print "Match failed: 93."
+		print "Match failed: front version."
 		print ex
 		log += 'Trying to find the front FW info resulted in: {0}\n'.format(ex)
 	try:
-		match = search("Back Firmware revision : (HF-\d+) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
+		match = search("Back Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
 		data["version_fw_type_back"][0] = match.group(1)
 		data["version_fw_type_back"][1] = int(match.group(2))
 		data["version_fw_back"][0] = int(match.group(3), 16)
 		data["version_fw_back"][1] = int(match.group(4), 16)
 		data["version_fw_back"][2] = int(match.group(5), 16)
 	except Exception as ex:
-		print "Match failed: 105."
+		print "Match failed: back version."
 		print ex
 		log += 'Trying to find the back FW info resulted in: {0}\n'.format(ex)
 	if (log == ""):
@@ -128,13 +129,14 @@ def print_uhtr_info(ip):
 	print "\tFW type (back): {0} ({1})".format(uhtr_info["version_fw_type_back"][0], uhtr_info["version_fw_type_back"][1])
 	print "\tSW version: ? (it's not currently possible to find out)"
 
-def get_ngccm_info(port):
+def get_ngccm_info(crate):
 	log =""
-	raw_output = ngccm_commands(port, "get HF1-mezz_reg4")
+	command = "get HF{0}-mezz_reg4".format(crate)
+	raw_output = ngccm_commands(crate_ports[crate], command)
 	version_fw_mez_major = -1
 	version_fw_mez_minor = -1
 	try:
-		match = search("get HF1-mezz_reg4 # '((0x)?[0-9a-f]+\s){3}((0x)?[0-9a-f]+)'", raw_output)
+		match = search("{0} # '((0x)?[0-9a-f]+\s){3}((0x)?[0-9a-f]+)'".format(command), raw_output)
 #		print match.group(0)
 #		print match.group(3)
 		version_str_x = "{0:#08x}".format(int(match.group(3),16))
@@ -144,7 +146,7 @@ def get_ngccm_info(port):
 	except Exception as ex:
 #		print raw_output
 		log += 'Trying to find the result of "get HF1-mezz_reg4" resulted in: {0}\n'.format(ex)
-		match = search("\n(get HF1-mezz_reg4.*)\n", raw_output)
+		match = search("\n({0}.*)\n".format(command), raw_output)
 		if match:
 			log+='The data string was "{0}".'.format(match.group(0).strip())
 	return {
@@ -154,8 +156,8 @@ def get_ngccm_info(port):
 		"log":			log,
 	}
 
-def print_ngccm_info(port):
-	ngccm_info = get_ngccm_info(port)
+def print_ngccm_info(crate):
+	ngccm_info = get_ngccm_info(crate)
 	print "* ngCCM  ================================="
 	if (ngccm_info["version_fw_mez_major"] == -1):
 		print "\tERROR: There was a problem fetching the ngCCM information."
@@ -240,14 +242,16 @@ def print_igloo_info(crate_port, slot):
 		print "\tFW version (bottom): {0}".format(igloo_info["version_fw_bot"])
 
 if __name__ == "__main__":
-	crate_port = 4242
+	crate = 1
 	slot = 2
-	ip_uhtr = "192.168.29.40"
+	crate_port = crate_ports[crate]
+#	ip_uhtr = "192.168.29.40"		# For B904
+	ip_uhtr = "192.168.100.16"		# For P5
 #	print "=========================================="
 	print_amc_info()
 	print_glib_info(crate_port)
 	print_uhtr_info(ip_uhtr)
-	print_ngccm_info(crate_port)
+	print_ngccm_info(crate)
 	print_bridge_info(crate_port, slot)
 	print_igloo_info(crate_port, slot)
 #	print "=========================================="
