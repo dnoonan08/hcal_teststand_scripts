@@ -18,7 +18,7 @@ This is a collection of scripts to use on the HCAL teststands. The scripts shoul
 Here are short summaries of what the different scripts do:
 
 * `pedestals.py`: Reads in 100 BXs and prints the average ADC and standard deviation for each QIE. This script can also find a channel map between QIE numbering and uHTR numbering, a function that should be moved into a different module some time.
-* `qie_card_valid.py`: Determines if a QIE card is operating correctly. This is very incomplete code; so far it just tests that the card's CIDs are rotating and synched.
+* `qie_card_valid.py`: Determines if a QIE card is operating correctly. This is very incomplete code; so far it just tests that the card's CIDs are rotating and synced.
 * `versions.py`: Displays software and firmware versions of the different teststand components.
 
 ### Structure
@@ -29,9 +29,7 @@ Most teststand operations revolve around a `teststand` object (defined in `hcal_
 from hcal_teststand import *
 ts = teststand("[teststand name]")
 ```
-where `[teststand name]` is what's used in `configuration/teststands.txt`, such as `bhm`.
-
-This object them has a number of attributes, like the MCH IP address, `ts.mch_ip`, and some methods, like `ts.status()`. Try running 
+where `[teststand name]` is what's used in `configuration/teststands.txt`, such as `bhm`. This object then has a number of attributes, like the MCH IP address, `ts.mch_ip`, and some methods, like `ts.status()`. Try running 
 ```
 print ts.status()
 ```
