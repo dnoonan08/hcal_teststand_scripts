@@ -3,24 +3,6 @@ from qie_card_valid import *
 import numpy
 import sys
 
-def uhtr_get_active_links(ip):
-	log = ""
-	commands = [
-		'0',
-		'link',
-		'init',
-		'1',
-		'92',
-		'status',
-		'quit',
-		'exit',
-		'exit',
-	]
-	uhtr_out = uhtr_commands(ip, commands)		# Pass the commands to the uHTR
-	raw_output = uhtr_out["output"]
-	log += uhtr_out["log"]
-	return active_links(raw_output)
-
 def set_ped(port, i, n):		# n is the decimal representation of the pedestal register.
 	assert isinstance(n, int)
 	if abs(n) > 31:

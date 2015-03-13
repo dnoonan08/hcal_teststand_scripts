@@ -54,28 +54,8 @@ def parse_uhtr_raw(raw):
 		tdc_te_match = search("TE-TDC", line)
 		if tdc_te_match:
 			data["tdc_te"].append([int(i) for i in line.split()[-4:]])
-	data["links"] = active_links(raw)
+	data["links"] = uhtr_parse_links(raw)
 	return data
-
-# Some functions that parse "raw_output"
-def active_links(raw):		# Produces a list of activated links from the raw input of the uHTRTool.exe
-	active = []
-	n_times = 0
-	for line in raw.split("\n"):
-		if search("^BadCounter(\s*(X|ON)){12}", line):
-#			print line
-			n_times += 1
-			statuses = line.split()[1:]
-			for i in range(len(statuses)):
-				if statuses[i].strip() == "ON":
-					active.append( 12 * ((n_times - 1) % 2) + i )
-	if n_times < 2:
-		print ">> ERROR: No correct \"status\" was called on the link."
-	elif n_times > 2:
-		print ">> ERROR: Hm, \"status\" was called on the link multiple times, so the active link list might be unreliable. (n_times = {0})".format(n_times)
-	if (n_times % 2 != 0):
-		print ">> ERROR: Uh, there were an odd number of \"status\" lines."
-	return list(set(active))
 
 # Functions to analyze this "data" dictionary
 # Split this into check_cid_rotating(d) and check_cid_synched(d)
