@@ -1,6 +1,6 @@
 from re import search
 from subprocess import Popen, PIPE
-from hcal_teststand import uhtr_commands
+from hcal_teststand import uhtr_commands, uhtr_parse_links
 
 # Read data from the uHTR
 def get_data_from_uhtr(ip, n, ch):
