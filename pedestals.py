@@ -91,6 +91,7 @@ if __name__ == "__main__":
 	
 	# This part reads in 100 BXs of data:
 	set_ped_all(crate_port, 6)
+#	set_ped(crate_port, 3, 31)
 	links = uhtr_get_active_links(ip_uhtr)
 	print "The activated links are {0}.".format(links)
 	for link in links:
