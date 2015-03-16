@@ -12,14 +12,14 @@ This is a collection of scripts to use on the HCAL teststands. The scripts shoul
 
 * `cd hcal_teststand_scripts`
 * Run `source configuration/setup_[teststand name].sh` where `[teststand name]` is what's used in `configuration/teststands.txt`.
-* `python [script_name].py`
+* `python [script_name].py [arguments]`
 
 ## Documentation
 Here are short summaries of what the different scripts do:
 
-* `pedestals.py`: Reads in 100 BXs and prints the average ADC and standard deviation for each QIE. This script can also find a channel map between QIE numbering and uHTR numbering, a function that should be moved into a different module some time.
+* `pedestals.py`: Reads in 100 BXs and prints the average ADC and standard deviation for each QIE. This script can also find a channel map between QIE numbering and uHTR numbering, a function that should be moved into a different module some time. This script takes the teststand name as a commandline argument, like `python pedestals.py bhm`. The default is `bhm`.
 * `qie_card_valid.py`: Determines if a QIE card is operating correctly. This is very incomplete code; so far it just tests that the card's CIDs are rotating and synced.
-* `versions.py`: Displays software and firmware versions of the different teststand components.
+* `versions.py`: Displays software and firmware versions of the different teststand components. This script takes the teststand name as a commandline argument, like `python versions.py bhm`. The default is `bhm`.
 
 ### Structure
 *While this isn't implemented in the scripts, yet, this structure is where we're headed. __This is currently very incomplete documentation.__*
@@ -34,3 +34,10 @@ where `[teststand name]` is what's used in `configuration/teststands.txt`, such 
 print ts.status()
 ```
 
+Functions related to a specific component are located in of a module named after it. Here is a list of the different teststand component modules:
+
+* `amc13.py`
+* `glib.py`
+* `uhtr.py`
+* `ngccm.py`
+* `qie.py`

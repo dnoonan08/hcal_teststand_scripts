@@ -1,6 +1,6 @@
 from re import search
 from subprocess import Popen, PIPE
-from hcal_teststand import uhtr_commands, uhtr_parse_links
+import uhtr
 
 # Read data from the uHTR
 def get_data_from_uhtr(ip, n, ch):
@@ -21,7 +21,7 @@ def get_data_from_uhtr(ip, n, ch):
 		'exit',
 		'exit',
 	]
-	uhtr_out = uhtr_commands(ip, commands)
+	uhtr_out = uhtr.send_commands(ip, commands)
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]
 #	with open("qie_card_valid_out.txt", "w") as out:
@@ -54,7 +54,7 @@ def parse_uhtr_raw(raw):
 		tdc_te_match = search("TE-TDC", line)
 		if tdc_te_match:
 			data["tdc_te"].append([int(i) for i in line.split()[-4:]])
-	data["links"] = uhtr_parse_links(raw)
+	data["links"] = uhtr.parse_links(raw)
 	return data
 
 # Functions to analyze this "data" dictionary

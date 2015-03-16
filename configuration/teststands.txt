@@ -3,10 +3,11 @@ fe_crates = 1
 ngccm_port = 4242
 uhtr_ip_base = 192.168.100
 uhtr_slots = 4
-glib_ip = 192.168.1.171
+glib_slot = 11
 mch_ip = 192.168.1.100
 amc13_ips = 192.168.1.139, 192.168.1.138
 amc13_versions = 0x4002, 0x21
+qie_slots = 1
 %%
 
 name = 904
@@ -14,10 +15,11 @@ fe_crates = 1
 ngccm_port = 4242
 uhtr_ip_base = 192.168.29
 uhtr_slots = 10
-glib_ip = 192.168.1.171
+glib_slot = 11
 mch_ip = 192.168.1.100
 amc13_ips = 192.168.1.147, 192.168.1.146
 amc13_versions = 0x4002, 0x21
+qie_slots = 2
 %%
 
 name = fnal

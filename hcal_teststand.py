@@ -1,117 +1,23 @@
 from re import search
 from subprocess import Popen, PIPE
+import amc13
+import glib
+import uhtr
+import ngccm
+import qie
 
-# This dictionary stores the map between crate number and crate port: (This is deprecated and will be removed soon.)
-crate_ports = {
-	1: 4242,
-}
+# FUNCTIONS:
 
-# FUNCTIONS
-# AMC13 Functions:
-def amc13_commands(ts, cmds):		# Transmits commands to "AMC13Tool2.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
-	log = ""
-	if isinstance(cmds, str):		# If you only want to execute one command, you can input it as a string, rather than a list with one element.
-		cmds = [cmds]
-	cmds.append("q")		# Append the "quit" command to the end of the command list in case it was left off.
-	cmds_str = ""
-	for c in cmds:
-		cmds_str += "{0}\n".format(c)
-	raw_output = Popen(['printf "{0}" | AMC13Tool2.exe -c configuration/amc13_{1}_config.xml'.format(cmds_str, ts.name)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the commands into a list called "raw_output" the first element of the list is stdout, the second is stderr.
-	log += "----------------------------\nYou ran the following script with the AMC13Tool:\n\n{0}\n----------------------------".format(cmds_str)
-#	print "========+========"
-#	print raw_output[0] + raw_output[1]
-#	print "========+========"
-	return {
-		"output": raw_output[0] + raw_output[1],
-		"log": log,
-	}
-
-# uHTR Functions:
-def uhtr_commands(ip, cmds):		# Transmits commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
-	log = ""
-	raw_output = ""
-	if isinstance(cmds, str):
-		print "WARNING: You probably didn't intend to run uHTRtool.exe with only one command: {0}".format(cmds)
-		print 'INFO: The "uhtr_commands" function takes a list of commands as an argument.'
-		cmds = [cmds]
-	cmds_str = ""
-	for c in cmds:
-		cmds_str += "{0}\n".format(c)
-	raw_output = Popen(['printf "{0}" | uHTRtool.exe {1}'.format(cmds_str, ip)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
-	log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
-#	print "========+========"
-#	print raw_output[0] + raw_output[1]
-#	print "========+========"
-	return {
-		"output": raw_output[0] + raw_output[1],
-		"log": log,
-	}
-
-def uhtr_parse_links(raw):		# Produces a list of activated links from the raw input of the uHTRTool.exe. Usually, you use the "uhtr_get_active_links" function below, which uses this function.
-	log = ""
-	active = []
-	n_times = 0
-	for line in raw.split("\n"):
-		if search("^BadCounter(\s*(X|ON)){12}", line):
-#			print line
-			n_times += 1
-			statuses = line.split()[1:]
-			for i in range(len(statuses)):
-				if statuses[i].strip() == "ON":
-					active.append( 12 * ((n_times - 1) % 2) + i )
-	if n_times < 2:
-		log += ">> ERROR: No correct \"status\" was called on the link."
-	elif n_times > 2:
-		log += ">> ERROR: Hm, \"status\" was called on the link multiple times, so the active link list might be unreliable. (n_times = {0})".format(n_times)
-	if (n_times % 2 != 0):
-		log += ">> ERROR: Uh, there were an odd number of \"status\" lines."
-	return list(set(active))
-
-def uhtr_get_active_links(ip):		# Produces a list of the active links of a certain uHTR.
-	log = ""
-	commands = [
-		'0',
-		'link',
-		'init',
-		'1',
-		'92',
-		'status',
-		'quit',
-		'exit',
-		'exit',
-	]
-	uhtr_out = uhtr_commands(ip, commands)
-	raw_output = uhtr_out["output"]
-	log += uhtr_out["log"]
-	return uhtr_parse_links(raw_output)
-
-# ngccm Tool Functions:
-def ngccm_commands(crate_port, cmds):		# Executes ngccm commands in the slowest way, in order to read all of the output.
-	raw_output = ""
-	if isinstance(cmds, str):
-		cmds = [cmds]
-	for c in cmds:
-		raw_output_temp = Popen(['printf "{0}" | ngccm -z -c -p {1}'.format(c + "\nquit", crate_port)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
-		raw_output += raw_output_temp[0] + raw_output_temp[1]
-	return raw_output
-
-def ngccm_commands_fast(crate_port, cmds):		# This executes ngccm commands in a fast way, but some "get" results might not appear in the output.
-	raw_output = ""
-	if isinstance(cmds, str):
-		cmds = [cmds]
-	cmd = ""
-	for c in cmds:
-		cmd += "{0}\n".format(c)
-	cmd += "quit\n"
-	raw_output_temp = Popen(['printf "{0}" | ngccm -z -c -p {1}'.format(cmd, crate_port)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
-	raw_output += raw_output_temp[0] + raw_output_temp[1]
-	return raw_output
+# AMC13 functions are in "amc13.py"
+# GLIB functions are in "glib.py"
+# uHTR functions are in "uhtr.py"
+# ngCCM and ngccm tool functions are in "ngccm.py" (not yet, actually)
 
 # Return the temperatures of your system.
 def get_temp(crate, port):		# It's more flexible to not have the input be a teststand object. I should make it accept both.
 	log =""
 	command = "get HF{0}-adc56_f".format(crate)
-	raw_output = ngccm_commands(port, command)
+	raw_output = ngccm.send_commands(port, command)["output"]
 #		print raw_output
 	temp = -1
 	try:
@@ -152,7 +58,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 			status["amc13"]["status"].append(1)
 		else:
 			status["amc13"]["status"].append(0)
-	amc13_output = amc13_commands(ts, "i 1-12")["output"]
+	amc13_output = amc13.send_commands("amc13_{0}_config.xml".format(ts.name), "i 1-12")["output"]
 	log += amc13_output
 	if amc13_output:
 		status["amc13"]["status"].append(1)
@@ -167,7 +73,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 		status["glib"]["status"].append(1)
 	else:
 		status["glib"]["status"].append(0)
-	ngccm_output = ngccm_commands(ts.ngccm_port, ["get fec1-ctrl", "get fec1-user_wb_regs"])
+	ngccm_output = ngccm.send_commands(ts.ngccm_port, ["get fec1-ctrl", "get fec1-user_wb_regs"])["output"]
 	log += ngccm_output
 	match = search("{0} # ((0x)?[0-9a-f]+)".format("get fec1-ctrl"), ngccm_output)
 	if match:
@@ -199,7 +105,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 	status["uhtr"]["status"] = []
 	status["uhtr"]["links"] = []
 	for uhtr_ip in ts.uhtr_ips:
-		links = uhtr_get_active_links(uhtr_ip)
+		links = uhtr.get_links(uhtr_ip)
 		status["uhtr"]["links"].append(links)
 		if links:
 			status["uhtr"]["status"].append(1)
@@ -209,9 +115,9 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 	# BKP (FE Backplane)
 	status["bkp"] = {}
 	status["bkp"]["status"] = []
-	ngccm_output = ngccm_commands_fast(ts.ngccm_port, ["put HF1-bkp_pwr_enable 1", "put HF1-bkp_reset 1", "put HF1-bkp_reset 0"])
+	ngccm_output = ngccm.send_commands_fast(ts.ngccm_port, ["put HF1-bkp_pwr_enable 1", "put HF1-bkp_reset 1", "put HF1-bkp_reset 0"])["output"]
 	log += ngccm_output
-	ngccm_output = ngccm_commands_fast(ts.ngccm_port, "get HF1-bkp_pwr_bad")
+	ngccm_output = ngccm.send_commands_fast(ts.ngccm_port, "get HF1-bkp_pwr_bad")["output"]
 	log += ngccm_output
 	match = search("{0} # ([01])".format("get HF1-bkp_pwr_bad"), ngccm_output)
 	if match:
@@ -234,7 +140,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 	}
 
 def parse_ts_configuration(f):		# This function is used to parse the "teststands.txt" configuration file. It is run by the "teststand" class; usually you want to use that instead of running this yourself.
-	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "glib_ip", "mch_ip", "amc13_ips", "amc13_versions"]
+	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "glib_slot", "mch_ip", "amc13_ips", "amc13_versions", "qie_slots"]
 	teststand_info = {}
 	raw = ""
 	if ("/" in f):
@@ -263,9 +169,9 @@ def parse_ts_configuration(f):		# This function is used to parse the "teststands
 					elif (variable == "uhtr_slots"):
 						value = search("{0}\s*=\s*(.+)".format(variable), line).group(1)
 						teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
-					elif (variable == "glib_ip"):
+					elif (variable == "glib_slot"):
 						value = search("{0}\s*=\s*(.+)".format(variable), line).group(1)
-						teststand_info[ts_name][variable] = value.strip()
+						teststand_info[ts_name][variable] = int(value)
 					elif (variable == "mch_ip"):
 						value = search("{0}\s*=\s*(.+)".format(variable), line).group(1)
 						teststand_info[ts_name][variable] = value.strip()
@@ -275,6 +181,9 @@ def parse_ts_configuration(f):		# This function is used to parse the "teststands
 					elif (variable == "amc13_versions"):
 						value = search("{0}\s*=\s*(.+)".format(variable), line).group(1)
 						teststand_info[ts_name][variable] = [i.strip() for i in value.split(",")]
+					elif (variable == "qie_slots"):
+						value = search("{0}\s*=\s*(.+)".format(variable), line).group(1)
+						teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
 	return teststand_info
 # /FUNCTIONS
 
@@ -296,18 +205,27 @@ class teststand:
 				self.uhtr_ips = []
 				for slot in self.uhtr_slots:
 					self.uhtr_ips.append("{0}.{1}".format(self.uhtr_ip_base, slot*4))
+				self.glib_ip = "192.168.1.{0}".format(160 + self.glib_slot)
 			except Exception as ex:		# The above will fail if the teststand names doesn't appear in the configuration file.
 				print "ERROR: Could not read the teststand information for {0} from the configuration file: {1}".format(self.name, f)
 				print ">> {0}".format(ex)
 		else:
 			print "ERROR: You need to initialize a teststand object with a name (string) and a file location for a teststand configuration."
-	# Methods:
-	def get_temps(self):		# A method to return a list of various temperatures around the teststand.
+	# METHODS:
+	def get_info(self):		# Returns a dictionary of component information, namely versions.
+		data = {}
+		data["amc13"] = amc13.get_info("amc13_{0}_config.xml".format(self.name))
+		data["glib"] = glib.get_info(self.ngccm_port)
+		data["uhtr"] = uhtr.get_info(self.uhtr_ips[0])
+		data["ngccm"] = ngccm.get_info(self.ngccm_port, self.fe_crates[0])
+		data["qie"] = qie.get_info(self.ngccm_port, self.qie_slots[0])
+		return data
+	def get_temps(self):		# Returns a list of various temperatures around the teststand.
 		temps = []
 		for crate in self.fe_crates:
 			temps.append(get_temp(crate, self.ngccm_port)["temp"])		# See the "get_temp" funtion above.
 		return temps
-	def status(self):		# A method to setup and check that the teststand is working.
+	def status(self):		# Sets up and checks that the teststand is working.
 		result = get_ts_status(self)
 		status = result["info"]
 		log = result["log"]
@@ -332,6 +250,9 @@ class teststand:
 			print log
 			print "========== /LOG ================================================"
 		return st
+	def set_ped_all(self, n):
+		qie.set_ped_all(self.ngccm_port, self.qie_slots[0], n)
+	# /METHODS
 	def __str__(self):		# This just defines what the object looks like when it's printed.
 		if hasattr(self, "name"):
 			return "<teststand object: {0}>".format(self.name)
