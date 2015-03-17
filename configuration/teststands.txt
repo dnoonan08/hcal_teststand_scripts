@@ -23,3 +23,12 @@ qie_slots = 2
 %%
 
 name = fnal
+fe_crates = 1
+ngccm_port = 4242
+uhtr_ip_base = 192.168.114
+uhtr_slots = 4
+glib_slot = 2
+mch_ip = 192.168.1.41
+amc13_ips = 192.168.1.95, 192.168.1.94
+amc13_versions = 0x4002, 0x21
+qie_slots = 1
