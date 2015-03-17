@@ -37,6 +37,7 @@ print ts.status()
 Functions related to a specific component are located in of a module named after it. Here is a list of the different teststand component modules:
 
 * `amc13.py`
+* `mch.py`
 * `glib.py`
 * `uhtr.py`
 * `ngccm.py`
