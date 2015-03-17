@@ -53,6 +53,26 @@ def get_info(f):		# Returns a dictionary of information about the AMC13, such as
 		"version_fw":	version_fw,
 		"log":			log,
 	}
+
+def get_status(ts):
+	log = ""
+	status = {}
+	status["status"] = []
+	# Ping AMC13 IPs:
+	for ip in ts.amc13_ips:
+		ping_result = Popen(["ping -c 1 {0}".format(ip)], shell = True, stdout = PIPE, stderr = PIPE).stdout.read()
+		if ping_result:
+			status["status"].append(1)
+		else:
+			status["status"].append(0)
+	# Use the AMC13Tool.exe to issue "i 1-12":
+	amc13_output = send_commands("amc13_{0}_config.xml".format(ts.name), "i 1-12")["output"]
+	log += amc13_output
+	if 'parsed list "1-12" as mask 0xfff\nAMC13 out of run mode\nAMC13 is back in run mode and ready' in amc13_output:
+		status["status"].append(1)
+	else:
+		status["status"].append(0)
+	return status
 # /FUNCTIONS
 
 if __name__ == "__main__":

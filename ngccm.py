@@ -64,6 +64,35 @@ def get_info(port, crate):		# Returns a dictionary of information about the ngCC
 		"version_sw":	"?",
 		"log":			log.strip(),
 	}
+
+def get_status(ts):		# Perform basic checks of the ngCCM:
+	status = {}
+	status["status"] = []
+	# Check the temperature:
+	temp = ts.get_temps()[0]
+	status["temp"] = temp
+	if (temp != -1) and (temp < 30.5):
+		status["status"] = [1]
+	else:
+		status["status"] = [0]
+	return status
+
+def get_status_bkp(ts):
+	log = ""
+	status = {}
+	status["status"] = []
+	# Enable, reset, and check the BKP power:
+	ngccm_output = send_commands_fast(ts.ngccm_port, ["put HF1-bkp_pwr_enable 1", "put HF1-bkp_reset 1", "put HF1-bkp_reset 0"])["output"]
+	log += ngccm_output
+	ngccm_output = send_commands_fast(ts.ngccm_port, "get HF1-bkp_pwr_bad")["output"]
+	log += ngccm_output
+	match = search("{0} # ([01])".format("get HF1-bkp_pwr_bad"), ngccm_output)
+	if match:
+		status["status"].append((int(match.group(1))+1)%2)
+	else:
+		log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get HF1-bkp_pwr_bad")
+		status["status"].append(0)
+	return status
 # /FUNCTIONS
 
 

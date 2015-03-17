@@ -1,5 +1,6 @@
 from re import search
 from subprocess import Popen, PIPE
+import mch
 import amc13
 import glib
 import uhtr
@@ -40,100 +41,13 @@ def get_temp(crate, port):		# It's more flexible to not have the input be a test
 def get_ts_status(ts):		# This function does basic initializations and checks. If all the "status" bits for each component are 1, then things are good.
 	status = {}
 	log = ""
-	# MCH
-	# Ping the MCH:
-	status["mch"] = {}
-	ping_result = Popen(["ping -c 1 {0}".format(ts.mch_ip)], shell = True, stdout = PIPE, stderr = PIPE).stdout.read()
-	if ping_result:
-		status["mch"]["status"] = [1]
-	else:
-		status["mch"]["status"] = [0]
-	# AMC 13
-	# Use the AMC13Tool.exe to issue "i 1-12":
-	status["amc13"] = {}
-	status["amc13"]["status"] = []
-	for ip in ts.amc13_ips:
-		ping_result = Popen(["ping -c 1 {0}".format(ip)], shell = True, stdout = PIPE, stderr = PIPE).stdout.read()
-		if ping_result:
-			status["amc13"]["status"].append(1)
-		else:
-			status["amc13"]["status"].append(0)
-	amc13_output = amc13.send_commands("amc13_{0}_config.xml".format(ts.name), "i 1-12")["output"]
-	log += amc13_output
-	if amc13_output:
-		status["amc13"]["status"].append(1)
-	else:
-		status["amc13"]["status"].append(0)
-	# GLIB
-	# Perform basic checks of the GLIB with the ngccm tool:
-	status["glib"] = {}
-	status["glib"]["status"] = []
-	ping_result = Popen(["ping -c 1 {0}".format(ts.glib_ip)], shell = True, stdout = PIPE, stderr = PIPE).stdout.read()
-	if ping_result:
-		status["glib"]["status"].append(1)
-	else:
-		status["glib"]["status"].append(0)
-	ngccm_output = ngccm.send_commands(ts.ngccm_port, ["get fec1-ctrl", "get fec1-user_wb_regs"])["output"]
-	log += ngccm_output
-	match = search("{0} # ((0x)?[0-9a-f]+)".format("get fec1-ctrl"), ngccm_output)
-	if match:
-		value = int(match.group(1), 16)
-		if (value == int("0x10aa3071", 16)):
-			status["glib"]["status"].append(1)
-		else:
-			log += "ERROR: The result of {0} was {1}, not {2}".format("get fec1-ctrl", value, int("0x10aa3071", 16))
-			status["glib"]["status"].append(0)
-	else:
-		log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get fec1-ctrl")
-		status["glib"]["status"] = [0]
-	match = search("{0} # '(.*)'".format("get fec1-user_wb_regs"), ngccm_output)
-	if match:
-		values = match.group(1).split()
-		clock = float(int(values[-5], 16))/10000
-		status["glib"]["clock"] = clock
-		if ( (clock > 40.0640) and (clock < 40.0895) ):
-			status["glib"]["status"].append(1)
-		else:
-			log += "ERROR: The clock frequency of {0} MHz is not between {1} and {2}.".format(clock, 40.0640, 40.0895)
-			status["glib"]["status"].append(0)
-	else:
-		log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get fec1-user_wb_regs")
-		status["glib"]["status"].append(0)
-	# uHTR
-	# Perform basic checks with the uHTRTool.exe:
-	status["uhtr"] = {}
-	status["uhtr"]["status"] = []
-	status["uhtr"]["links"] = []
-	for uhtr_ip in ts.uhtr_ips:
-		links = uhtr.get_links(uhtr_ip)
-		status["uhtr"]["links"].append(links)
-		if links:
-			status["uhtr"]["status"].append(1)
-		else:
-			status["uhtr"]["status"].append(0)
-	# Transition to FE things:
-	# BKP (FE Backplane)
-	status["bkp"] = {}
-	status["bkp"]["status"] = []
-	ngccm_output = ngccm.send_commands_fast(ts.ngccm_port, ["put HF1-bkp_pwr_enable 1", "put HF1-bkp_reset 1", "put HF1-bkp_reset 0"])["output"]
-	log += ngccm_output
-	ngccm_output = ngccm.send_commands_fast(ts.ngccm_port, "get HF1-bkp_pwr_bad")["output"]
-	log += ngccm_output
-	match = search("{0} # ([01])".format("get HF1-bkp_pwr_bad"), ngccm_output)
-	if match:
-		status["bkp"]["status"].append((int(match.group(1))+1)%2)
-	else:
-		log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get HF1-bkp_pwr_bad")
-		status["bkp"]["status"].append(0)
-	# ngCCM
-	# Perform basic checks of the ngCCM:
-	status["ngccm"] = {}
-	temp = ts.get_temps()[0]
-	status["ngccm"]["temp"] = temp
-	if (temp != -1) and (temp < 30):
-		status["ngccm"]["status"] = [1]
-	else:
-		status["ngccm"]["status"] = [0]
+	status["mch"] = mch.get_status(ts)
+	status["amc13"] = amc13.get_status(ts)
+	status["glib"] = glib.get_status(ts)
+	status["uhtr"] = uhtr.get_status(ts)
+	status["bkp"] = ngccm.get_status_bkp(ts)
+	status["ngccm"] = ngccm.get_status(ts)
+#	status["qie"] = qie.get_status(ts)		# Doesn't exist, yet.
 	return {
 		"info": status,
 		"log": log
@@ -226,19 +140,17 @@ class teststand:
 		result = get_ts_status(self)
 		status = result["info"]
 		log = result["log"]
+		st = []
 		print "Status result: {0}".format(status)
-		st = [1, 1]
-		for key, value in status.iteritems():
-			for thing in value["status"]:
-				if thing != 1:
-					if key in ["amc13", "glib", "mch", "uhtr"]:
-						st[0] = 0
-					if key in ["bkp", "ngccm", "qie_card"]:
-						st[1] = 0
+		for component in ["amc13", "glib", "mch", "uhtr", "bkp", "ngccm"]:		# * Add qie
+#			print component
+			st_temp = 1
+			for s in status[component]["status"]:
+				if s != 1:
+					st = 0
+			st.append(st_temp)
 #		print log
 		print "Teststand status ({0}):".format(self.name)
-		print "[{0}] Back-end".format(st[0])
-		print "[{0}] Front-end".format(st[1])
 		if sum(st) == len(st):
 			print "GOOD"
 		else:

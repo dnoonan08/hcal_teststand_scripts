@@ -62,6 +62,28 @@ def get_info(ip):		# Returns a dictionary of information about the uHTR, such as
 		"log": log.strip(),
 	}
 
+def get_status(ts):		# Perform basic checks with the uHTRTool.exe:
+	status = {}
+	status["status"] = []
+	# Ping uHTR IPs:
+	for ip in ts.uhtr_ips:
+		ping_result = Popen(["ping -c 1 {0}".format(ip)], shell = True, stdout = PIPE, stderr = PIPE).stdout.read()
+		if ping_result:
+			status["status"].append(1)
+		else:
+			status["status"].append(0)
+	# Activate links:
+	# * Check that there are 6 active links per IP?
+	status["links"] = []
+	for ip in ts.uhtr_ips:
+		links = get_links(ip)
+		status["links"].append(links)
+		if links:
+			status["status"].append(1)
+		else:
+			status["status"].append(0)
+	return status
+
 def parse_links(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you use the "get_links" function below, which uses this function.
 	log = ""
 	active = []

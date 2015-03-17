@@ -28,4 +28,4 @@ uhtr_slots = 4
 glib_slot = 2
 mch_ip = 192.168.1.41
 amc13_ips = 192.168.1.95, 192.168.1.94
-qie_slots = 1
+qie_slots = 13
