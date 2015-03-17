@@ -42,9 +42,9 @@ export PATH=$PATH:/nfshome0/hcalpro/ngFEC
 				'''.strip()
 			elif name == "fnal":
 				string = '''
-source ~/seema/TTTSoftware/environ.csh
-source ~daqowner/dist/etc/env.csh
-setenv PYTHONPATH $ROOTSYS/lib:$PYTHONPATH
+source /home/hcalpro/tote/env.sh
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/hcalpro/ngFEC
+export PATH=$PATH:/home/hcalpro/ngFEC
 				'''.strip()
 			try:
 				out = open("configuration/setup_{0}.sh".format(name), "w")
