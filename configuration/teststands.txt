@@ -6,7 +6,6 @@ uhtr_slots = 4
 glib_slot = 11
 mch_ip = 192.168.1.100
 amc13_ips = 192.168.1.139, 192.168.1.138
-amc13_versions = 0x4002, 0x21
 qie_slots = 1
 %%
 
@@ -18,7 +17,6 @@ uhtr_slots = 10
 glib_slot = 11
 mch_ip = 192.168.1.100
 amc13_ips = 192.168.1.147, 192.168.1.146
-amc13_versions = 0x4002, 0x21
 qie_slots = 2
 %%
 
@@ -30,5 +28,4 @@ uhtr_slots = 4
 glib_slot = 2
 mch_ip = 192.168.1.41
 amc13_ips = 192.168.1.95, 192.168.1.94
-amc13_versions = 0x4002, 0x21
 qie_slots = 1

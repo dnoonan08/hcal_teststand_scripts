@@ -140,7 +140,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 	}
 
 def parse_ts_configuration(f):		# This function is used to parse the "teststands.txt" configuration file. It is run by the "teststand" class; usually you want to use that instead of running this yourself.
-	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "glib_slot", "mch_ip", "amc13_ips", "amc13_versions", "qie_slots"]
+	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "glib_slot", "mch_ip", "amc13_ips", "qie_slots"]
 	teststand_info = {}
 	raw = ""
 	if ("/" in f):
@@ -176,9 +176,6 @@ def parse_ts_configuration(f):		# This function is used to parse the "teststands
 						value = search("{0}\s*=\s*(.+)".format(variable), line).group(1)
 						teststand_info[ts_name][variable] = value.strip()
 					elif (variable == "amc13_ips"):
-						value = search("{0}\s*=\s*(.+)".format(variable), line).group(1)
-						teststand_info[ts_name][variable] = [i.strip() for i in value.split(",")]
-					elif (variable == "amc13_versions"):
 						value = search("{0}\s*=\s*(.+)".format(variable), line).group(1)
 						teststand_info[ts_name][variable] = [i.strip() for i in value.split(",")]
 					elif (variable == "qie_slots"):
