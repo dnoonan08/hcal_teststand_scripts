@@ -1,5 +1,5 @@
 from hcal_teststand import *
-from qie_card_valid import *
+import uhtr
 import numpy
 import sys
 import qie
@@ -67,14 +67,14 @@ if __name__ == "__main__":
 	
 	# This part reads in 100 BXs of data:
 #	qie.set_ped_all(ts.ngccm_port, ts.qie_slots[0], 6)
-	ts.set_ped_all(31)
+	ts.set_ped_all(6)
 #	set_ped(crate_port, 3, 31)
 	links = uhtr.get_links(ts.uhtr_ips[0])
 	print "The activated links are {0}.".format(links)
 	for link in links:
 		print "==== Link {0} ====".format(link)
-		uhtr_read = get_data_from_uhtr(ts.uhtr_ips[0], 300, link)
-		data = parse_uhtr_raw(uhtr_read["output"])
+		uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 300, link)
+		data = uhtr.parse_data(uhtr_read["output"])
 #		print data["adc"]
 		print "Read in {0} bunch crossings.".format(len(data["adc"]))
 		for i in range(4):

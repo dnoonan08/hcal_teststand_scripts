@@ -128,6 +128,58 @@ def get_links(ip):		# Initializes and then returns a list of the active links of
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]
 	return parse_links(raw_output)
+
+def get_data(ip, n, ch):
+	log = ""
+	commands = [
+		'0',
+		'link',
+		'init',
+		'0',
+		'32',
+		'status',
+		'spy',
+		'{0}'.format(ch),
+		'0',
+		'0',
+		'{0}'.format(n),
+		'quit',
+		'exit',
+		'exit',
+	]
+	uhtr_out = send_commands(ip, commands)
+	raw_output = uhtr_out["output"]
+	log += uhtr_out["log"]
+	return uhtr_out
+
+# Parse uHTRTool.exe data
+def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc. organized into sublists per fiber.
+	n = 0
+	raw_data = []
+	for line in raw.split("\n"):
+		if search("\s*\d+\s*[0123456789ABCDEF]{5}", line):
+			raw_data.append(line.strip())
+	data = {
+		"cid": [],
+		"adc": [],
+		"tdc_le": [],
+		"tdc_te": [],
+	}
+	for line in raw_data:
+		cid_match = search("CAPIDS", line)
+		if cid_match:
+			data["cid"].append([int(i) for i in line.split()[-4:]])
+		adc_match = search("ADCs", line)
+		if adc_match:
+			data["adc"].append([int(i) for i in line.split()[-4:]])
+		tdc_le_match = search("LE-TDC", line)
+		if tdc_le_match:
+			data["tdc_le"].append([int(i) for i in line.split()[-4:]])
+		tdc_te_match = search("TE-TDC", line)
+		if tdc_te_match:
+			data["tdc_te"].append([int(i) for i in line.split()[-4:]])
+	data["links"] = parse_links(raw)
+	return data
 # /FUNCTIONS
 
 if __name__ == "__main__":

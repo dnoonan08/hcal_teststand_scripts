@@ -2,61 +2,6 @@ from re import search
 from subprocess import Popen, PIPE
 import uhtr
 
-# Read data from the uHTR
-def get_data_from_uhtr(ip, n, ch):
-	log = ""
-	commands = [
-		'0',
-		'link',
-		'init',
-		'0',
-		'32',
-		'status',
-		'spy',
-		'{0}'.format(ch),
-		'0',
-		'0',
-		'{0}'.format(n),
-		'quit',
-		'exit',
-		'exit',
-	]
-	uhtr_out = uhtr.send_commands(ip, commands)
-	raw_output = uhtr_out["output"]
-	log += uhtr_out["log"]
-#	with open("qie_card_valid_out.txt", "w") as out:
-#		out.write(log + raw_output)
-	return uhtr_out
-
-# Parse uHTRTool.exe data
-def parse_uhtr_raw(raw):
-	n = 0
-	raw_data = []
-	for line in raw.split("\n"):
-		if search("\s*\d+\s*[0123456789ABCDEF]{5}", line):
-			raw_data.append(line.strip())
-	data = {
-		"cid": [],
-		"adc": [],
-		"tdc_le": [],
-		"tdc_te": [],
-	}
-	for line in raw_data:
-		cid_match = search("CAPIDS", line)
-		if cid_match:
-			data["cid"].append([int(i) for i in line.split()[-4:]])
-		adc_match = search("ADCs", line)
-		if adc_match:
-			data["adc"].append([int(i) for i in line.split()[-4:]])
-		tdc_le_match = search("LE-TDC", line)
-		if tdc_le_match:
-			data["tdc_le"].append([int(i) for i in line.split()[-4:]])
-		tdc_te_match = search("TE-TDC", line)
-		if tdc_te_match:
-			data["tdc_te"].append([int(i) for i in line.split()[-4:]])
-	data["links"] = uhtr.parse_links(raw)
-	return data
-
 # Functions to analyze this "data" dictionary
 # Split this into check_cid_rotating(d) and check_cid_synched(d)
 def check_cid(d):
@@ -144,8 +89,8 @@ if __name__ == "__main__":
 	i_link = 2
 #	ip_uhtr = "192.168.29.40"		# The IP address of the uHTR you want to contact (For B904)
 	ip_uhtr = "192.168.100.16"		# The IP address of the uHTR you want to contact (USE THIS ONE FOR THE BHM)
-	uhtr_read = get_data_from_uhtr(ip_uhtr, n_samples, i_link)
-	data = parse_uhtr_raw(uhtr_read["output"])
+	uhtr_read = uhtr.get_data(ip_uhtr, n_samples, i_link)
+	data = uhtr.parse_data(uhtr_read["output"])
 #	print uhtr_read["output"]
 #	print data["cid"]
 #	print data["adc"]

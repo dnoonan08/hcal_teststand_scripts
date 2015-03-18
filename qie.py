@@ -124,6 +124,32 @@ def set_ped_all(port, crate, slot, n):		# n is the decimal representation of the
 		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i+1, n_str) for i in range(24)]
 		raw_output = ngccm.send_commands_fast(port, commands)["output"]
 		# I should include something here to make sure the command didn't return an error? Return 1 if not...
+
+def make_adc_to_q_conversion():
+	srs = [
+		range(0, 16),
+		range(16, 36),
+		range(36, 57),
+		range(57, 64)
+	]
+	overlap = 3
+	s_init = 3.1			# All other ideal sensitivities can be calculated from this using s = s_init * (8**r) * (2**sr).
+	s = 0
+	s_sr_min = 0
+#	p = -16
+	p = 0
+	q_sum = p
+	q = []
+	for r in range(4):
+		for sr in range(4):
+			for m in srs[sr]:
+				s_prev = s
+				s = s_init * (8**r) * (2**sr)		# Calculate the appropriate sensitivity.
+				q_sum += s_prev/2 + s/2
+				if sr == 0 and m == 0 and r > 0:
+					q_sum -= s*overlap
+				q.append(q_sum)
+	return q
 # /FUNCTIONS
 
 
