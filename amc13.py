@@ -65,6 +65,13 @@ def get_status(ts):
 			status["status"].append(1)
 		else:
 			status["status"].append(0)
+	# Make sure the version is accessible:
+	amc_info = get_info("amc13_{0}_config.xml".format(ts.name))
+	if (amc_info["sn"] != -1):
+		status["status"].append(1)
+	else:
+		status["status"].append(0)
+	# * Add a version check?
 	# Use the AMC13Tool.exe to issue "i 1-12":
 	amc13_output = send_commands("amc13_{0}_config.xml".format(ts.name), "i 1-12")["output"]
 	log += amc13_output

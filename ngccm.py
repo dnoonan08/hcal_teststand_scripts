@@ -65,19 +65,27 @@ def get_info(port, crate):		# Returns a dictionary of information about the ngCC
 		"log":			log.strip(),
 	}
 
-def get_status(ts):		# Perform basic checks of the ngCCM:
+def get_status(ts):		# Perform basic checks of the ngCCMs:
 	status = {}
 	status["status"] = []
+	# Check that versions are accessible:
+	if ts.name != "bhm":
+		for crate in ts.fe_crates:
+			ngccm_info = get_info(ts.ngccm_port, crate)
+			if (ngccm_info["version_fw_mez_major"] != -1):
+				status["status"].append(1)
+			else:
+				status["status"].append(0)
 	# Check the temperature:
 	temp = ts.get_temps()[0]
 	status["temp"] = temp
 	if (temp != -1) and (temp < 30.5):
-		status["status"] = [1]
+		status["status"].append(1)
 	else:
-		status["status"] = [0]
+		status["status"].append(0)
 	return status
 
-def get_status_bkp(ts):
+def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:
 	log = ""
 	status = {}
 	status["status"] = []

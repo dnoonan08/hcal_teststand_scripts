@@ -47,7 +47,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 	status["uhtr"] = uhtr.get_status(ts)
 	status["bkp"] = ngccm.get_status_bkp(ts)
 	status["ngccm"] = ngccm.get_status(ts)
-#	status["qie"] = qie.get_status(ts)		# Doesn't exist, yet.
+	status["qie"] = qie.get_status(ts)
 	return {
 		"info": status,
 		"log": log
@@ -136,7 +136,7 @@ class teststand:
 		for crate in self.fe_crates:
 			temps.append(get_temp(crate, self.ngccm_port)["temp"])		# See the "get_temp" funtion above.
 		return temps
-	def status(self):		# Sets up and checks that the teststand is working.
+	def get_status(self):		# Sets up and checks that the teststand is working.
 		result = get_ts_status(self)
 		status = result["info"]
 		log = result["log"]

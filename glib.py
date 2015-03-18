@@ -40,6 +40,12 @@ def get_status(ts):		# Perform basic checks of the GLIB with the ngccm tool.
 		status["status"].append(1)
 	else:
 		status["status"].append(0)
+	# Check that the version was accessible:
+	glib_info = get_info(ts.ngccm_port)
+	if (int(glib_info["version_fw"]) != 0):
+		status["status"].append(1)
+	else:
+		status["status"].append(0)
 	# Check the control (1) and clock (2):
 	ngccm_output = ngccm.send_commands(ts.ngccm_port, ["get fec1-ctrl", "get fec1-user_wb_regs"])["output"]
 	log += ngccm_output

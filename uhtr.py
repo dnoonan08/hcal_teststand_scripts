@@ -72,6 +72,13 @@ def get_status(ts):		# Perform basic checks with the uHTRTool.exe:
 			status["status"].append(1)
 		else:
 			status["status"].append(0)
+	# Make sure the versions are accessible:
+	for ip in ts.uhtr_ips:
+		uhtr_info = get_info(ip)
+		if uhtr_info["version_fw_front"][1] != 0:
+			status["status"].append(1)
+		else:
+			status["status"].append(0)
 	# Activate links:
 	# * Check that there are 6 active links per IP?
 	status["links"] = []
@@ -110,8 +117,8 @@ def get_links(ip):		# Initializes and then returns a list of the active links of
 		'0',
 		'link',
 		'init',
-		'1',
-		'92',
+		'0',
+		'32',
 		'status',
 		'quit',
 		'exit',

@@ -75,6 +75,26 @@ def get_info(port, slot):
 		"igloo": get_igloo_info(port, slot),
 	}
 
+def get_status(ts):		# Perform basic checks of the QIE cards:
+	status = {}
+	status["status"] = []
+	# Check Bridge FPGA and IGLOO2 version are accessible:
+	for slot in ts.qie_slots:
+		qie_info = get_info(ts.ngccm_port, slot)
+		if (qie_info["bridge"]["version_fw"] != "00.00.0000"):
+			status["status"].append(1)
+		else:
+			status["status"].append(0)
+		if (qie_info["igloo"]["version_fw_top"] != "00.00"):
+			status["status"].append(1)
+		else:
+			status["status"].append(0)
+		if (qie_info["igloo"]["version_fw_bot"] != "00.00"):
+			status["status"].append(1)
+		else:
+			status["status"].append(0)
+	return status
+
 def set_ped(port, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
 	assert isinstance(n, int)
 	if abs(n) > 31:
