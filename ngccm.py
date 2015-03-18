@@ -96,16 +96,17 @@ def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:
 	status = {}
 	status["status"] = []
 	# Enable, reset, and check the BKP power:
-	ngccm_output = send_commands_fast(ts.ngccm_port, ["put HF1-bkp_pwr_enable 1", "put HF1-bkp_reset 1", "put HF1-bkp_reset 0"])["output"]
-	log += ngccm_output
-	ngccm_output = send_commands_fast(ts.ngccm_port, "get HF1-bkp_pwr_bad")["output"]
-	log += ngccm_output
-	match = search("{0} # ([01])".format("get HF1-bkp_pwr_bad"), ngccm_output)
-	if match:
-		status["status"].append((int(match.group(1))+1)%2)
-	else:
-		log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get HF1-bkp_pwr_bad")
-		status["status"].append(0)
+	for crate in ts.fe_crates:
+		ngccm_output = send_commands_fast(ts.ngccm_port, ["put HF{0}-bkp_pwr_enable 1".format(crate), "put HF{0}-bkp_reset 1".format(crate), "put HF{0}-bkp_reset 0".format(crate)])["output"]
+		log += ngccm_output
+		ngccm_output = send_commands_fast(ts.ngccm_port, "get HF{0}-bkp_pwr_bad".format(crate))["output"]
+		log += ngccm_output
+		match = search("{0} # ([01])".format("get HF1-bkp_pwr_bad"), ngccm_output)
+		if match:
+			status["status"].append((int(match.group(1))+1)%2)
+		else:
+			log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get HF1-bkp_pwr_bad")
+			status["status"].append(0)
 	return status
 # /FUNCTIONS
 
