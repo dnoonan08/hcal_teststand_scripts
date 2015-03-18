@@ -110,7 +110,7 @@ def set_ped(port, crate, slot, i, n):		# Set the pedestal of QIE i to DAC value 
 		raw_output = ngccm.send_commands(port, commands)["output"]
 		# Maybe I should include something here to make sure the command didn't return an error? Return 1 if not...
 
-def set_ped_all(port, slot, n):		# n is the decimal representation of the pedestal register.
+def set_ped_all(port, crate, slot, n):		# n is the decimal representation of the pedestal register.
 	# This function is faster than running "set_ped" 24 times.
 	assert isinstance(n, int)
 	if abs(n) > 31:

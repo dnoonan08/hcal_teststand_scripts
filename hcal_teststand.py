@@ -165,7 +165,7 @@ class teststand:
 	def get_status(self):		# Sets up and checks that the teststand is working.
 		return get_ts_status(self)
 	def set_ped_all(self, n):
-		for crate, slots in self.fe:
+		for crate, slots in self.fe.iteritems():
 			for slot in slots:
 				qie.set_ped_all(self.ngccm_port, crate, slot, n)
 	# /METHODS

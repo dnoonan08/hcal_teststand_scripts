@@ -67,7 +67,7 @@ if __name__ == "__main__":
 	
 	# This part reads in 100 BXs of data:
 #	qie.set_ped_all(ts.ngccm_port, ts.qie_slots[0], 6)
-	ts.set_ped_all(6)
+	ts.set_ped_all(31)
 #	set_ped(crate_port, 3, 31)
 	links = uhtr.get_links(ts.uhtr_ips[0])
 	print "The activated links are {0}.".format(links)
