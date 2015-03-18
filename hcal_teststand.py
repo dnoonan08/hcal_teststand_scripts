@@ -57,7 +57,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 				st_temp = 0
 		st.append(st_temp)
 	return {
-		"status", st,
+		"status": st,
 		"info": status,
 		"log": log,
 	}
