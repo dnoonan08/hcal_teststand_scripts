@@ -101,11 +101,11 @@ def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:
 		log += ngccm_output
 		ngccm_output = send_commands_fast(ts.ngccm_port, "get HF{0}-bkp_pwr_bad".format(crate))["output"]
 		log += ngccm_output
-		match = search("{0} # ([01])".format("get HF1-bkp_pwr_bad"), ngccm_output)
+		match = search("{0} # ([01])".format("get HF{0}-bkp_pwr_bad".format(crate)), ngccm_output)
 		if match:
 			status["status"].append((int(match.group(1))+1)%2)
 		else:
-			log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get HF1-bkp_pwr_bad")
+			log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get HF{0}-bkp_pwr_bad".format(crate))
 			status["status"].append(0)
 	return status
 # /FUNCTIONS
