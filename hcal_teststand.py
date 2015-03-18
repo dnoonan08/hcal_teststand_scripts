@@ -94,7 +94,13 @@ def parse_ts_configuration(f):		# This function is used to parse the "teststands
 						teststand_info[ts_name][variable] = [i.strip() for i in value.split(",")]
 					elif (variable == "qie_slots"):
 						value = search("{0}\s*=\s*(.+)".format(variable), line).group(1)
-						teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
+						crate_lists = value.split(";")
+						teststand_info[ts_name][variable] = []
+						for crate_list in crate_lists:
+							if crate_list:
+								teststand_info[ts_name][variable].append([int(i) for i in crate_list.split(",")])
+							else:
+								teststand_info[ts_name][variable].append([])
 	return teststand_info
 # /FUNCTIONS
 
@@ -110,6 +116,7 @@ class teststand:
 			try:
 				# Exctract teststand info from the teststand configuration file:
 				ts_info = parse_ts_configuration(f)[self.name]
+				print ts_info
 				for key, value in ts_info.iteritems():
 					setattr(self, key, value)
 				# Assign a few other calculable attributes:
@@ -117,6 +124,10 @@ class teststand:
 				for slot in self.uhtr_slots:
 					self.uhtr_ips.append("{0}.{1}".format(self.uhtr_ip_base, slot*4))
 				self.glib_ip = "192.168.1.{0}".format(160 + self.glib_slot)
+				self.fe = {}
+				if len(self.fe_crates) <= len(self.qie_slots):
+					for i in range(len(self.fe_crates)):
+						self.fe[self.fe_crates[i]] = self.qie_slots[i]
 			except Exception as ex:		# The above will fail if the teststand names doesn't appear in the configuration file.
 				print "ERROR: Could not read the teststand information for {0} from the configuration file: {1}".format(self.name, f)
 				print ">> {0}".format(ex)
@@ -147,7 +158,7 @@ class teststand:
 			st_temp = 1
 			for s in status[component]["status"]:
 				if s != 1:
-					st = 0
+					st_temp = 0
 			st.append(st_temp)
 #		print log
 		print "Teststand status ({0}):".format(self.name)
@@ -160,7 +171,9 @@ class teststand:
 			print "========== /LOG ================================================"
 		return st
 	def set_ped_all(self, n):
-		qie.set_ped_all(self.ngccm_port, self.qie_slots[0], n)
+		for crate, slots in self.fe:
+			for slot in slots:
+				qie.set_ped_all(self.ngccm_port, crate, slot, n)
 	# /METHODS
 	def __str__(self):		# This just defines what the object looks like when it's printed.
 		if hasattr(self, "name"):

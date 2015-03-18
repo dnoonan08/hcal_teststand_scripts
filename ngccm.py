@@ -79,10 +79,16 @@ def get_status(ts):		# Perform basic checks of the ngCCMs:
 	# Check the temperature:
 	temp = ts.get_temps()[0]
 	status["temp"] = temp
-	if (temp != -1) and (temp < 30.5):
-		status["status"].append(1)
+	if ts.name == "bhm":
+		if (temp != -1) and (temp < 30.5):
+			status["status"].append(1)
+		else:
+			status["status"].append(0)
 	else:
-		status["status"].append(0)
+		if (temp != -1) and (temp < 37):
+			status["status"].append(1)
+		else:
+			status["status"].append(0)
 	return status
 
 def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:

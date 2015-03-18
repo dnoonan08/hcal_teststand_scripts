@@ -5,11 +5,11 @@ from subprocess import Popen, PIPE
 import ngccm
 
 # FUNCTIONS:
-def get_bridge_info(port, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
+def get_bridge_info(port, crate, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
 	data = {
-		"version_fw_major": ['get HF1-{0}-B_FIRMVERSION_MAJOR'.format(slot), 0],
-		"version_fw_minor": ['get HF1-{0}-B_FIRMVERSION_MINOR'.format(slot), 0],
-		"version_fw_svn": ['get HF1-{0}-B_FIRMVERSION_SVN'.format(slot), 0],
+		"version_fw_major": ['get HF{0}-{1}-B_FIRMVERSION_MAJOR'.format(crate, slot), 0],
+		"version_fw_minor": ['get HF{0}-{1}-B_FIRMVERSION_MINOR'.format(crate, slot), 0],
+		"version_fw_svn": ['get HF{0}-{1}-B_FIRMVERSION_SVN'.format(crate, slot), 0],
 	}
 	log = ""
 	raw_output = ngccm.send_commands(port, [data[info][0] for info in data.keys()])["output"]
@@ -35,12 +35,12 @@ def get_bridge_info(port, slot):		# Returns a dictionary of information about th
 		"log":			log.strip(),
 	}
 
-def get_igloo_info(port, slot):		# Returns a dictionary of information about the IGLOO2, such as the FW versions.
+def get_igloo_info(port, crate, slot):		# Returns a dictionary of information about the IGLOO2, such as the FW versions.
 	data = {
-		"version_fw_major_top": ['get HF1-{0}-iTop_FPGA_MAJOR_VERSION'.format(slot), 0],
-		"version_fw_minor_top": ['get HF1-{0}-iTop_FPGA_MINOR_VERSION'.format(slot), 0],
-		"version_fw_major_bot": ['get HF1-{0}-iBot_FPGA_MAJOR_VERSION'.format(slot), 0],
-		"version_fw_minor_bot": ['get HF1-{0}-iBot_FPGA_MINOR_VERSION'.format(slot), 0],
+		"version_fw_major_top": ['get HF{0}-{1}-iTop_FPGA_MAJOR_VERSION'.format(crate, slot), 0],
+		"version_fw_minor_top": ['get HF{0}-{1}-iTop_FPGA_MINOR_VERSION'.format(crate, slot), 0],
+		"version_fw_major_bot": ['get HF{0}-{1}-iBot_FPGA_MAJOR_VERSION'.format(crate, slot), 0],
+		"version_fw_minor_bot": ['get HF{0}-{1}-iBot_FPGA_MINOR_VERSION'.format(crate, slot), 0],
 	}
 	log = ""
 	raw_output = ngccm.send_commands(port, [data[info][0] for info in data.keys()])["output"]
@@ -69,33 +69,34 @@ def get_igloo_info(port, slot):		# Returns a dictionary of information about the
 		"log":			log.strip(),
 	}
 
-def get_info(port, slot):
+def get_info(port, crate, slot):
 	return{
-		"bridge": get_bridge_info(port, slot),
-		"igloo": get_igloo_info(port, slot),
+		"bridge": get_bridge_info(port, crate, slot),
+		"igloo": get_igloo_info(port, crate, slot),
 	}
 
 def get_status(ts):		# Perform basic checks of the QIE cards:
 	status = {}
 	status["status"] = []
 	# Check Bridge FPGA and IGLOO2 version are accessible:
-	for slot in ts.qie_slots:
-		qie_info = get_info(ts.ngccm_port, slot)
-		if (qie_info["bridge"]["version_fw"] != "00.00.0000"):
-			status["status"].append(1)
-		else:
-			status["status"].append(0)
-		if (qie_info["igloo"]["version_fw_top"] != "00.00"):
-			status["status"].append(1)
-		else:
-			status["status"].append(0)
-		if (qie_info["igloo"]["version_fw_bot"] != "00.00"):
-			status["status"].append(1)
-		else:
-			status["status"].append(0)
+	for crate, slots in ts.fe:
+		for slot in slots:
+			qie_info = get_info(ts.ngccm_port, crate, slot)
+			if (qie_info["bridge"]["version_fw"] != "00.00.0000"):
+				status["status"].append(1)
+			else:
+				status["status"].append(0)
+			if (qie_info["igloo"]["version_fw_top"] != "00.00"):
+				status["status"].append(1)
+			else:
+				status["status"].append(0)
+			if (qie_info["igloo"]["version_fw_bot"] != "00.00"):
+				status["status"].append(1)
+			else:
+				status["status"].append(0)
 	return status
 
-def set_ped(port, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
+def set_ped(port, crate, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
 	assert isinstance(n, int)
 	if abs(n) > 31:
 		print ">> ERROR: You must enter a decimal integer between -31 and 31. The pedestals have not been changed."
@@ -105,7 +106,7 @@ def set_ped(port, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
 		else:
 			n = n + 32
 		n_str = "{0:#04x}".format(n)		# The "#" prints the "0x". The number of digits to pad with 0s must include these "0x", hence "4" instead of "2".
-		commands = ["put HF1-{0}-QIE{1}_PedestalDAC {2}".format(slot, i, n_str)]
+		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i, n_str)]
 		raw_output = ngccm.send_commands(port, commands)["output"]
 		# Maybe I should include something here to make sure the command didn't return an error? Return 1 if not...
 
@@ -120,7 +121,7 @@ def set_ped_all(port, slot, n):		# n is the decimal representation of the pedest
 		else:
 			n = n + 32
 		n_str = "{0:#04x}".format(n)		# The "#" prints the "0x". The number of digits to pad with 0s must include these "0x", hence "4" instead of "2".
-		commands = ["put HF1-{0}-QIE{1}_PedestalDAC {2}".format(slot, i+1, n_str) for i in range(24)]
+		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i+1, n_str) for i in range(24)]
 		raw_output = ngccm.send_commands_fast(port, commands)["output"]
 		# I should include something here to make sure the command didn't return an error? Return 1 if not...
 # /FUNCTIONS
