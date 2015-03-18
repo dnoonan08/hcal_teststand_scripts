@@ -139,7 +139,7 @@ class teststand:
 		data["amc13"] = amc13.get_info("amc13_{0}_config.xml".format(self.name))
 		data["glib"] = glib.get_info(self.ngccm_port)
 		data["uhtr"] = []
-		for ip in self.uhtr_ips
+		for ip in self.uhtr_ips:
 			data["uhtr"].append(uhtr.get_info(ip))
 		data["ngccm"] = []
 		data["qie"] = []
