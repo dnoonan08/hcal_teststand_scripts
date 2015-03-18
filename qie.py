@@ -79,7 +79,7 @@ def get_status(ts):		# Perform basic checks of the QIE cards:
 	status = {}
 	status["status"] = []
 	# Check Bridge FPGA and IGLOO2 version are accessible:
-	for crate, slots in ts.fe:
+	for crate, slots in ts.fe.iteritems():
 		for slot in slots:
 			qie_info = get_info(ts.ngccm_port, crate, slot)
 			if (qie_info["bridge"]["version_fw"] != "00.00.0000"):

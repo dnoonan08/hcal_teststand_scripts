@@ -143,7 +143,7 @@ class teststand:
 			data["uhtr"].append(uhtr.get_info(ip))
 		data["ngccm"] = []
 		data["qie"] = []
-		for crate, slots in self.fe:
+		for crate, slots in self.fe.iteritems():
 			data["ngccm"].append(ngccm.get_info(self.ngccm_port, crate))
 			for slot in slots:
 				data["qie"].append(qie.get_info(self.ngccm_port, crate, slot))
