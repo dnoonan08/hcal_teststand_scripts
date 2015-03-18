@@ -48,9 +48,18 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 	status["bkp"] = ngccm.get_status_bkp(ts)
 	status["ngccm"] = ngccm.get_status(ts)
 	status["qie"] = qie.get_status(ts)
+	st = []
+	for component in ["amc13", "glib", "mch", "uhtr", "bkp", "ngccm", "qie"]:
+#		print component
+		st_temp = 1
+		for s in status[component]["status"]:
+			if s != 1:
+				st_temp = 0
+		st.append(st_temp)
 	return {
+		"status", st,
 		"info": status,
-		"log": log
+		"log": log,
 	}
 
 def parse_ts_configuration(f):		# This function is used to parse the "teststands.txt" configuration file. It is run by the "teststand" class; usually you want to use that instead of running this yourself.
@@ -116,7 +125,7 @@ class teststand:
 			try:
 				# Exctract teststand info from the teststand configuration file:
 				ts_info = parse_ts_configuration(f)[self.name]
-				print ts_info
+#				print ts_info
 				for key, value in ts_info.iteritems():
 					setattr(self, key, value)
 				# Assign a few other calculable attributes:
@@ -154,28 +163,7 @@ class teststand:
 			temps.append(get_temp(crate, self.ngccm_port)["temp"])		# See the "get_temp" funtion above.
 		return temps
 	def get_status(self):		# Sets up and checks that the teststand is working.
-		result = get_ts_status(self)
-		status = result["info"]
-		log = result["log"]
-		st = []
-		print "Status result: {0}".format(status)
-		for component in ["amc13", "glib", "mch", "uhtr", "bkp", "ngccm"]:		# * Add qie
-#			print component
-			st_temp = 1
-			for s in status[component]["status"]:
-				if s != 1:
-					st_temp = 0
-			st.append(st_temp)
-#		print log
-		print "Teststand status ({0}):".format(self.name)
-		if sum(st) == len(st):
-			print "GOOD"
-		else:
-			print "BAD"
-			print "========== LOG ================================================="
-			print log
-			print "========== /LOG ================================================"
-		return st
+		return get_ts_status(self)
 	def set_ped_all(self, n):
 		for crate, slots in self.fe:
 			for slot in slots:
