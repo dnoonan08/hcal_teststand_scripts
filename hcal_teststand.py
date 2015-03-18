@@ -138,9 +138,15 @@ class teststand:
 		data = {}
 		data["amc13"] = amc13.get_info("amc13_{0}_config.xml".format(self.name))
 		data["glib"] = glib.get_info(self.ngccm_port)
-		data["uhtr"] = uhtr.get_info(self.uhtr_ips[0])
-		data["ngccm"] = ngccm.get_info(self.ngccm_port, self.fe_crates[0])
-		data["qie"] = qie.get_info(self.ngccm_port, self.qie_slots[0])
+		data["uhtr"] = []
+		for ip in self.uhtr_ips
+			data["uhtr"].append(uhtr.get_info(ip))
+		data["ngccm"] = []
+		data["qie"] = []
+		for crate, slots in self.fe:
+			data["ngccm"].append(ngccm.get_info(self.ngccm_port, crate))
+			for slot in slots:
+				data["qie"].append(qie.get_info(self.ngccm_port, crate, slot))
 		return data
 	def get_temps(self):		# Returns a list of various temperatures around the teststand.
 		temps = []
