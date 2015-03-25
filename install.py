@@ -5,13 +5,23 @@ def make_amc13_configs(f):
 	ts_info = parse_ts_configuration(f)
 	for name, info in ts_info.iteritems():
 		if info:
-			string = '''
-<?xml version="1.0" encoding="UTF-8"?>
-<connections>
-	<connection id="T1" uri="chtcp-2.0://localhost:10203?target={0}:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1_v0x4002.xml" />
-	<connection id="T2" uri="chtcp-2.0://localhost:10203?target={1}:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2_v0x21.xml" />
-</connections>
-			'''.format(info["amc13_ips"][0], info["amc13_ips"][1]).strip()
+			string = ""
+			if name == "904":		# A temporary kludge until I figure this out better.
+				string = '''
+	<?xml version="1.0" encoding="UTF-8"?>
+	<connections>
+		<connection id="T1" uri="chtcp-2.0://localhost:10203?target={0}:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1.xml" />
+		<connection id="T2" uri="chtcp-2.0://localhost:10203?target={1}:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2.xml" />
+	</connections>
+				'''.format(info["amc13_ips"][0], info["amc13_ips"][1]).strip()
+			else:
+				string = '''
+	<?xml version="1.0" encoding="UTF-8"?>
+	<connections>
+		<connection id="T1" uri="chtcp-2.0://localhost:10203?target={0}:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1_v0x4002.xml" />
+		<connection id="T2" uri="chtcp-2.0://localhost:10203?target={1}:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2_v0x21.xml" />
+	</connections>
+				'''.format(info["amc13_ips"][0], info["amc13_ips"][1]).strip()
 			try:
 				out = open("configuration/amc13_{0}_config.xml".format(name), "w")
 				out.write(string)

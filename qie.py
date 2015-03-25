@@ -3,6 +3,8 @@
 from re import search
 from subprocess import Popen, PIPE
 import ngccm
+from time import time, sleep
+from numpy import mean, std
 
 # FUNCTIONS:
 def get_bridge_info(port, crate, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
@@ -95,6 +97,73 @@ def get_status(ts):		# Perform basic checks of the QIE cards:
 			else:
 				status["status"].append(0)
 	return status
+
+def read_counter_qie_bridge(ts, crate, slot):
+	count = -1
+	cmd = "get HF{0}-{1}-B_RESQIECOUNTER".format(crate, slot)
+	raw_output = ngccm.send_commands(ts.ngccm_port, cmd)["output"]
+	match = search(cmd + " # ((0x)?[0-9a-f]+)", raw_output)
+	if match:
+		count = int(match.group(1),16)
+#	else:
+#		print "ERROR:"
+	return count
+
+def read_counter_qie_igloo(ts, crate, slot):
+	counts = [-1, -1]
+	cmds = [
+		"get HF{0}-{1}-iTop_RST_QIE_count".format(crate, slot),
+		"get HF{0}-{1}-iBot_RST_QIE_count".format(crate, slot),
+	]
+	raw_output = ngccm.send_commands(ts.ngccm_port, cmds)["output"]
+	for i in range(2):
+		match = search(cmds[i] + " # ((0x)?[0-9a-f]+)", raw_output)
+		if match:
+			counts[i] = int(match.group(1),16)
+	return counts
+
+def get_frequency_orbit(ts):
+	data = {
+		"bridge": [],
+		"igloo": [],
+	}
+	for crate, slots in ts.fe.iteritems():
+		for slot in slots:
+			for fpga in data.keys():
+				if fpga == "bridge":
+					c = []
+					t = []
+					for i in range(6):
+						c.append(read_counter_qie_bridge(ts, crate, slot))
+						t.append(time())
+						sleep(0.01)
+					f = []
+					for i in range(len(c)-1):
+						f.append((c[i+1]-c[i])/(t[i+1]-t[i]))
+					data[fpga].append({
+						"f_list":	f,
+						"f":	mean(f),
+						"f_e":	std(f)/(len(f)**0.5),
+					})
+				elif fpga == "igloo":
+					c = []
+					t = []
+					for i in range(6):
+						c.append(read_counter_qie_igloo(ts, crate, slot))
+						t.append([time(), time()])
+						sleep(0.01)
+					f = []
+					for j in range(2):
+						f_temp = []
+						for i in range(len(c)-1):
+							f_temp.append((c[i+1][j]-c[i][j])/(t[i+1][j]-t[i][j]))
+						f.append(f_temp)
+					data[fpga].append({
+						"f_list":	f,
+						"f":	[mean(f[0]), mean(f[1])],
+						"f_e":	[std(f[0])/(len(f[0])**0.5), std(f[1])/(len(f[1])**0.5)],
+					})
+	return data
 
 def set_ped(port, crate, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
 	assert isinstance(n, int)

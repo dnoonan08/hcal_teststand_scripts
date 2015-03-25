@@ -21,7 +21,7 @@ def send_commands(ip, cmds):		# Sends commands to "uHTRtool.exe" and returns the
 		"log": log,
 	}
 
-def get_info(ip):		# Returns a dictionary of information about the uHTR, such as the FW versions.
+def get_info_ip(ip):		# Returns a dictionary of information about the uHTR, such as the FW versions.
 	log = ""
 	data = {	# "HF-4800 (41) 00.0f.00" => FW = [00, 0f, 00], FW_type = [HF-4800, 41] (repeat for "back")
 		"version_fw_front": [0, 0, 0],
@@ -29,7 +29,6 @@ def get_info(ip):		# Returns a dictionary of information about the uHTR, such as
 		"version_fw_back": [0, 0, 0],
 		"version_fw_type_back": [0, 0],
 	}
-	log = ""
 	raw_output = send_commands(ip, ["0", "exit", "exit"])["output"]
 #	log += raw_output
 	match = search("Front Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
@@ -52,6 +51,7 @@ def get_info(ip):		# Returns a dictionary of information about the uHTR, such as
 	else:
 #		print "Match failed: front version."
 		log += '>> ERROR: Failed to find the back FW info.'
+	slot = int(ip.split(".")[-1])/4
 	return {
 		"version_fw_front": data["version_fw_front"],
 		"version_fw_type_front": data["version_fw_type_front"],
@@ -59,8 +59,20 @@ def get_info(ip):		# Returns a dictionary of information about the uHTR, such as
 		"version_fw_type_back": data["version_fw_type_back"],
 		"version_fw_front_str": "{0:03d}.{1:03d}.{2:03d}".format(data["version_fw_front"][0], data["version_fw_front"][1], data["version_fw_front"][2]),
 		"version_fw_back_str": "{0:03d}.{1:03d}.{2:03d}".format(data["version_fw_back"][0], data["version_fw_back"][1], data["version_fw_back"][2]),
+		"slot": slot,
 		"log": log.strip(),
 	}
+
+def get_info(ip_or_ts):		# A get_info function that accepts either an IP address or a teststand object.
+	if isinstance(ip_or_ts, str):
+		ip = ip_or_ts
+		return get_info_ip(ip)
+	else:
+		info = []
+		ts = ip_or_ts
+		for ip in ts.uhtr_ips:
+			info.append(get_info_ip(ip))
+		return info
 
 def get_status(ts):		# Perform basic checks with the uHTRTool.exe:
 	status = {}

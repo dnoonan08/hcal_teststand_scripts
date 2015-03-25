@@ -147,9 +147,7 @@ class teststand:
 		data = {}
 		data["amc13"] = amc13.get_info("amc13_{0}_config.xml".format(self.name))
 		data["glib"] = glib.get_info(self.ngccm_port)
-		data["uhtr"] = []
-		for ip in self.uhtr_ips:
-			data["uhtr"].append(uhtr.get_info(ip))
+		data["uhtr"] = uhtr.get_info(self)
 		data["ngccm"] = []
 		data["qie"] = []
 		for crate, slots in self.fe.iteritems():

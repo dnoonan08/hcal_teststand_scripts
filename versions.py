@@ -35,13 +35,14 @@ def print_glib_info(ts):
 		print "\tFW version: {0}".format(glib_info["version_fw"])
 
 def print_uhtr_info(ts):
-	uhtr_info = uhtr.get_info(ts.uhtr_ips[0])
-	print "* uHTR   ================================="
-	print "\tFW version (front): {0}".format(uhtr_info["version_fw_front_str"])
-	print "\tFW type (front): {0} ({1})".format(uhtr_info["version_fw_type_front"][0], uhtr_info["version_fw_type_front"][1])
-	print "\tFW version (back): {0}".format(uhtr_info["version_fw_back_str"])
-	print "\tFW type (back): {0} ({1})".format(uhtr_info["version_fw_type_back"][0], uhtr_info["version_fw_type_back"][1])
-	print "\tSW version: ? (it's not currently possible to find out)"
+	uhtr_infos = uhtr.get_info(ts)
+	for uhtr_info in uhtr_infos:
+		print "* uHTR (Slot {0}) ============================".format(uhtr_info["slot"])
+		print "\tFW version (front): {0}".format(uhtr_info["version_fw_front_str"])
+		print "\tFW type (front): {0} ({1})".format(uhtr_info["version_fw_type_front"][0], uhtr_info["version_fw_type_front"][1])
+		print "\tFW version (back): {0}".format(uhtr_info["version_fw_back_str"])
+		print "\tFW type (back): {0} ({1})".format(uhtr_info["version_fw_type_back"][0], uhtr_info["version_fw_type_back"][1])
+		print "\tSW version: ? (it's not currently possible to find out)"
 
 def print_ngccm_info(ts):
 	ngccm_info = ngccm.get_info(ts.ngccm_port, ts.fe_crates[0])
@@ -53,24 +54,47 @@ def print_ngccm_info(ts):
 		print "\tFW version (mezzanine): {0}".format(ngccm_info["version_fw_mez"])
 		print "\tSW version: {0}".format(ngccm_info["version_sw"])
 
-def print_bridge_info(ts):
-	bridge_info = qie.get_bridge_info(ts.ngccm_port, ts.qie_slots[0])
-	print "* BRIDGE ================================="
+def print_bridge_info(ts, crate, slot):
+	bridge_info = qie.get_bridge_info(ts.ngccm_port, crate, slot)
+	print "* BRIDGE (Crate {0}, Slot {1}) ===============".format(crate, slot)
 	if (bridge_info["version_fw"] == "00.00.0000"):
 		print "\tERROR: There was a problem fetching the BRIDGE information."
 		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(bridge_info["log"])
 	else:
 		print "\tFW version: {0}".format(bridge_info["version_fw"])
 
-def print_igloo_info(ts):
-	igloo_info = qie.get_igloo_info(ts.ngccm_port, ts.qie_slots[0])
-	print "* IGLOO  ================================="
+def print_igloo_info(ts, crate, slot):
+	igloo_info = qie.get_igloo_info(ts.ngccm_port, crate, slot)
+	print "* IGLOO  (Crate {0}, Slot {1}) ===============".format(crate, slot)
 	if (igloo_info["version_fw_top"] == "00.00"):
 		print "\tERROR: There was a problem fetching the IGLOO information."
 		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(igloo_info["log"])
 	else:
 		print "\tFW version (top): {0}".format(igloo_info["version_fw_top"])
 		print "\tFW version (bottom): {0}".format(igloo_info["version_fw_bot"])
+
+def print_qie_info_1(ts, crate, slot):
+	qie_info = qie.get_info(ts.ngccm_port, crate, slot)
+	igloo_info = qie_info["igloo"]
+	bridge_info = qie_info["bridge"]
+	print "* QIE (Crate {0}, Slot {1}) ===============".format(crate, slot)
+	if (igloo_info["version_fw_top"] == "00.00"):
+		print "\tERROR: There was a problem fetching the IGLOO information."
+#		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(igloo_info["log"])
+	else:
+		print "\tIGLOO2 FW version (top): {0}".format(igloo_info["version_fw_top"])
+		print "\tIGLOO2 FW version (bottom): {0}".format(igloo_info["version_fw_bot"])
+	if (bridge_info["version_fw"] == "00.00.0000"):
+		print "\tERROR: There was a problem fetching the BRIDGE information."
+#		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(bridge_info["log"])
+	else:
+		print "\tBRIDGE FW version: {0}".format(bridge_info["version_fw"])
+
+def print_qie_info(ts):
+	for crate, slots in ts.fe.iteritems():
+		for slot in slots:
+			print_qie_info_1(ts, crate, slot)
+
 
 if __name__ == "__main__":
 	name = ""
@@ -86,5 +110,6 @@ if __name__ == "__main__":
 	print_glib_info(ts)
 	print_uhtr_info(ts)
 	print_ngccm_info(ts)
-	print_bridge_info(ts)
-	print_igloo_info(ts)
+	print_qie_info(ts)
+##	print_bridge_info(ts, 1, 2)
+##	print_igloo_info(ts, 1, 2)
