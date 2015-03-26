@@ -80,9 +80,14 @@ def get_info(port, crate, slot):
 def get_status(ts):		# Perform basic checks of the QIE cards:
 	status = {}
 	status["status"] = []
-	# Check Bridge FPGA and IGLOO2 version are accessible:
+	status["orbit"] = []
+	f_orbit = get_frequency_orbit(ts)
+	# Loop over all QIE cards:
+	i_qie = -1
 	for crate, slots in ts.fe.iteritems():
 		for slot in slots:
+			i_qie += 1
+			# Check Bridge FPGA and IGLOO2 version are accessible:
 			qie_info = get_info(ts.ngccm_port, crate, slot)
 			if (qie_info["bridge"]["version_fw"] != "00.00.0000"):
 				status["status"].append(1)
@@ -96,36 +101,66 @@ def get_status(ts):		# Perform basic checks of the QIE cards:
 				status["status"].append(1)
 			else:
 				status["status"].append(0)
+			# Check QIE resets in the BRIDGE (1) and the IGLOO2s (2):
+			orbit_temp = []
+			f_orbit_bridge = f_orbit["bridge"][i_qie]
+			f_orbit_igloo = f_orbit["igloo"][i_qie]
+			## (1) Check the BRIDGE:
+			if (f_orbit_bridge["f"] < 13000 and f_orbit_bridge["f"] > 10000 and f_orbit_bridge["f_e"] < 500):
+				status["status"].append(1)
+			else:
+				status["status"].append(0)
+			orbit_temp.append([f_orbit_bridge["f"], f_orbit_bridge["f_e"]])
+			## (2) Check the IGLOO2s:
+			for i in range(2):
+				if (f_orbit_igloo["f"][i] < 13000 and f_orbit_igloo["f"][i] > 10000 and f_orbit_igloo["f_e"][i] < 600):
+					status["status"].append(1)
+				else:
+					status["status"].append(0)
+				orbit_temp.append([f_orbit_igloo["f"][i], f_orbit_igloo["f_e"][i]])
+			status["orbit"].append(orbit_temp)
 	return status
 
 def read_counter_qie_bridge(ts, crate, slot):
+	log = ""
 	count = -1
 	cmd = "get HF{0}-{1}-B_RESQIECOUNTER".format(crate, slot)
-	raw_output = ngccm.send_commands(ts.ngccm_port, cmd)["output"]
-	match = search(cmd + " # ((0x)?[0-9a-f]+)", raw_output)
-	if match:
-		count = int(match.group(1),16)
-#	else:
-#		print "ERROR:"
-	return count
-
+	output = ngccm.send_commands_parsed(ts.ngccm_port, cmd)["output"]
+	try:
+		count = int(output[0]["result"], 16)
+	except Exception as ex:
+		log += output[0]["cmd"] + " -> " + output[0]["result"] + "\n"
+	return {
+		"count": count,
+		"log": log,
+	}
 def read_counter_qie_igloo(ts, crate, slot):
+	log = ""
 	counts = [-1, -1]
+	times = [-1, -1]
 	cmds = [
 		"get HF{0}-{1}-iTop_RST_QIE_count".format(crate, slot),
 		"get HF{0}-{1}-iBot_RST_QIE_count".format(crate, slot),
 	]
-	raw_output = ngccm.send_commands(ts.ngccm_port, cmds)["output"]
+	result = ngccm.send_commands_parsed(ts.ngccm_port, cmds)
+	output = result["output"]
 	for i in range(2):
-		match = search(cmds[i] + " # ((0x)?[0-9a-f]+)", raw_output)
-		if match:
-			counts[i] = int(match.group(1),16)
-	return counts
+		try:
+			counts[i] = int(output[i]["result"], 16)
+			times[i] = output[i]["times"][0]
+		except Exception as ex:
+			log += output[i][0] + " -> " + output[i][1] + "\n" + ex + "\n"
+	return {
+		"counts": counts,
+		"times": times,
+		"log": log,
+	}
 
 def get_frequency_orbit(ts):
 	data = {
 		"bridge": [],
 		"igloo": [],
+		"log": "",
 	}
 	for crate, slots in ts.fe.iteritems():
 		for slot in slots:
@@ -134,9 +169,11 @@ def get_frequency_orbit(ts):
 					c = []
 					t = []
 					for i in range(6):
-						c.append(read_counter_qie_bridge(ts, crate, slot))
+						result = read_counter_qie_bridge(ts, crate, slot)
+						data["log"] += result["log"]
+						c.append(result["count"])
 						t.append(time())
-						sleep(0.01)
+#						sleep(0.01)
 					f = []
 					for i in range(len(c)-1):
 						f.append((c[i+1]-c[i])/(t[i+1]-t[i]))
@@ -149,9 +186,11 @@ def get_frequency_orbit(ts):
 					c = []
 					t = []
 					for i in range(6):
-						c.append(read_counter_qie_igloo(ts, crate, slot))
-						t.append([time(), time()])
-						sleep(0.01)
+						result = read_counter_qie_igloo(ts, crate, slot)
+						data["log"] += result["log"]
+						c.append(result["counts"])
+						t.append([result["times"][0], result["times"][1]])
+#						sleep(0.01)
 					f = []
 					for j in range(2):
 						f_temp = []

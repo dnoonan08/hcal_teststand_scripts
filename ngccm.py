@@ -2,6 +2,8 @@
 
 from re import search
 from subprocess import Popen, PIPE
+import pexpect
+from time import time, sleep
 
 # FUNCTIONS:
 def send_commands(port, cmds):		# Executes ngccm commands in the slowest way, in order to read all of the output.
@@ -9,14 +11,49 @@ def send_commands(port, cmds):		# Executes ngccm commands in the slowest way, in
 	raw_output = ""
 	if isinstance(cmds, str):
 		cmds = [cmds]
+	if "quit" not in cmds:
+		cmds.append("quit")
+	p = pexpect.spawn('ngccm -z -c -p {0}'.format(port))
 	log += "----------------------------\nYou ran the following script with the ngccm tool:\n"
 	for c in cmds:
-		log += c + "\nquit\n"
-		raw_output_temp = Popen(['printf "{0}" | ngccm -z -c -p {1}'.format(c + "\nquit", port)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
-		raw_output += raw_output_temp[0] + raw_output_temp[1]
+#		print ">> {0}".format(c)
+		p.sendline(c)
+		if c != "quit":
+			p.expect("{0} # .*\n".format(c))
+			raw_output += p.before + p.after
+		log += c + "\n"
+	log += "----------------------------\n"
+	p.expect(pexpect.EOF)
+	raw_output += p.before
+	return {
+		"output": raw_output.strip(),
+		"log": log.strip(),
+	}
+	
+def send_commands_parsed(port, cmds):		# This executes commands as above, but returns the parsed responses in a list of pairs.
+	log = ""
+	output = []
+	if isinstance(cmds, str):
+		cmds = [cmds]
+	if "quit" not in cmds:
+		cmds.append("quit")
+	p = pexpect.spawn('ngccm -z -c -p {0}'.format(port))
+	log += "----------------------------\nYou ran the following script with the ngccm tool:\n"
+	for c in cmds:
+		p.sendline(c)
+		t0 = time()
+		if c != "quit":
+			p.expect("{0} # (.*)\n".format(c))
+			t1 = time()
+			output.append({
+				"cmd": c,
+				"result": p.match.group(1).strip(),
+				"times": [t0, t1],
+			})
+		log += c + "\n"
 	log += "----------------------------\n"
 	return {
-		"output": raw_output,
+		"output": output,
 		"log": log.strip(),
 	}
 
@@ -30,7 +67,8 @@ def send_commands_fast(port, cmds):		# This executes ngccm commands in a fast wa
 		cmds_str += "{0}\n".format(c)
 	cmds_str += "quit\n"
 	log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
-	raw_output_temp = Popen(['printf "{0}" | ngccm -z -c -p {1}'.format(cmds_str, port)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
+	p = Popen(['printf "{0}" | ngccm -z -c -p {1}'.format(cmds_str, port)], shell = True, stdout = PIPE, stderr = PIPE)
+	raw_output_temp = p.communicate()		# This puts the output of the commands into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
 	raw_output += raw_output_temp[0] + raw_output_temp[1]
 	return {
 		"output": raw_output,

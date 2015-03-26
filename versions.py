@@ -37,7 +37,7 @@ def print_glib_info(ts):
 def print_uhtr_info(ts):
 	uhtr_infos = uhtr.get_info(ts)
 	for uhtr_info in uhtr_infos:
-		print "* uHTR (Slot {0}) ============================".format(uhtr_info["slot"])
+		print "* uHTR (Slot {0:02d}) =========================".format(uhtr_info["slot"])
 		print "\tFW version (front): {0}".format(uhtr_info["version_fw_front_str"])
 		print "\tFW type (front): {0} ({1})".format(uhtr_info["version_fw_type_front"][0], uhtr_info["version_fw_type_front"][1])
 		print "\tFW version (back): {0}".format(uhtr_info["version_fw_back_str"])
@@ -77,7 +77,7 @@ def print_qie_info_1(ts, crate, slot):
 	qie_info = qie.get_info(ts.ngccm_port, crate, slot)
 	igloo_info = qie_info["igloo"]
 	bridge_info = qie_info["bridge"]
-	print "* QIE (Crate {0}, Slot {1}) ===============".format(crate, slot)
+	print "* QIE (Crate {0}, Slot {1:02d}) =================".format(crate, slot)
 	if (igloo_info["version_fw_top"] == "00.00"):
 		print "\tERROR: There was a problem fetching the IGLOO information."
 #		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(igloo_info["log"])
