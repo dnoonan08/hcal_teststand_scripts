@@ -3,7 +3,98 @@
 from re import search
 from subprocess import Popen, PIPE
 
+################################################
+# container specifying all of the relevant information
+# about the qie that one would need to know about
+# a given link 
+################################################	
+class link : 
+
+	qie_half_label = [ 'bottom' , 'top' ]
+	qie_uniqueID = ""
+	qie_half     = -1 # see qie_half_label
+	qie_fiber    = -1 # either 0,1,2
+	on           = False
+
+	def set_link( self , qie_uniqueID_ , qie_half_label_ , qie_fiber_ , on_):
+
+		self.qie_uniqueID = qie_uniqueID_
+		self.qie_fiber    = qie_fiber_
+		self.on           = on_
+
+		if qie_half_label_ in self.qie_half_label : 
+			self.qie_half = self.qie_half_label.index( qie_half_label_ )
+		else :
+			self.qie_fiber = -1
+			print "ERROR: qie_half_label",qie_half_label_,"not known - should be either top or bottom"
+
+	def Print( self ) :
+		print "unique ID:",self.qie_uniqueID
+		print "board half:",self.qie_half
+		print "fiber:",self.qie_fiber
+		print "on?",(self.on==1)
+
+	def __init__( self , qie_uniqueID_ = "" , qie_half_label_ = 'bottom' , qie_fiber_ = 0 , on_ = False ):
+		
+		self.set_link( qie_uniqueID_ , qie_half_label_ , qie_fiber_ , on_ )
+
+
+################################################
+# container to hold QIE mapping for all
+# of the links of a given uHTR
+# ... eventually, I would like this to 
+# read and write xml files so that a snap shot 
+# of the cable mapping can be saved 
+################################################	
+class uHTRlinkMap : 
+	
+	links = []
+
+	def __init__( self ):
+		
+		for i in range(96):
+			self.links.append( link() )
+
 # FUNCTIONS:
+
+def map_links(ip , outputFile="test.xml") : # looks at the spy dumps of all of the active channels and parses out the QIE card's unique ID and fiber information corresponding
+	                         # to the target qie channels
+
+	activeLinks = get_links(ip)
+	uhtr_map = uHTRlinkMap()
+
+	for link_ in uhtr_map.links : 
+		if uhtr_map.links.index(link_) in activeLinks : 
+			#print "link",uhtr_map.links.index(link_),"on..."
+			link_.on = True
+			# grab spy dump and parse information about this link
+			uhtr_read = get_data( ip , 3 , uhtr_map.links.index(link_) )
+			data= [""]*6
+			for line in uhtr_read["output"].split("\n"):
+				#print line
+				if line.find("TOP fiber") != -1 : 
+					#print line.split(" ")[5]
+					data[0] = line.split(" ")[5][1:5]
+					link_.qie_half=1
+					link_.qie_fiber = int(line.split(" ")[9])
+				if line.find("BOTTOM fiber") != -1 : 
+					#print line.split(" ")[5]
+					data[0] = line.split(" ")[5][1:5]
+					link_.qie_half=0
+					link_.qie_fiber = int(line.split(" ")[9])
+				if line.find("CAPIDS") != -1 :
+					data[1] = line.split(" ")[5][1:5]
+				if line.find("ADCs") != -1 :
+					data[2] = line.split(" ")[5][1:5]
+				if line.find("LE-TDC") != -1 :
+					data[3] = line.split(" ")[5][1:5]
+				if line.find("TE-TDC") != -1 :
+					data[4] = line.split(" ")[5][1:5]
+				link_.qie_uniqueID = "0x{0}{1}{2}{3} 0x{4}{5}{6}{7}".format(data[2][0:2],data[2][2:4],data[1][0:2],data[1][2:4],data[4][0:2],data[4][2:4],data[3][0:2],data[3][2:4])
+			#link_.Print()
+
+	return uhtr_map
+
 def send_commands(ip, cmds):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a IP address and a list of commands.
 	log = ""
 	raw_output = ""
@@ -129,7 +220,7 @@ def get_links(ip):		# Initializes and then returns a list of the active links of
 		'0',
 		'link',
 		'init',
-		'0',
+		'1',
 		'32',
 		'status',
 		'quit',
@@ -141,13 +232,42 @@ def get_links(ip):		# Initializes and then returns a list of the active links of
 	log += uhtr_out["log"]
 	return parse_links(raw_output)
 
-def get_data(ip, n, ch):
+# calls the uHTRs histogramming functionality
+# ip - ip address of the uHTR (e.g. teststand("904").uhtr_ips[0])
+# n  - number of orbits to integrate over
+# sepCapID - whether to distinguish between different cap IDs
+# (currently I think this means you can only read out range 0)
+# fileName - output file name
+def get_histo(ip , n , sepCapID , fileName ): 
+
 	log = ""
 	commands = [
 		'0',
 		'link',
-		'init',
+		'histo',
+		'integrate',
+		'{0}'.format(n), # number of orbit to integrate over
+		'{0}'.format(sepCapID),
+		'{0}'.format(fileName),
 		'0',
+		'quit',
+		'quit',
+		'exit',
+		'exit'
+		]
+
+	log = send_commands(ip,commands)["log"]
+	# ... seems that send_commands returns a 
+	# dictionary which contains all of the outputs
+
+def get_data(ip, n, ch):
+	log = ""
+
+	commands = [
+		'0',
+		'link',
+		'init',
+		'1',
 		'32',
 		'status',
 		'spy',
@@ -159,6 +279,7 @@ def get_data(ip, n, ch):
 		'exit',
 		'exit',
 	]
+
 	uhtr_out = send_commands(ip, commands)
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]

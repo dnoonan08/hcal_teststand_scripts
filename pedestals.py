@@ -1,5 +1,6 @@
 from hcal_teststand import *
 import uhtr
+import ngccm
 import numpy
 import sys
 import qie
@@ -54,26 +55,23 @@ if __name__ == "__main__":
 		name = "bhm"
 	ts = teststand(name)
 
-	# This part prints out a channel map:
-#	channels = get_channel_map(ip_uhtr, crate_port)
-##	print channels
-#	bad = []
-#	for ch in channels:
-#		if ch["link"] == -1:
-#			bad.append([ch["number"], ch["targets"]])
-#			print "QIE{0} is messed up: {1}.".format(ch["number"], ch["targets"])
-#		else:
-#			print "QIE{0} maps to Link {1}, Sublink {2}.".format(ch["number"], ch["link"], ch["sublink"])
-	
-	# This part reads in 100 BXs of data:
-#	qie.set_ped_all(ts.ngccm_port, ts.qie_slots[0], 6)
+	# set unique ID on the FPGA for link mapping
+	ngccm.link_test_modeB(ts,1,2,True)
+	ngccmLog = ngccm.set_unique_id(ts,1,2)
+	uhtr_map = uhtr.map_links(ts.uhtr_ips[0])
+
+	# make sure that the FPGA is in normal readout mode
+	ngccm.link_test_modeB(ts,1,2,False)
+
 	ts.set_ped_all(6)
 #	set_ped(crate_port, 3, 31)
 	links = uhtr.get_links(ts.uhtr_ips[0])
 	print "The activated links are {0}.".format(links)
-	for link in links:
-		print "==== Link {0} ====".format(link)
-		uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 300, link)
+	for link_ in uhtr_map.links :
+		if not link_.on : continue
+		print "==== Link {0} ====".format( uhtr_map.links.index(link_) )
+		link_.Print()
+		uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 300, uhtr_map.links.index(link_) )
 		data = uhtr.parse_data(uhtr_read["output"])
 #		print data["adc"]
 		print "Read in {0} bunch crossings.".format(len(data["adc"]))

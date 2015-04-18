@@ -148,7 +148,32 @@ def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:
 	return status
 # /FUNCTIONS
 
+def link_test_modeB(ts,crate,slot,yesNo): # if yesNo -> enable test mode B: puts qie card unique ID into data stream
 
+	if yesNo :
+		return send_commands(ts.ngccm_port , ["put HF{0}-{1}-iTop_LinkTestMode 0x7".format(crate,slot),"put HF{0}-{1}-iBot_LinkTestMode 0x7".format(crate,slot)] ) 
+	else :
+		return send_commands(ts.ngccm_port , ["put HF{0}-{1}-iTop_LinkTestMode 0x0".format(crate,slot),"put HF{0}-{1}-iBot_LinkTestMode 0x0".format(crate,slot)] ) 
+
+def link_test_mode(ts,crate,slot,yesNo): # if yesNo -> enable test mode 
+
+	if yesNo :
+		return send_commands(ts.ngccm_port , ["put HF{0}-{1}-iTop_LinkTestMode 0x1".format(crate,slot),"put HF{0}-{1}-iBot_LinkTestMode 0x1".format(crate,slot)] ) 
+	else :
+		return send_commands(ts.ngccm_port , ["put HF{0}-{1}-iTop_LinkTestMode 0x0".format(crate,slot),"put HF{0}-{1}-iBot_LinkTestMode 0x0".format(crate,slot)] ) 
+
+def set_unique_id(ts,crate,slot):  # grabs uniue ID from QIE card and saves it to igloo register
+
+	log = send_commands(ts.ngccm_port , ["get HF{0}-{1}-UniqueID".format(crate,slot)])
+	output = ""
+	for line in log["output"].split("\n") :
+		if line.find("get HF1-2-UniqueID # '1") != -1 : 
+			output = line.split("'")
+			break
+	
+	uniqueID = output[1].split()[1:3]	
+	return send_commands(ts.ngccm_port , ["put HF{0}-{1}-iTop_UniqueID {2} {3}".format(crate,slot,uniqueID[0],uniqueID[1]),"put HF{0}-{1}-iBot_UniqueID {2} {3}".format(crate,slot,uniqueID[0],uniqueID[1])])
+		
 if __name__ == "__main__":
 	print "Hang on."
 	print 'What you just ran is "ngccm.py". This is a module, not a script. See the documentation ("readme.md") for more information.'
