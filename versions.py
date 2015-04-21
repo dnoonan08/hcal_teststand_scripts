@@ -67,10 +67,14 @@ def print_igloo_info(ts, crate, slot):
 	igloo_info = qie.get_igloo_info(ts.ngccm_port, crate, slot)
 	print "* IGLOO  (Crate {0}, Slot {1}) ===============".format(crate, slot)
 	if (igloo_info["version_fw_top"] == "00.00"):
-		print "\tERROR: There was a problem fetching the IGLOO information."
+		print "\tERROR: There was a problem fetching the IGLOO's top FPGA information."
 		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(igloo_info["log"])
 	else:
 		print "\tFW version (top): {0}".format(igloo_info["version_fw_top"])
+	if (igloo_info["version_fw_bot"] == "00.00"):
+		print "\tERROR: There was a problem fetching the IGLOO's bottom FPGA information."
+		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(igloo_info["log"])
+	else:
 		print "\tFW version (bottom): {0}".format(igloo_info["version_fw_bot"])
 
 def print_qie_info_1(ts, crate, slot):
@@ -79,10 +83,14 @@ def print_qie_info_1(ts, crate, slot):
 	bridge_info = qie_info["bridge"]
 	print "* QIE (Crate {0}, Slot {1:02d}) =================".format(crate, slot)
 	if (igloo_info["version_fw_top"] == "00.00"):
-		print "\tERROR: There was a problem fetching the IGLOO information."
+		print "\tERROR: There was a problem fetching the IGLOO's top FPGA information."
 #		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(igloo_info["log"])
 	else:
 		print "\tIGLOO2 FW version (top): {0}".format(igloo_info["version_fw_top"])
+	if (igloo_info["version_fw_bot"] == "00.00"):
+		print "\tERROR: There was a problem fetching the IGLOO's bottom FPGA information."
+#		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(igloo_info["log"])
+	else:
 		print "\tIGLOO2 FW version (bottom): {0}".format(igloo_info["version_fw_bot"])
 	if (bridge_info["version_fw"] == "00.00.0000"):
 		print "\tERROR: There was a problem fetching the BRIDGE information."
@@ -112,4 +120,4 @@ if __name__ == "__main__":
 	print_ngccm_info(ts)
 	print_qie_info(ts)
 ##	print_bridge_info(ts, 1, 2)
-##	print_igloo_info(ts, 1, 2)
+##	print_igloo_info(ts, 1, 1)

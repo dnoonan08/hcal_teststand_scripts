@@ -39,19 +39,19 @@ def get_info(f):		# Returns a dictionary of information about the AMC13, such as
 	if match:
 		version_sw = int(match.group(1))
 	else:
-		log += ">> ERROR: Could not find the SW version."
+		log += ">> ERROR: Could not find the SW version.\n"
 	match = search("SN:\s+(\d+)\s+T1v:\s+(\d+)\s+T2v:\s+(\d+)", raw_output)
 	if match:
 		sn = int(match.group(1))
 		version_fw.append(int(match.group(2)))
 		version_fw.append(int(match.group(3)))
 	else:
-		log += ">> ERROR: Could not find the SN or the FW version."
+		log += ">> ERROR: Could not find the SN or the FW version.\n"
 	return {
 		"sn":			sn,
 		"version_sw":	version_sw,
 		"version_fw":	version_fw,
-		"log":			log,
+		"log":			log.strip(),
 	}
 
 def get_status(ts):

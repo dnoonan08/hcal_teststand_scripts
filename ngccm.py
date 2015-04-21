@@ -19,7 +19,7 @@ def send_commands(port, cmds):		# Executes ngccm commands in the slowest way, in
 #		print ">> {0}".format(c)
 		p.sendline(c)
 		if c != "quit":
-			p.expect("{0} # .*\n".format(c))
+			p.expect("{0} #\s?.*\n".format(c))
 			raw_output += p.before + p.after
 		log += c + "\n"
 	log += "----------------------------\n"
@@ -43,7 +43,7 @@ def send_commands_parsed(port, cmds):		# This executes commands as above, but re
 		p.sendline(c)
 		t0 = time()
 		if c != "quit":
-			p.expect("{0} # (.*)\n".format(c))
+			p.expect("{0} #\s?(.*)\n".format(c))
 			t1 = time()
 			output.append({
 				"cmd": c,

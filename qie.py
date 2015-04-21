@@ -52,7 +52,7 @@ def get_igloo_info(port, crate, slot):		# Returns a dictionary of information ab
 			data[info][1] = int(match.group(1), 16)
 		else:
 			log += '>> ERROR: Failed to find the result of "{0}". The data string follows:\n'.format(data[info][0])
-			match = search("\n({0}.*)\n".format(data[info][0]), raw_output)
+			match = search("\n({0} #.*)\n".format(data[info][0]), raw_output)
 			if match:
 				log += '{0}\n'.format(match.group(0).strip())
 			else:
@@ -233,15 +233,15 @@ def set_ped_all(port, crate, slot, n):		# n is the decimal representation of the
 		raw_output = ngccm.send_commands_fast(port, commands)["output"]
 		# I should include something here to make sure the command didn't return an error? Return 1 if not...
 
-def make_adc_to_q_conversion():
-	srs = [
+def make_adc_to_q_conversion():		# This function generates a list of charge values (in fC) indexed by ADC bin number.
+	srs = [		# Subrange information
 		range(0, 16),
 		range(16, 36),
 		range(36, 57),
 		range(57, 64)
 	]
-	overlap = 3
-	s_init = 3.1			# All other ideal sensitivities can be calculated from this using s = s_init * (8**r) * (2**sr).
+	overlap = 3		# The number of bins that overlap at range transitions.
+	s_init = 3.1		# All other ideal sensitivities can be calculated from this using s = s_init * (8**r) * (2**sr).
 	s = 0
 	s_sr_min = 0
 #	p = -16

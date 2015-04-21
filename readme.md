@@ -3,16 +3,16 @@ This is a collection of scripts to use on the HCAL teststands. The scripts shoul
 
 ## Installation
 
-* `git clone git@github.com:elliot-hughes/hcal_teststand_scripts.git` will create a directory called `hcal_teststand_scripts` with the scripts inside.<sup>[1](#footnote1)</sup>
-* `cd hcal_teststand_scripts`
-* Modify `configuration/teststands.txt` if you need to. (You should tell <code>tote@physics.rutgers.edu</code> what the correct settings should be.)
-* `python install.py` will create important configuration files and setup scripts from the information in the `configuration/teststands.txt` configuration file.
+1. `git clone git@github.com:elliot-hughes/hcal_teststand_scripts.git` will create a directory called `hcal_teststand_scripts` with the scripts inside.<sup>[1](#footnote1)</sup>
+1. `cd hcal_teststand_scripts`
+1. Modify `configuration/teststands.txt` if you need to. (You should tell <code>tote@physics.rutgers.edu</code> what the correct settings should be.)
+1. `python install.py` will create important configuration files and setup scripts from the information in the `configuration/teststands.txt` configuration file.
 
 ## Running Scripts
 
-* `cd hcal_teststand_scripts`
-* Run `source configuration/setup_[teststand name].sh` where `[teststand name]` is what's used in `configuration/teststands.txt`.
-* `python [script_name].py [arguments]`
+1. `cd hcal_teststand_scripts`
+1. Run `source configuration/setup_[teststand name].sh` where `[teststand name]` is what's used in `configuration/teststands.txt`.
+1. `python [script_name].py [arguments]`
 
 ## Documentation
 Here are short summaries of what the different scripts do:
@@ -42,7 +42,7 @@ Functions related to a specific component are located in of a module named after
 * `qie.py`
 
 # Recent Changes
-* 150421: Tote updated the readme.
+* 150421: Tote updated the readme. He modified the 904 configuration (AMC13 IPs and QIE slot number). He also fixed minor bugs in `ngccm.send_commands` and `qie.get_info`.
 
 # Notes
 <a name="footnote1">1</a>: This assumes you have SSH keys set up. If you don't, you can always use HTTPS: `git clone https://github.com/elliot-hughes/hcal_teststand_scripts.git`
