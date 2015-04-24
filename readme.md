@@ -45,4 +45,4 @@ Functions related to a specific component are located in of a module named after
 * 150421: Tote updated the readme. He modified the 904 configuration (AMC13 IPs and QIE slot number). He also fixed minor bugs in `ngccm.send_commands` and `qie.get_info`.
 
 # Notes
-<a name="footnote1">1</a>: This assumes you have SSH keys set up. If you don't, you can always use HTTPS: `git clone https://github.com/elliot-hughes/hcal_teststand_scripts.git`
+<a name="footnote1">1</a>: This assumes you have [SSH keys set up](https://help.github.com/articles/generating-ssh-keys/). If you don't, you can always use HTTPS: `git clone https://github.com/elliot-hughes/hcal_teststand_scripts.git`. If you see an error like `error: SSL certificate problem, verify that the CA cert is OK.`, you can set `git config --global http.sslVerify false` to ignore it. A more secure solution would be to update your OS or [set up the SSH keys](https://help.github.com/articles/generating-ssh-keys/).
