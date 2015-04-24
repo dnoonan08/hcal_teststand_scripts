@@ -4,6 +4,7 @@ from re import search
 from subprocess import Popen, PIPE
 import pexpect
 from time import time, sleep
+from print_table import *
 
 # FUNCTIONS:
 def send_commands(port, cmds):		# Executes ngccm commands in the slowest way, in order to read all of the output.
@@ -168,6 +169,63 @@ def set_unique_id(ts, crate, slot):  # grabs uniue ID from QIE card and saves it
 		return 1
 	else:
 		return 0
+
+def get_unique_id(ts , crate , slot ): # reads ID from the uniqueID chip of a given crate/slot and returns it as a string
+	
+	ngccm_output = send_commands_parsed(ts.ngccm_port , ["get HF{0}-{1}-UniqueID".format(crate,slot)]) 
+        # Results in something like "get HF1-1-UniqueID # '1 0x5f000000 0x9b46ce70'"
+	result = ngccm_output["output"][0]["result"]
+	if "'" in result: 
+		return result[1:-1].split()[1:3]
+	else :
+		return ""
+
+def get_qie_shift_reg(ts , crate , slot , qie_list = range(1,5) ):
+
+	qie_settings = [ "CalMode", 
+			 "CapID0pedestal", 
+			 "CapID1pedestal", 
+			 "CapID2pedestal", 
+			 "CapID3pedestal", 
+			 "ChargeInjectDAC", 
+			 "DiscOn", 
+			 "FixRange", 
+			 "IdcBias", 
+			 "IsetpBias", 
+			 "Lvds", 
+			 "PedestalDAC",
+			 "RangeSet", 
+			 "TGain", 
+			 "TimingIref", 
+			 "TimingThresholdDAC",
+			 "Trim"]
+
+	table = [qie_settings]
+	qieLabels = ["setting"]
+	commands = []
+	for qie in qie_list :
+		#print qie
+		for setting in qie_settings : 
+			commands.append("get HF{0}-{1}-QIE{2}_{3}".format(crate,slot,qie,setting))
+	
+	ngccm_output = send_commands_parsed( ts.ngccm_port , commands )
+
+	for qie in qie_list : 
+		qieLabels.append("QIE {0}".format(qie))
+		values = []
+		for i in ngccm_output["output"] : 		
+			for setting in qie_settings : 
+				if setting in i["cmd"] and "QIE{0}".format(qie) in i["cmd"]:
+					values.append( i["result"] )
+				
+		table.append( values ) 
+
+	#print table
+	table_ = [ qieLabels ] 
+	for i in zip(*table) : 
+		table_.append(i)
+
+	print_table(table_)
 
 if __name__ == "__main__":
 	print "Hang on."

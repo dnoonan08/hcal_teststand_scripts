@@ -50,6 +50,7 @@ def send_commands(ip, cmds):		# Sends commands to "uHTRtool.exe" and returns the
 		cmds_str += "{0}\n".format(c)
 	raw_output = Popen(['printf "{0}" | uHTRtool.exe {1}'.format(cmds_str, ip)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
 	log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
+
 	return {
 		"output": raw_output[0] + raw_output[1],
 		"log": log,

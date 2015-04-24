@@ -31,4 +31,4 @@ uhtr_settings = 1, 92
 glib_slot = 2
 mch_ip = 192.168.1.41
 amc13_ips = 192.168.1.95, 192.168.1.94
-qie_slots = 11
+qie_slots = 4,5,6,11,13
