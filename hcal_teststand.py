@@ -112,20 +112,43 @@ def parse_ts_configuration(f):		# This function is used to parse the "teststands
 								teststand_info[ts_name][variable].append([])
 	return teststand_info
 
-def set_mode(ts, crate, slot, n):		# 0: normal mode, 1: link test mode
+def set_mode(ts, crate, slot, n):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
 	s = 0
-	cmds = [
-		"put HF{0}-{1}-iTop_LinkTestMode_Enable {2}".format(crate, slot, n),
-		"put HF{0}-{1}-iBot_LinkTestMode_Enable {2}".format(crate, slot, n),
-		"get HF{0}-{1}-iTop_LinkTestPattern".format(crate, slot),
-		"get HF{0}-{1}-iBot_LinkTestPattern".format(crate, slot),
-	]
-	output = ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
-	if output[0]["result"] == "OK" and output[1]["result"] == "OK":
-		s = 1
+	if n == 0:
+		cmds = [
+			"put HF{0}-{1}-iTop_LinkTestMode 0x0".format(crate, slot, n),
+			"put HF{0}-{1}-iBot_LinkTestMode 0x0".format(crate, slot, n),
+			"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot, n),
+			"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot, n),
+		]
+		output = ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+#		print output
+		if "ERROR" not in output[0]["result"] and "ERROR" not in output[1]["result"]:
+			s = 1
+	elif n == 1:
+		cmds = [
+			"put HF{0}-{1}-iTop_LinkTestMode 0x1".format(crate, slot, n),
+			"put HF{0}-{1}-iBot_LinkTestMode 0x1".format(crate, slot, n),
+			"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot, n),
+			"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot, n),
+		]
+		output = ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+		if "ERROR" not in output[0]["result"] and "ERROR" not in output[1]["result"]:
+			s = 1
+	elif n == 2:
+		cmds = [
+			"put HF{0}-{1}-iTop_LinkTestMode 0x7".format(crate, slot, n),
+			"put HF{0}-{1}-iBot_LinkTestMode 0x7".format(crate, slot, n),
+			"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot, n),
+			"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot, n),
+		]
+		output = ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+#		print output
+		if "ERROR" not in output[0]["result"] and "ERROR" not in output[1]["result"]:
+			s = 1
 	return s
 
-def set_mode_all(ts, n):		# 0: normal mode, 1: link test mode
+def set_mode_all(ts, n):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
 	s = 1
 	for crate, slots in ts.fe.iteritems():
 		for slot in slots:

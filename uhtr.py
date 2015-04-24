@@ -38,63 +38,6 @@ class link :
 		
 		self.set_link( qie_uniqueID_ , qie_half_label_ , qie_fiber_ , on_ )
 
-
-################################################
-# container to hold QIE mapping for all
-# of the links of a given uHTR
-# ... eventually, I would like this to 
-# read and write xml files so that a snap shot 
-# of the cable mapping can be saved 
-################################################	
-class uHTRlinkMap : 
-	
-	links = []
-
-	def __init__( self ):
-		
-		for i in range(96):
-			self.links.append( link() )
-
-# FUNCTIONS:
-
-def map_links(ip , outputFile="test.xml") : # looks at the spy dumps of all of the active channels and parses out the QIE card's unique ID and fiber information corresponding
-	                         # to the target qie channels
-
-	activeLinks = get_links(ip)
-	uhtr_map = uHTRlinkMap()
-
-	for link_ in uhtr_map.links : 
-		if uhtr_map.links.index(link_) in activeLinks : 
-			#print "link",uhtr_map.links.index(link_),"on..."
-			link_.on = True
-			# grab spy dump and parse information about this link
-			uhtr_read = get_data( ip , 3 , uhtr_map.links.index(link_) )
-			data= [""]*6
-			for line in uhtr_read["output"].split("\n"):
-				#print line
-				if line.find("TOP fiber") != -1 : 
-					#print line.split(" ")[5]
-					data[0] = line.split(" ")[5][1:5]
-					link_.qie_half=1
-					link_.qie_fiber = int(line.split(" ")[9])
-				if line.find("BOTTOM fiber") != -1 : 
-					#print line.split(" ")[5]
-					data[0] = line.split(" ")[5][1:5]
-					link_.qie_half=0
-					link_.qie_fiber = int(line.split(" ")[9])
-				if line.find("CAPIDS") != -1 :
-					data[1] = line.split(" ")[5][1:5]
-				if line.find("ADCs") != -1 :
-					data[2] = line.split(" ")[5][1:5]
-				if line.find("LE-TDC") != -1 :
-					data[3] = line.split(" ")[5][1:5]
-				if line.find("TE-TDC") != -1 :
-					data[4] = line.split(" ")[5][1:5]
-				link_.qie_uniqueID = "0x{0}{1}{2}{3} 0x{4}{5}{6}{7}".format(data[2][0:2],data[2][2:4],data[1][0:2],data[1][2:4],data[4][0:2],data[4][2:4],data[3][0:2],data[3][2:4])
-			#link_.Print()
-
-	return uhtr_map
-
 def send_commands(ip, cmds):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a IP address and a list of commands.
 	log = ""
 	raw_output = ""

@@ -19,6 +19,7 @@ Here are short summaries of what the different scripts do:
 
 * `pedestals.py`: Reads in 100 BXs and prints the average ADC and standard deviation for each QIE. This script can also find a channel map between QIE numbering and uHTR numbering, a function that should be moved into a different module some time. This script takes the teststand name as a commandline argument, like `python pedestals.py bhm`. The default is `bhm`.
 * `qie_card_valid.py`: Determines if a QIE card is operating correctly. This is very incomplete code; so far it just tests that the card's CIDs are rotating and synced.
+* <a name="uhr_map"></a>`uhtr_map.py`: For each QIE card, write the card's unique ID to an IGLOO register. Set the link test mode to type B. Then for each uHTR, read out the unique ID through SPY and map link number to unique ID. This script takes the teststand name as a commandline argument, like `python uhtr_map.py 904`. The default is `904`.
 * `versions.py`: Displays software and firmware versions of the different teststand components. This script takes the teststand name as a commandline argument, like `python versions.py bhm`. The default is `bhm`.
 
 ### Structure
@@ -41,7 +42,11 @@ Functions related to a specific component are located in of a module named after
 * `ngccm.py`
 * `qie.py`
 
+### The `teststand` object
+When you initialize a teststand (see above), it reads configuration information from `configuration/teststands.txt`. For example, the presence of front-end crates is specified by a list of identifying integers. The QIE cards are specified as sets of lists for each front-end crate, separated by semicolons. Both of these organizations are stored in the `fe` variable (a dictionary) of your teststand object.
+
 # Recent Changes
+* 150424: Added `uhtr_map.py` (see [documentation above](#uhtr_map)). In doing this, I moved `uhtr.map_links` from `uhtr` to `uhtr_map` and renamed it to `read_links`, I fixed a minor "hardcode" bug in `ngccm.set_unique_id`, and I incorporated `ngccm.link_test_mode` and `ngccm.link_test_modeB` into `hcal_teststand.set_mode`.
 * 150421: Tote updated the readme. He modified the 904 configuration (AMC13 IPs and QIE slot number). He also fixed minor bugs in `ngccm.send_commands` and `qie.get_info`.
 
 # Notes

@@ -55,23 +55,13 @@ if __name__ == "__main__":
 		name = "bhm"
 	ts = teststand(name)
 
-	# set unique ID on the FPGA for link mapping
-	ngccm.link_test_modeB(ts,1,2,True)
-	ngccmLog = ngccm.set_unique_id(ts,1,2)
-	uhtr_map = uhtr.map_links(ts.uhtr_ips[0])
-
-	# make sure that the FPGA is in normal readout mode
-	ngccm.link_test_modeB(ts,1,2,False)
-
 	ts.set_ped_all(6)
 #	set_ped(crate_port, 3, 31)
-	links = uhtr.get_links(ts.uhtr_ips[0])
-	print "The activated links are {0}.".format(links)
-	for link_ in uhtr_map.links :
-		if not link_.on : continue
-		print "==== Link {0} ====".format( uhtr_map.links.index(link_) )
-		link_.Print()
-		uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 300, uhtr_map.links.index(link_) )
+	active_links = uhtr.get_links(ts.uhtr_ips[0])
+	print "The activated links are {0}.".format(active_links)
+	for link_i in active_links:
+		print "==== Link {0} ====".format(link_i)
+		uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 300, link_i)
 		data = uhtr.parse_data(uhtr_read["output"])
 #		print data["adc"]
 		print "Read in {0} bunch crossings.".format(len(data["adc"]))
