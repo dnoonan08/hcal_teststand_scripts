@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
 	for ip in ts.uhtr_ips:
 		slot = int(ip.split(".")[-1])/4
-		links = uhtr.get_links(ip)
+		links = uhtr.find_links(ip)
 		print "* uHTR in Slot {0} =======================".format(slot)
 		print "\tActive links:{0}".format(links)
 		z_cids = []

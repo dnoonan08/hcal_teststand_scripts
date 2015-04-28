@@ -8,35 +8,23 @@ from subprocess import Popen, PIPE
 # about the qie that one would need to know about
 # a given link 
 ################################################	
-class link : 
-
-	qie_half_label = [ 'bottom' , 'top' ]
-	qie_uniqueID = ""
-	qie_half     = -1 # see qie_half_label
-	qie_fiber    = -1 # either 0,1,2
-	on           = False
-
-	def set_link( self , qie_uniqueID_ , qie_half_label_ , qie_fiber_ , on_):
-
-		self.qie_uniqueID = qie_uniqueID_
-		self.qie_fiber    = qie_fiber_
-		self.on           = on_
-
-		if qie_half_label_ in self.qie_half_label : 
-			self.qie_half = self.qie_half_label.index( qie_half_label_ )
-		else :
-			self.qie_fiber = -1
-			print "ERROR: qie_half_label",qie_half_label_,"not known - should be either top or bottom"
-
+class link :
+	qie_half_labels = ['bottom', 'top']
+	
+	def __init__(self, qie_uniqueID = "", qie_half = -1, qie_fiber = -1, on = False):
+		self.qie_uniqueID = qie_uniqueID
+		self.qie_half = qie_half
+		self.qie_half_label = "unknown"
+		self.qie_fiber = qie_fiber
+		self.on = on
+		if self.qie_half in [0, 1]: 
+			self.qie_half_label = self.qie_half_labels[self.qie_half]
+	
 	def Print( self ) :
-		print "unique ID:",self.qie_uniqueID
-		print "board half:",self.qie_half
-		print "fiber:",self.qie_fiber
-		print "on?",(self.on==1)
-
-	def __init__( self , qie_uniqueID_ = "" , qie_half_label_ = 'bottom' , qie_fiber_ = 0 , on_ = False ):
-		
-		self.set_link( qie_uniqueID_ , qie_half_label_ , qie_fiber_ , on_ )
+		print "Unique ID:", self.qie_uniqueID
+		print "Board half:", self.qie_half_label
+		print "Fiber:", self.qie_fiber
+		print "Active:", (self.on == 1)
 
 def send_commands(ip, cmds):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a IP address and a list of commands.
 	log = ""
@@ -130,7 +118,7 @@ def get_status(ts):		# Perform basic checks with the uHTRTool.exe:
 	# * Check that there are 6 active links per IP?
 	status["links"] = []
 	for ip in ts.uhtr_ips:
-		links = get_links(ip)
+		links = find_links(ip)
 		status["links"].append(links)
 		if links:
 			status["status"].append(1)
@@ -138,7 +126,7 @@ def get_status(ts):		# Perform basic checks with the uHTRTool.exe:
 			status["status"].append(0)
 	return status
 
-def parse_links(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you use the "get_links" function below, which uses this function.
+def parse_links(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you use the "find_links" function below, which uses this function.
 	log = ""
 	active = []
 	n_times = 0
@@ -158,8 +146,10 @@ def parse_links(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you
 		log += ">> ERROR: Uh, there were an odd number of \"status\" lines, which is weird."
 	return list(set(active))
 
-def get_links(ip):		# Initializes and then returns a list of the active links of a certain uHTR.
+def find_links(ip):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
 	log = ""
+	
+	# Identify active links:
 	commands = [
 		'0',
 		'link',
@@ -174,7 +164,23 @@ def get_links(ip):		# Initializes and then returns a list of the active links of
 	uhtr_out = send_commands(ip, commands)
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]
-	return parse_links(raw_output)
+	active_links = parse_links(raw_output)		# A list of the indices of the active links.
+	return active_links
+
+def get_links(ts, ip):		# Initializes and sets up links and then returns a list of links, for a certain uHTR.
+# THIS FUNCTION DOESN'T WORK, YET!
+	# Get a list of the active links:
+	active_links = find_links(ip)
+	
+	# For each active link, read QIE unique ID and fiber number from SPY data:
+	links = []
+	for i in range(96):
+		if i in active_links:
+			links.append(link())
+		else:
+			links.append(link())
+	
+	return links
 
 # calls the uHTRs histogramming functionality
 # ip - ip address of the uHTR (e.g. teststand("904").uhtr_ips[0])
@@ -206,7 +212,7 @@ def get_histo(ip , n , sepCapID , fileName ):
 
 def get_data(ip, n, ch):
 	log = ""
-
+	
 	commands = [
 		'0',
 		'link',
@@ -223,7 +229,7 @@ def get_data(ip, n, ch):
 		'exit',
 		'exit',
 	]
-
+	
 	uhtr_out = send_commands(ip, commands)
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]
@@ -231,6 +237,7 @@ def get_data(ip, n, ch):
 
 # Parse uHTRTool.exe data
 def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc. organized into sublists per fiber.
+#	print raw
 	n = 0
 	raw_data = []
 	for line in raw.split("\n"):
@@ -241,8 +248,13 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 		"adc": [],
 		"tdc_le": [],
 		"tdc_te": [],
+		"fiber": [],
+		"half": [],
+		"raw": [],
 	}
+	raw_temp = []
 	for line in raw_data:
+#		print line
 		cid_match = search("CAPIDS", line)
 		if cid_match:
 			data["cid"].append([int(i) for i in line.split()[-4:]])
@@ -255,8 +267,32 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 		tdc_te_match = search("TE-TDC", line)
 		if tdc_te_match:
 			data["tdc_te"].append([int(i) for i in line.split()[-4:]])
+		half_match = search("(TOP|BOTTOM)", line)
+		if half_match:
+			if half_match.group(1) == "BOTTOM":
+				data["half"].append(0)
+			elif half_match.group(1) == "TOP":
+				data["half"].append(1)
+		fiber_match = search("fiber\s([012])", line)
+		if fiber_match:
+			data["fiber"].append(int(fiber_match.group(1)))
+		raw_match = search("\d+\s+([0123456789ABCDEF]{5})\s*(.*)", line)
+		if raw_match:
+			raw_string = raw_match.group(1)
+			raw_thing = raw_match.group(2)
+			if not raw_thing:
+				data["raw"].append(raw_temp)
+				raw_temp = []
+			else:
+				raw_temp.append(raw_string)
 	data["links"] = parse_links(raw)
+	if not data["raw"]:
+		print "ERROR: There was no SPY data for some reason."
+#		print raw
 	return data
+
+def get_data_parsed(ip, n, ch):
+	return parse_data(get_data(ip, n, ch)["output"])
 # /FUNCTIONS
 
 if __name__ == "__main__":

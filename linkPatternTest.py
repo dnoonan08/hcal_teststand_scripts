@@ -73,35 +73,32 @@ if __name__ == "__main__":
 		name = sys.argv[1]
 	else:
 		name = "bhm"
-
+	
 	ts = teststand(name)
-
-        ################
-        # get uHTR link mapping 
-        ################
-        ngccm.link_test_modeB(ts,1,2,True)
-	ngccmLog = ngccm.set_unique_id(ts,1,2)
-	uhtr_map = uhtr.map_links(ts.uhtr_ips[0])
-	ngccm.link_test_modeB(ts,1,2,False)
-
-
+	
+	################
+	# get uHTR link mapping 
+	################
+#	set_mode_all(ts, 2)
+#	# These won't work:
+##	ngccm.link_test_modeB(ts,1,2,True)
+#	ngccmLog = ngccm.set_unique_id(ts, 1, 2)
+#	uhtr_map = uhtr.map_links(ts.uhtr_ips[0])
+#	ngccm.link_test_modeB(ts,1,2,False)
+	
 	# set unique ID on the FPGA for link mapping
-	ngccm.link_test_mode(ts,1,2,True)
-	# init uhtr links
-	uhtr.get_links(ts.uhtr_ips[0])
-
-        # grab data from uHTR spy function for each active link
-        for link_ in uhtr_map.links :
-		if not link_.on : continue
-		if uhtr_map.links.index(link_) == 16 : continue
-		print "==== Link {0} ====".format( uhtr_map.links.index(link_) )
-		link_.Print()
-		uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 900 , uhtr_map.links.index(link_) )
-		#print uhtr_read["output"]
-		errors = decodeRawOutput( uhtr_read["output"] )
-		print "ERRORS:",errors
+	set_mode_all(ts, 1)		# Turn on particular string output.
+	for ip in ts.uhtr_ips:
+		active_links = uhtr.find_links(ip)		# Initialize links and return list of active ones.
 		
-	# make sure that the FPGA is in normal readout mode
-	ngccm.link_test_mode(ts,1,2,False)
-
-        
+		# grab data from uHTR spy function for each active link:
+		for link in active_links:
+			print "==== Link {0} ====".format(link)
+#			link_.Print()		# This isn't defined ATM ...
+			uhtr_read = uhtr.get_data(ip, 900, link)
+#			print uhtr_read["output"]
+			errors = decodeRawOutput(uhtr_read["output"])
+			print "ERRORS:", errors
+		
+	# Return the FPGA to normal readout mode:
+	set_mode_all(ts, 0)		# Turn on particular string output.

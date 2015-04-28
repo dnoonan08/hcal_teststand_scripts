@@ -46,6 +46,7 @@ Functions related to a specific component are located in of a module named after
 When you initialize a teststand (see above), it reads configuration information from `configuration/teststands.txt`. For example, the presence of front-end crates is specified by a list of identifying integers. The QIE cards are specified as sets of lists for each front-end crate, separated by semicolons. Both of these organizations are stored in the `fe` variable (a dictionary) of your teststand object.
 
 # Recent Changes
+* 150428: I moved some things around. I really like the `uhtr.link` class, so I'm going to finish implementing it everywhere tomorrow. This will integrate the "uhtr map" idea into the basic framework.
 * 150424: Added `uhtr_map.py` (see [documentation above](#uhtr_map)). In doing this, I moved `uhtr.map_links` from `uhtr` to `uhtr_map` and renamed it to `read_links`, I fixed a minor "hardcode" bug in `ngccm.set_unique_id`, and I incorporated `ngccm.link_test_mode` and `ngccm.link_test_modeB` into `hcal_teststand.set_mode`.
 * 150421: Tote updated the readme. He modified the 904 configuration (AMC13 IPs and QIE slot number). He also fixed minor bugs in `ngccm.send_commands` and `qie.get_info`.
 

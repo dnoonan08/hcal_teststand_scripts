@@ -217,6 +217,9 @@ class teststand:
 			return "<teststand object: {0}>".format(self.name)
 		else:
 			return "<empty teststand object>"
+
+#class command_result:
+#	def __init__(self):
 # /CLASSES
 
 # This is what gets exectuted when hcal_teststand.py is executed (not imported).
