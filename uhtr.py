@@ -1,31 +1,48 @@
-# This module contains functions for talking to the uHTR.
+# This module contains classes and functions for talking to the uHTR.
 
 from re import search
 from subprocess import Popen, PIPE
+import hcal_teststand
+import qie
 
-################################################
-# container specifying all of the relevant information
-# about the qie that one would need to know about
-# a given link 
-################################################	
-class link :
+# CLASSES:
+class link:		# An object that represents a uHTR link. It contains information about what it's connected to.
 	qie_half_labels = ['bottom', 'top']
 	
-	def __init__(self, qie_uniqueID = "", qie_half = -1, qie_fiber = -1, on = False):
-		self.qie_uniqueID = qie_uniqueID
+	# CONSTRUCTION
+	def __init__(self, uhtr_ip = "unknown", link_number = -1, qie_unique_id = "unknown", qie_half = -1, qie_fiber = -1, on = False):
+		self.ip = uhtr_ip
+		self.n = link_number
+		self.qie_unique_id = qie_unique_id
 		self.qie_half = qie_half
 		self.qie_half_label = "unknown"
 		self.qie_fiber = qie_fiber
 		self.on = on
 		if self.qie_half in [0, 1]: 
 			self.qie_half_label = self.qie_half_labels[self.qie_half]
+	# /CONSTRUCTION
 	
-	def Print( self ) :
-		print "Unique ID:", self.qie_uniqueID
-		print "Board half:", self.qie_half_label
+	# METHODS
+	def get_data(self):
+		data = get_data_parsed(self.ip, 300, self.n)
+		return data
+	
+	def Print(self):
+		print "uHTR Info: {0}, Link {1}".format(self.ip, self.n)
+		print "QIE card ID:", self.qie_unique_id
+		print "QIE card half:", self.qie_half_label
 		print "Fiber:", self.qie_fiber
 		print "Active:", (self.on == 1)
+	# /METHODS
+	
+	def __str__(self):		# This just defines what the object looks like when it's printed.
+		if self.n != -1:
+			return "<link object: uHTR IP = {0}, n = {1}, status = {2}>".format(self.ip, self.n, "on" if self.on else "off")
+		else:
+			return "<empty link object>"
+# /CLASSES
 
+# FUNCTIONS:
 def send_commands(ip, cmds):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a IP address and a list of commands.
 	log = ""
 	raw_output = ""
@@ -167,20 +184,43 @@ def find_links(ip):		# Initializes links and then returns a list of link indicie
 	active_links = parse_links(raw_output)		# A list of the indices of the active links.
 	return active_links
 
-def get_links(ts, ip):		# Initializes and sets up links and then returns a list of links, for a certain uHTR.
-# THIS FUNCTION DOESN'T WORK, YET!
+def get_links(ts, ip):		# Initializes and sets up links of a uHTR and then returns a list of links.
+	# Set up the QIE card unique IDs:
+	is_set = qie.set_unique_id_all(ts)
+#	if is_set:
+#		print ">> Unique IDs set up."
+#	else:
+#		print ">> ERROR: Something went wrong setting up the unique IDs."
+	
 	# Get a list of the active links:
 	active_links = find_links(ip)
 	
 	# For each active link, read QIE unique ID and fiber number from SPY data:
+	# (self, uhtr_ip = "unknown", link_number = -1, qie_unique_id = "unknown", qie_half = -1, qie_fiber = -1, on = False)
+	hcal_teststand.set_mode_all(ts, 2)
 	links = []
 	for i in range(96):
 		if i in active_links:
-			links.append(link())
+			data = get_data_parsed(ip, 3, i)
+			qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
+					data["raw"][0][2][1:5],
+					data["raw"][0][1][1:5],
+					data["raw"][0][4][1:5],
+					data["raw"][0][3][1:5]
+				)
+			qie_fiber = data["fiber"][0]
+			qie_half = data["half"][0]
+			links.append(link(ip, i, qie_unique_id, qie_half, qie_fiber, on = True))
 		else:
-			links.append(link())
-	
+			links.append(link(uhtr_ip = ip, link_number = i, on = False))
+	hcal_teststand.set_mode_all(ts, 0)
 	return links
+
+def get_links_all(ts):		# Calls "get_links" for all uHTRs in the system.
+	container = {}
+	for ip in ts.uhtr_ips:
+		container[ip] = get_links(ts, ip)
+	return container
 
 # calls the uHTRs histogramming functionality
 # ip - ip address of the uHTR (e.g. teststand("904").uhtr_ips[0])
@@ -189,7 +229,7 @@ def get_links(ts, ip):		# Initializes and sets up links and then returns a list 
 # (currently I think this means you can only read out range 0)
 # fileName - output file name
 def get_histo(ip , n , sepCapID , fileName ): 
-
+	
 	log = ""
 	commands = [
 		'0',
@@ -205,7 +245,7 @@ def get_histo(ip , n , sepCapID , fileName ):
 		'exit',
 		'exit'
 		]
-
+	
 	log = send_commands(ip,commands)["log"]
 	# ... seems that send_commands returns a 
 	# dictionary which contains all of the outputs

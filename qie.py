@@ -7,6 +7,7 @@ from time import time, sleep
 from numpy import mean, std
 
 # FUNCTIONS:
+# Functions to fetch component information:
 def get_bridge_info(port, crate, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
 	data = {
 		"version_fw_major": ['get HF{0}-{1}-B_FIRMVERSION_MAJOR'.format(crate, slot), 0],
@@ -77,6 +78,39 @@ def get_info(port, crate, slot):
 		"igloo": get_igloo_info(port, crate, slot),
 	}
 
+def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and slot and returns it as a list.
+	ngccm_output = ngccm.send_commands_parsed(ts.ngccm_port, ["get HF{0}-{1}-UniqueID".format(crate,slot)])		# Results in something like "get HF1-1-UniqueID # '1 0x5f000000 0x9b46ce70'"
+	result = ngccm_output["output"][0]["result"]
+	if "'" in result: 
+		return result[1:-1].split()[1:3]		# Get the result of the command, strip the quotes, and turn the result into a list (ignoring the first element).
+	else:
+		return []
+# /
+
+# Functions to set up components:
+def set_unique_id(ts, crate, slot):		# Saves the unique ID of a crate slot to the associated QIE card to IGLOO registers.
+	unique_id = get_unique_id(ts, crate, slot)
+	if unique_id:
+		ngccm_output = ngccm.send_commands(ts.ngccm_port , [
+			"put HF{0}-{1}-iTop_UniqueID {2} {3}".format(crate, slot, unique_id[0], unique_id[1]),
+			"put HF{0}-{1}-iBot_UniqueID {2} {3}".format(crate, slot, unique_id[0], unique_id[1])
+		])
+		return 1
+	else:
+		return 0
+
+def set_unique_id_all(ts):		# Repeats the "set_unique_id" function from above for all slots in the teststand.
+	is_set = []
+	for crate, slots in ts.fe.iteritems():
+		for slot in slots:
+			is_set.append(set_unique_id(ts, crate, slot))		# Set the QIE card's unique ID into the correct IGLOO registers.
+	if len(set(is_set)) == 1:
+		return list(set(is_set))[0]
+	else:
+		return 0
+# /
+
+# Functions to "status" components, including calculating clocks:
 def get_status(ts):		# Perform basic checks of the QIE cards:
 	status = {}
 	status["status"] = []
@@ -203,7 +237,9 @@ def get_frequency_orbit(ts):
 						"f_e":	[std(f[0])/(len(f[0])**0.5), std(f[1])/(len(f[1])**0.5)],
 					})
 	return data
+# /
 
+# Functions to set QIE registers:
 def set_ped(port, crate, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
 	assert isinstance(n, int)
 	if abs(n) > 31:
@@ -232,7 +268,9 @@ def set_ped_all(port, crate, slot, n):		# n is the decimal representation of the
 		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i+1, n_str) for i in range(24)]
 		raw_output = ngccm.send_commands_fast(port, commands)["output"]
 		# I should include something here to make sure the command didn't return an error? Return 1 if not...
+# /
 
+# Functions dealing with QIE chip behavior:
 def make_adc_to_q_conversion():		# This function generates a list of charge values (in fC) indexed by ADC bin number.
 	srs = [		# Subrange information
 		range(0, 16),
@@ -258,6 +296,7 @@ def make_adc_to_q_conversion():		# This function generates a list of charge valu
 					q_sum -= s*overlap
 				q.append(q_sum)
 	return q
+# /
 # /FUNCTIONS
 
 
