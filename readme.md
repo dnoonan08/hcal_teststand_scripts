@@ -10,6 +10,8 @@ This is a collection of scripts to use on the HCAL teststands. The scripts shoul
 
 ## Running Scripts
 
+Make sure you connect to a machine with Python 2.6 or greater. For the 904 teststand, use `ssh hcal904daq01.cms904` from inside the head node.
+
 1. `cd hcal_teststand_scripts`
 1. Run `source configuration/setup_[teststand name].sh` where `[teststand name]` is what's used in `configuration/teststands.txt`.
 1. `python [script_name].py [arguments]`
