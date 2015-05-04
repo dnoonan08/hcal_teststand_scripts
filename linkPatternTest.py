@@ -69,10 +69,16 @@ if __name__ == "__main__":
 	name = ""
 	if len(sys.argv) == 1:
 		name = "bhm"
+		numBx = 300
 	elif len(sys.argv) == 2:
 		name = sys.argv[1]
+		numBx = 300
+	elif len(sys.argv) == 3:
+		name = sys.argv[1]
+		numBx = int(sys.argv[2],10)
 	else:
 		name = "bhm"
+		numBx = 300
 	
 	ts = teststand(name)
 	
@@ -87,18 +93,29 @@ if __name__ == "__main__":
 #	ngccm.link_test_modeB(ts,1,2,False)
 	
 	# set unique ID on the FPGA for link mapping
-	set_mode_all(ts, 1)		# Turn on particular string output.
+	set_mode_all(ts, 2)		# Turn on particular string output.
 	for ip in ts.uhtr_ips:
 		active_links = uhtr.find_links(ip)		# Initialize links and return list of active ones.
-		
+		print active_links
 		# grab data from uHTR spy function for each active link:
 		for link in active_links:
 			print "==== Link {0} ====".format(link)
 #			link_.Print()		# This isn't defined ATM ...
-			uhtr_read = uhtr.get_data(ip, 900, link)
-#			print uhtr_read["output"]
-			errors = decodeRawOutput(uhtr_read["output"])
-			print "ERRORS:", errors
+			if numBx<=300 : 
+				uhtr_read = uhtr.get_data(ip, numBx*3, link)
+				errors = decodeRawOutput(uhtr_read["output"])
+				print "ERRORS:", errors
+			else : 
+				errors = 0 
+				numBx_ = numBx
+				while numBx_ > 300 :
+					#print "not implemented for numBx>300"
+					uhtr_read = uhtr.get_data(ip, 300*3, link)
+					errors = errors + decodeRawOutput(uhtr_read["output"])
+					numBx_ = numBx_ - 300
+				uhtr_read = uhtr.get_data(ip, 300*3, link)
+				errors = errors + decodeRawOutput(uhtr_read["output"])
+                                print "ERRORS:", errors
 		
 	# Return the FPGA to normal readout mode:
 	set_mode_all(ts, 0)		# Turn on particular string output.
