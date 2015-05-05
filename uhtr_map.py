@@ -1,9 +1,6 @@
 from hcal_teststand import *
-import uhtr
-import ngccm
-import numpy
+from hcal_teststand.hcal_teststand import *
 import sys
-import qie
 
 # FUNCTIONS:
 # /FUNCTIONS
