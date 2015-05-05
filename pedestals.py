@@ -1,9 +1,14 @@
+####################################################################
+# Type: SCRIPT                                                     #
+#                                                                  #
+# Description: Reads in 100 BXs of SPY data from each active link  #
+# and prints out the average and standard deviation.               #
+####################################################################
+
 from hcal_teststand import *
-import uhtr
-import ngccm
-import numpy
+from hcal_teststand.hcal_teststand import *
 import sys
-import qie
+import numpy
 
 def get_channel_map(ip, crate_port):
 	# This function gets each active link and tries to map each channel inside to a board QIE number, as assigned by ngccm software.
@@ -48,11 +53,11 @@ def get_channel_map(ip, crate_port):
 if __name__ == "__main__":
 	name = ""
 	if len(sys.argv) == 1:
-		name = "bhm"
+		name = "904"
 	elif len(sys.argv) == 2:
 		name = sys.argv[1]
 	else:
-		name = "bhm"
+		name = "904"
 	ts = teststand(name)
 
 	ts.set_ped_all(6)

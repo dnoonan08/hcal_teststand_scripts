@@ -1,3 +1,9 @@
+####################################################################
+# Type: SCRIPT                                                     #
+#                                                                  #
+# Description: [Add description]                                   #
+####################################################################
+
 from hcal_teststand import *
 from hcal_teststand.hcal_teststand import *
 import sys

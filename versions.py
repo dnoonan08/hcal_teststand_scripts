@@ -1,16 +1,15 @@
-# This script prints out version information for all of the components in a teststand.
+####################################################################
+# Type: SCRIPT                                                     #
+#                                                                  #
+# Description: This script prints out version information for all  #
+# of the components in a teststand.                                #
+####################################################################
 
-#from re import search
-#from subprocess import Popen, PIPE
 from hcal_teststand import *
-import amc13
-import glib
-import uhtr
-import ngccm
-import qie
-
+from hcal_teststand.hcal_teststand import *
 import sys
 
+# FUNCTIONS:
 def print_amc13_info(ts):		# Fetches and prints AMC13 version information.
 	amc_info = amc13.get_info("amc13_{0}_config.xml".format(ts.name))
 	print "* AMC13  ================================="
@@ -102,18 +101,19 @@ def print_qie_info(ts):
 	for crate, slots in ts.fe.iteritems():
 		for slot in slots:
 			print_qie_info_1(ts, crate, slot)
+# /FUNCTIONS
 
-
+# MAIN:
 if __name__ == "__main__":
 	name = ""
 	if len(sys.argv) == 1:
-		name = "bhm"
+		name = "904"
 	elif len(sys.argv) == 2:
 		name = sys.argv[1]
 	else:
-		name = "bhm"
+		name = "904"
 	ts = teststand(name)
-	print ">> Finding the versions of the {0} teststand...".format(name)
+	print "\n>> Finding the versions of the {0} teststand...".format(name)
 	print_amc13_info(ts)
 	print_glib_info(ts)
 	print_uhtr_info(ts)
@@ -121,3 +121,4 @@ if __name__ == "__main__":
 	print_qie_info(ts)
 ##	print_bridge_info(ts, 1, 2)
 ##	print_igloo_info(ts, 1, 1)
+# /MAIN

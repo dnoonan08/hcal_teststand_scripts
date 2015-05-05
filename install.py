@@ -1,7 +1,15 @@
-# Notes: keep this script compatible with Python 2.4.
+####################################################################
+# Type: SCRIPT                                                     #
+#                                                                  #
+# Description: This script installs the repository. It creates     #
+# configuration files and set up scripts.                          #
+#                                                                  #
+# Notes: Keep this script compatible with Python 2.4.              #
+####################################################################
 
 from re import search
 
+# FUNCTIONS:
 def parse_ts_configuration(f):		# This function is a clone of the function of the same name in hcal_teststand but modified to be compatible with Python 2.4.
 	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "glib_slot", "mch_ip", "amc13_ips", "qie_slots"]
 	teststand_info = {}
@@ -52,7 +60,7 @@ def parse_ts_configuration(f):		# This function is a clone of the function of th
 								teststand_info[ts_name][variable].append([])
 	return teststand_info
 
-def make_amc13_configs(f):
+def make_amc13_configs(f):		# Write configuration files for AMC13.
 	names = []
 	ts_info = parse_ts_configuration(f)
 	for name, info in ts_info.iteritems():
@@ -82,7 +90,7 @@ def make_amc13_configs(f):
 			print "ERROR: Didn't make an AMC13 configuration file for " + name + "."
 	return names
 
-def make_setup_scripts(f):
+def make_setup_scripts(f):		# Write the set up scripts.
 	names = []
 	ts_info = parse_ts_configuration(f)
 	for name, info in ts_info.iteritems():
@@ -115,8 +123,10 @@ export PATH=$PATH:/home/hcalpro/ngFEC
 		else:
 			print "ERROR: Didn't make an setup script for " + name + "."
 	return names
+# /FUNCTIONS
 
+# MAIN:
 if __name__ == "__main__":
 	make_amc13_configs("teststands.txt")
 	make_setup_scripts("teststands.txt")
-
+ # /MAIN

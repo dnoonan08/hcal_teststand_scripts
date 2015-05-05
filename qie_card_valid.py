@@ -1,8 +1,13 @@
+####################################################################
+# Type: SCRIPT                                                     #
+#                                                                  #
+# Description: Checks the CID behavior of each active link.        #
+####################################################################
+
+from hcal_teststand import *
+from hcal_teststand.hcal_teststand import *
 import sys
 from re import search
-from subprocess import Popen, PIPE
-from hcal_teststand import *
-import uhtr
 
 # Functions to analyze this "data" dictionary
 # Split this into check_cid_rotating(d) and check_cid_synched(d)
@@ -88,11 +93,11 @@ def check_cid_rotating(d):		# Check if the CIDs are rotating. This function retu
 if __name__ == "__main__":
 	name = ""
 	if len(sys.argv) == 1:
-		name = "bhm"
+		name = "904"
 	elif len(sys.argv) == 2:
 		name = sys.argv[1]
 	else:
-		name = "bhm"
+		name = "904"
 	ts = teststand(name)
 	print ">> Checking the QIE cards on the {0} teststand...".format(name)
 

@@ -19,10 +19,10 @@ Make sure you connect to a machine with Python 2.6 or greater. For the 904 tests
 ## Documentation
 Here are short summaries of what the different scripts do:
 
-* `pedestals.py`: Reads in 100 BXs and prints the average ADC and standard deviation for each QIE. This script can also find a channel map between QIE numbering and uHTR numbering, a function that should be moved into a different module some time. This script takes the teststand name as a commandline argument, like `python pedestals.py bhm`. The default is `bhm`.
+* `pedestals.py`: Reads in 100 BXs and prints the average ADC and standard deviation for each QIE. This script can also find a channel map between QIE numbering and uHTR numbering, a function that should be moved into a different module some time. This script takes the teststand name as a commandline argument, like `python pedestals.py 904`. The default is `904`.
 * `qie_card_valid.py`: Determines if a QIE card is operating correctly. This is very incomplete code; so far it just tests that the card's CIDs are rotating and synced.
 * <a name="uhtr_map"></a>`uhtr_map.py`: For each QIE card, write the card's unique ID to an IGLOO register. Set the link test mode to type B. Then for each uHTR, read out the unique ID through SPY and map link number to unique ID. This script takes the teststand name as a commandline argument, like `python uhtr_map.py 904`. The default is `904`.
-* `versions.py`: Displays software and firmware versions of the different teststand components. This script takes the teststand name as a commandline argument, like `python versions.py bhm`. The default is `bhm`.
+* `versions.py`: Displays software and firmware versions of the different teststand components. This script takes the teststand name as a commandline argument, like `python versions.py 904`. The default is `904`.
 
 ### Structure
 Most teststand operations revolve around a `teststand` object (defined in `hcal_teststand.py`). To initialize one, use
@@ -48,6 +48,7 @@ Functions related to a specific component are located in of a module named after
 When you initialize a teststand (see above), it reads configuration information from `configuration/teststands.txt`. For example, the presence of front-end crates is specified by a list of identifying integers. The QIE cards are specified as sets of lists for each front-end crate, separated by semicolons. Both of these organizations are stored in the `fe` variable (a dictionary) of your teststand object.
 
 # Recent Changes
+* 150505: I turned all of the modules into a simple package called `hcal_teststand`. From now on, only keep scripts and `readme.md` in the main directory. I renamed `playground.py` to `example.py` and changed its contents a little to be slightly more educational. I changed the default teststand of each script to `904`. I fixed a minor bug in `ngccm.send_commands_parsed` that saved the wrong command result.
 * 150429: I renamed `uhtr.get_links` to `uhtr.find_links`. The `uhtr.get_links` function now does something much more powerful, actually returning link objects which contain the "uHTR mapping" information. I moved `ngccm.set_unique_id` (and other similar functions) to the `qie` namespace.
 * 150428: I moved some things around. I really like the `uhtr.link` class, so I'm going to finish implementing it everywhere tomorrow. This will integrate the "uhtr map" idea into the basic framework.
 * 150424: Added `uhtr_map.py` (see [documentation above](#uhtr_map)). In doing this, I moved `uhtr.map_links` from `uhtr` to `uhtr_map` and renamed it to `read_links`, I fixed a minor "hardcode" bug in `ngccm.set_unique_id`, and I incorporated `ngccm.link_test_mode` and `ngccm.link_test_modeB` into `hcal_teststand.set_mode`.

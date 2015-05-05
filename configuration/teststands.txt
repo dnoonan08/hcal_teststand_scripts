@@ -19,7 +19,7 @@ uhtr_settings = 1, 92
 glib_slot = 10
 mch_ip = 192.168.1.100
 amc13_ips = 192.168.1.165, 192.168.1.164
-qie_slots = 1
+qie_slots = 1, 2
 %%
 
 name = fnal

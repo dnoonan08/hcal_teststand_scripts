@@ -1,9 +1,13 @@
+####################################################################
+# Type: SCRIPT                                                     #
+#                                                                  #
+# Description: [Add description]                                   #
+####################################################################
+
 from hcal_teststand import *
-import uhtr
-import ngccm
-import numpy
+from hcal_teststand.hcal_teststand import *
 import sys
-import qie
+import numpy
 
 """
 if everythings works out, you should see something like the following:
@@ -68,7 +72,7 @@ def decodeRawOutput( raw_output ) :
 if __name__ == "__main__":
 	name = ""
 	if len(sys.argv) == 1:
-		name = "bhm"
+		name = "904"
 		numBx = 300
 	elif len(sys.argv) == 2:
 		name = sys.argv[1]
@@ -77,7 +81,7 @@ if __name__ == "__main__":
 		name = sys.argv[1]
 		numBx = int(sys.argv[2],10)
 	else:
-		name = "bhm"
+		name = "904"
 		numBx = 300
 	
 	ts = teststand(name)
@@ -93,7 +97,7 @@ if __name__ == "__main__":
 #	ngccm.link_test_modeB(ts,1,2,False)
 	
 	# set unique ID on the FPGA for link mapping
-	set_mode_all(ts, 2)		# Turn on particular string output.
+	set_mode_all(ts, 1)		# Turn on particular string output.
 	for ip in ts.uhtr_ips:
 		active_links = uhtr.find_links(ip)		# Initialize links and return list of active ones.
 		print active_links

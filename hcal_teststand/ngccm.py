@@ -1,4 +1,9 @@
-# This module contains functions for talking to the ngCCM and the ngccm tool (terribly named).
+####################################################################
+# Type: MODULE                                                     #
+#                                                                  #
+# Description: This module contains functions for talking to the   #
+# ngCCM and the ngccm tool (terribly named).                       #
+####################################################################
 
 from re import search
 from subprocess import Popen, PIPE
@@ -44,8 +49,7 @@ def send_commands_parsed(port, cmds):		# This executes commands as above, but re
 		p.sendline(c)
 		t0 = time()
 		if c != "quit":
-			p.expect("{0} #(\s|E.*)\n".format(c))
-#			print p.before + p.after
+			p.expect("{0} #((\s|E).*)\n".format(c))
 			t1 = time()
 			output.append({
 				"cmd": c,
