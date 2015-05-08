@@ -1,13 +1,36 @@
+####################################################################
+# Type: CONFIGURATION                                              #
+#                                                                  #
+# Description: This file contains configuration information about  #
+# teststands. Each teststand is defined by a set of variables and  #
+# is separated from other teststands by a line containing only     #
+3 '%%'. The first teststand is an educational example.             #
+####################################################################
+
+name = example				# Define the name of the teststand. Keep it simple and unique.
+fe_crates = 1, 3, 5			# List of the FE crate numbers of the crates you're using.
+ngccm_port = 4242			# The ngCCM server port.
+uhtr_ip_base = 192.168.100	# The first three bytes of the uHTR IP addresses. The last byte is calculated by multiplying the uHTR slot number by 4. (See the next line.)
+uhtr_slots = 4, 11			# List of the slots in the uTCA crate occupied by uHTRs.
+uhtr_settings = 0, 32		# This isn't implemented, yet, so it doesn't matter what you put here.
+glib_slot = 11				# The slot of the uTCA crate occupied by the GLIB.
+mch_ip = 192.168.1.100		# The IP address of the MCH.
+amc13_ips = 192.168.1.139, 192.168.1.138		# List of the two IP addresses of the AMC13. The order matters! Generally the larger 4th byte goes first.
+qie_slots = 1, 2, 3, 11; 1, 3, 4; 2;			# Double list of the QIE slots. Each list separated by semicolons corresponds to each FE crate above. (See 'fe_crates' above.) If a crate is empty, make sure to enter a blank list for it here (two semicolons in a row).
+
+%%
+
 name = bhm
 fe_crates = 1
 ngccm_port = 4242
 uhtr_ip_base = 192.168.100
 uhtr_slots = 4
-uhtr_settings = 0, 32
+uhtr_settings = 0, 32		# This isn't implemented, yet!
 glib_slot = 11
 mch_ip = 192.168.1.100
 amc13_ips = 192.168.1.139, 192.168.1.138
 qie_slots = 1
+
 %%
 
 name = 904
@@ -15,11 +38,12 @@ fe_crates = 1
 ngccm_port = 4242
 uhtr_ip_base = 192.168.29
 uhtr_slots = 11
-uhtr_settings = 1, 92
+uhtr_settings = 1, 92		# This isn't implemented, yet!
 glib_slot = 10
 mch_ip = 192.168.1.100
 amc13_ips = 192.168.1.165, 192.168.1.164
 qie_slots = 1, 2
+
 %%
 
 name = fnal
@@ -27,7 +51,7 @@ fe_crates = 2
 ngccm_port = 4242
 uhtr_ip_base = 192.168.114
 uhtr_slots = 4
-uhtr_settings = 1, 92
+uhtr_settings = 1, 92		# This isn't implemented, yet!
 glib_slot = 2
 mch_ip = 192.168.1.41
 amc13_ips = 192.168.1.95, 192.168.1.94

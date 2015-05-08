@@ -80,7 +80,7 @@ def print_qie_info_1(ts, crate, slot):
 	qie_info = qie.get_info(ts.ngccm_port, crate, slot)
 	igloo_info = qie_info["igloo"]
 	bridge_info = qie_info["bridge"]
-	print "* QIE (Crate {0}, Slot {1:02d}) =================".format(crate, slot)
+	print "* QIE card (crate {0}, slot {1:02d}) =================".format(crate, slot)
 	if (igloo_info["version_fw_top"] == "00.00"):
 		print "\tERROR: There was a problem fetching the IGLOO's top FPGA information."
 #		print "\tThe log is below:\n++++++++++++++ LOG ++++++++++++++++++\n{0}\n+++++++++++++ /LOG ++++++++++++++++++".format(igloo_info["log"])

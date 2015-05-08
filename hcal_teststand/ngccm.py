@@ -85,21 +85,16 @@ def get_info(port, crate):		# Returns a dictionary of information about the ngCC
 	log =""
 	version_fw_mez_major = -1
 	version_fw_mez_minor = -1
-	cmd = "get HF{0}-mezz_reg4".format(crate)
-	raw_output = send_commands(port, cmd)["output"]
-	match = search(cmd + " # '((0x)?[0-9a-f]+\s){3}((0x)?[0-9a-f]+)'", raw_output)
-	if match:
+	command = "get HF{0}-mezz_reg4".format(crate)
+	parsed_output = send_commands_parsed(port, command)["output"]
+	result = parsed_output[0]["result"]
+	cmd = parsed_output[0]["cmd"]
+	if "ERROR" not in result:
 		version_str_x = "{0:#08x}".format(int(match.group(3),16))
 		version_fw_mez_major = int(version_str_x[-2:], 16)
 		version_fw_mez_minor = int(version_str_x[-4:-2], 16)
 	else:
-		log += ">> ERROR: Failed to find FW versions. The data string follows:\n"
-		match = search("\n({0}.*)\n".format(cmd), raw_output)
-		if match:
-			log += 'The data string was "{0}".\n'.format(match.group(0).strip())
-		else:
-			log += "Empty\n"
-			log += "{0}\n".format(raw_output)
+		log += ">> ERROR: Failed to find FW versions. The command result follows:\n{0} -> {1}".format(cmd, result)
 	version_fw_mez = "{0:02d}.{1:02d}".format(version_fw_mez_major, version_fw_mez_minor)
 	return {
 		"version_fw_mez_major":	version_fw_mez_major,

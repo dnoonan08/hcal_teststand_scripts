@@ -9,65 +9,57 @@ from numpy import mean, std
 # FUNCTIONS:
 # Functions to fetch component information:
 def get_bridge_info(port, crate, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
-	data = {
-		"version_fw_major": ['get HF{0}-{1}-B_FIRMVERSION_MAJOR'.format(crate, slot), 0],
-		"version_fw_minor": ['get HF{0}-{1}-B_FIRMVERSION_MINOR'.format(crate, slot), 0],
-		"version_fw_svn": ['get HF{0}-{1}-B_FIRMVERSION_SVN'.format(crate, slot), 0],
-	}
+	data = [
+		["version_fw_major", 'get HF{0}-{1}-B_FIRMVERSION_MAJOR'.format(crate, slot), 0],
+		["version_fw_minor", 'get HF{0}-{1}-B_FIRMVERSION_MINOR'.format(crate, slot), 0],
+		["version_fw_svn", 'get HF{0}-{1}-B_FIRMVERSION_SVN'.format(crate, slot), 0],
+	]
 	log = ""
-	raw_output = ngccm.send_commands(port, [data[info][0] for info in data.keys()])["output"]
-	for info in data.keys():
-		match = search("{0} # ((0x)?[0-9a-f]+)".format(data[info][0]), raw_output)
-		if match:
-			data[info][1] = int(match.group(1), 16)
+	parsed_output = ngccm.send_commands_parsed(port, [info[1] for info in data])["output"]
+#	print parsed_output
+	for info in data:
+		result = parsed_output[data.index(info)]["result"]
+		cmd = parsed_output[data.index(info)]["cmd"]
+		if "ERROR" not in result:
+			info[2] = int(result, 16)
 		else:
-			log += '>> ERROR: Failed to find the result of "{0}". The data string follows:\n'.format(data[info][0])
-			match = search("\n({0}.*)\n".format(data[info][0]), raw_output)
-			if match:
-				log += '{0}\n'.format(match.group(0).strip())
-			else:
-				log += "Empty\n"
-				log += "{0}\n".format(raw_output)
-	version_fw = "{0:02d}.{1:02d}.{2:04d}".format(data["version_fw_major"][1], data["version_fw_minor"][1], data["version_fw_svn"][1])
+			log += '>> ERROR: Failed to find the result of "{0}". The data string follows:\n{1}'.format(cmd, result)
+	version_fw = "{0:02d}.{1:02d}.{2:04d}".format(data[0][2], data[1][2], data[2][2])
 	return {
 		"slot":	slot,
-		"version_fw_major":	data["version_fw_major"][1],
-		"version_fw_minor":	data["version_fw_minor"][1],
-		"version_fw_svn":	data["version_fw_svn"][1],
+		"version_fw_major":	data[0][2],
+		"version_fw_minor":	data[1][2],
+		"version_fw_svn":	data[2][2],
 		"version_fw":	version_fw,
 		"log":			log.strip(),
 	}
 
 def get_igloo_info(port, crate, slot):		# Returns a dictionary of information about the IGLOO2, such as the FW versions.
-	data = {
-		"version_fw_major_top": ['get HF{0}-{1}-iTop_FPGA_MAJOR_VERSION'.format(crate, slot), 0],
-		"version_fw_minor_top": ['get HF{0}-{1}-iTop_FPGA_MINOR_VERSION'.format(crate, slot), 0],
-		"version_fw_major_bot": ['get HF{0}-{1}-iBot_FPGA_MAJOR_VERSION'.format(crate, slot), 0],
-		"version_fw_minor_bot": ['get HF{0}-{1}-iBot_FPGA_MINOR_VERSION'.format(crate, slot), 0],
-	}
+	data = [
+		["version_fw_major_top", 'get HF{0}-{1}-iTop_FPGA_MAJOR_VERSION'.format(crate, slot), 0],
+		["version_fw_minor_top", 'get HF{0}-{1}-iTop_FPGA_MINOR_VERSION'.format(crate, slot), 0],
+		["version_fw_major_bot", 'get HF{0}-{1}-iBot_FPGA_MAJOR_VERSION'.format(crate, slot), 0],
+		["version_fw_minor_bot", 'get HF{0}-{1}-iBot_FPGA_MINOR_VERSION'.format(crate, slot), 0],
+	]
 	log = ""
-	raw_output = ngccm.send_commands(port, [data[info][0] for info in data.keys()])["output"]
-	for info in data.keys():
-		match = search("{0} # ((0x)?[0-9a-f]+)".format(data[info][0]), raw_output)
-		if match:
-			data[info][1] = int(match.group(1), 16)
+	parsed_output = ngccm.send_commands_parsed(port, [info[1] for info in data])["output"]
+#	print parsed_output
+	for info in data:
+		result = parsed_output[data.index(info)]["result"]
+		cmd = parsed_output[data.index(info)]["cmd"]
+		if "ERROR" not in result:
+			info[2] = int(result, 16)
 		else:
-			log += '>> ERROR: Failed to find the result of "{0}". The data string follows:\n'.format(data[info][0])
-			match = search("\n({0} #.*)\n".format(data[info][0]), raw_output)
-			if match:
-				log += '{0}\n'.format(match.group(0).strip())
-			else:
-				log += "Empty\n"
-				log += "{0}\n".format(raw_output)
-	version_fw_top = "{0:02d}.{1:02d}".format(data["version_fw_major_top"][1], data["version_fw_minor_top"][1])
-	version_fw_bot = "{0:02d}.{1:02d}".format(data["version_fw_major_bot"][1], data["version_fw_minor_bot"][1])
+			log += '>> ERROR: Failed to find the result of "{0}". The data string follows:\n{1}'.format(cmd, result)
+	version_fw_top = "{0:02d}.{1:02d}".format(data[0][2], data[1][2])
+	version_fw_bot = "{0:02d}.{1:02d}".format(data[2][2], data[3][2])
 	return {
 		"slot": slot,
-		"version_fw_major_top":	data["version_fw_major_top"][1],
-		"version_fw_minor_top":	data["version_fw_minor_top"][1],
+		"version_fw_major_top":	data[0][2],
+		"version_fw_minor_top":	data[1][2],
 		"version_fw_top":	version_fw_top,
-		"version_fw_major_bot":	data["version_fw_major_bot"][1],
-		"version_fw_minor_bot":	data["version_fw_minor_bot"][1],
+		"version_fw_major_bot":	data[2][2],
+		"version_fw_minor_bot":	data[3][2],
 		"version_fw_bot":	version_fw_bot,
 		"log":			log.strip(),
 	}
