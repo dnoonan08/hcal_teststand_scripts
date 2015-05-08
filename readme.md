@@ -28,7 +28,7 @@ Here are short summaries of what the different scripts do:
 Most teststand operations revolve around a `teststand` object (defined in `hcal_teststand.py`). To initialize one, use
 ```
 from hcal_teststand import *
-ts = teststand("[teststand name]")
+ts = hcal_teststand.teststand("[teststand name]")
 ```
 where `[teststand name]` is what's used in `configuration/teststands.txt`, such as `bhm`. This object then has a number of attributes, like the MCH IP address, `ts.mch_ip`, and some methods, like `ts.status()`. Try running 
 ```
