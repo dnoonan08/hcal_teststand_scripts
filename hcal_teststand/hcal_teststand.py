@@ -63,6 +63,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 	}
 
 def parse_ts_configuration(f):		# This function is used to parse the "teststands.txt" configuration file. It is run by the "teststand" class; usually you want to use that instead of running this yourself.
+	# WHEN YOU EDIT THIS SCRIPT, MAKE SURE TO UPDATE install.py!
 	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "glib_slot", "mch_ip", "amc13_ips", "qie_slots"]
 	teststand_info = {}
 	raw = ""
