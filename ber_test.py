@@ -39,11 +39,11 @@ if __name__ == "__main__":
 	print ">> Running BER test on teststand {0}.".format(name)
 	print ">> Processing {0} cycle(s) ...".format(n)
 	
-	# A cycle:
 	n_cycles = 0
 	n_errors = 0
 	errors = []
 	for j in range(n):
+		# Do a cycle:
 		if v: print "==== Cycle {0} ============================================".format(j + 1)
 		for i in range(1, 33):
 			# Construct test string:
