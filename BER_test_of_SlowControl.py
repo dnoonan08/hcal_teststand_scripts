@@ -11,6 +11,7 @@
 from hcal_teststand import *
 from hcal_teststand.hcal_teststand import *
 import sys
+from optparse import OptionParser
 
 # CLASSES:
 # /CLASSES
@@ -21,24 +22,32 @@ import sys
 # MAIN:
 if __name__ == "__main__":
 	# Arguments:
-	name = "904"		# Teststand name
-	n = 1		# Number of cycles
-	v = 0		# Verbose mode
 	crate = 1		# Crate number to run the test over
 	slot = 2		# Slot number to run the test over
-	if len(sys.argv) == 3:
-		name = sys.argv[1]
-		n = sys.argv[2]
-	elif len(sys.argv) == 4:
-		name = sys.argv[1]
-		n = int(sys.argv[2])
-		v = int(sys.argv[3])
+	parser = OptionParser()
+	parser.add_option("-n", "--ncycles", dest="ncycles",
+		default=1,
+		help="The number of cycles you want to run over (default is 1)", metavar="INT")
+	parser.add_option("-v", "--verbose", dest="verbose",
+		default=False,
+		help="Turn on verbose mode (default is off)", metavar="BOOL")
+	parser.add_option("-t", "--teststand", dest="ts",
+		default="904",
+		help="The name of the teststand you want to use (default is 904)", metavar="STR")
+	(options, args) = parser.parse_args()
+	name = options.ts
+	n = int(options.ncycles)
+	v = False
+	if options.verbose:
+		if options.verbose.lower() == "true" or options.verbose  == "1":
+			v = True
 	
 	# Set up:
 	ts = teststand(name)		# Initialize a teststand object. This object stores the teststand configuration and has a number of useful methods.
 	print ">> Running BER test on teststand {0}.".format(name)
 	print ">> Processing {0} cycle(s) ...".format(n)
 	
+	# Cycle n times:
 	n_cycles = 0
 	n_errors = 0
 	errors = []
