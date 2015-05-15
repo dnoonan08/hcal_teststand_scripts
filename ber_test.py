@@ -16,27 +16,6 @@ import sys
 # /CLASSES
 
 # FUNCTIONS:
-def bits_to_hex(bit_string):
-	bit_string = str(bit_string)
-	
-	# Does what below does in explanatory lines:
-#	print bit_string
-#	string_r = bit_string[::-1]		# Temporarily reverse the string.
-#	print string_r
-#	nibbles_r = []
-#	for i in range(0, len(string_r), 4):
-#		nibbles_r.append(string_r[i:i+4])
-#	print nibbles_r
-#	nibbles = []
-#	for nibble_r in nibbles_r:
-#		nibbles.append(nibble_r[::-1])
-#	print nibbles
-#	nibbles = nibbles[::-1]
-#	print nibbles
-	
-	# A very complicated one-line operation: (See above to see how it works.)
-	nibbles = ["{0:04d}".format(int(bit_string[::-1][i:i+4][::-1])) for i in range(0, len(bit_string), 4)][::-1]
-	hexits = [""]
 # /FUNCTIONS
 
 # MAIN:
