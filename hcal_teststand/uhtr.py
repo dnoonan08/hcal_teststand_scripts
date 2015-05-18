@@ -275,6 +275,35 @@ def get_data(ip, n, ch):
 	log += uhtr_out["log"]
 	return uhtr_out
 
+### get triggered data -
+def get_triggered_data(ip , n , outputFile="testTriggeredData"):
+	log = ""
+
+	commands = [ '0',
+		     'link',
+		     'init',
+		     '1',
+		     '32',
+		     'status',
+		     'l1acapture',
+		     'autorun',
+		     '{0}'.format(n),
+		     '5',
+		     '50',
+		     '0',
+		     '{0}'.format(outputFile),
+		     '6,7,8,9',
+		     'quit',
+		     'quit',
+		     'exit',
+		     'exit',
+		     ]
+
+	uhtr_out = send_commands(ip, commands)
+	raw_output = uhtr_out["output"]
+	log += uhtr_out["log"]
+	#return uhtr_out
+
 # Parse uHTRTool.exe data
 def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc. organized into sublists per fiber.
 #	print raw

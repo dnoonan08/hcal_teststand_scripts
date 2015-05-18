@@ -112,14 +112,17 @@ if __name__ == "__main__":
 			else : 
 				errors = 0 
 				numBx_ = numBx
+				runningTally = 0
 				while numBx_ > 300 :
 					#print "not implemented for numBx>300"
 					uhtr_read = uhtr.get_data(ip, 300*3, link)
+					runningTally+=300
 					errors = errors + decodeRawOutput(uhtr_read["output"])
 					numBx_ = numBx_ - 300
 				uhtr_read = uhtr.get_data(ip, 300*3, link)
+				runningTally+=300
 				errors = errors + decodeRawOutput(uhtr_read["output"])
-                                print "ERRORS:", errors
+                                print "ERRORS:", errors,"out of",runningTally
 		
 	# Return the FPGA to normal readout mode:
 	set_mode_all(ts, 0)		# Turn on particular string output.

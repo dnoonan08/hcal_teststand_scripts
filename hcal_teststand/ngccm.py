@@ -148,6 +148,29 @@ def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:
 			status["status"].append(0)
 	return status
 
+# enable CI mode
+def set_CI_mode(ts , crate , slot , enable = True , DAC = 0 ) :
+	
+	if( enable ) :
+		commands = [#" put HF{0}-{1}-iTop_CntrReg_CImode 1".format(crate,slot)]
+			    #"put HF{0}-{1}-iBot_CntrReg_CImode 1".format(crate,slot)
+			    "put HF{0}-{1}-QIE1_ChargeInjectDAC {0}".format(crate,slot,DAC)]
+	else : 		
+		commands = [" put HF{0}-{1}-iTop_CntrReg_CImode 0".format(crate,slot)]
+			    #"put HF{0}-{1}-iBot_CntrReg_CImode 0".format(crate,slot)]
+
+	
+	ngccm_output = send_commands_parsed( ts.ngccm_port , commands )
+
+# sets all QIE clock phases
+def set_qie_clk_phase(ts , crate , slot , phase = 0 ) :
+
+	commands = []
+	for qie in range(24) :
+		commands.append("put HF{0}-{1}-Qie{2}_ck_ph {3}".format(crate,slot,qie+1,phase))
+	
+	ngccm_output = send_commands_parsed( ts.ngccm_port , commands )
+	
 # This function should be moved to "qie.py":
 def get_qie_shift_reg(ts , crate , slot , qie_list = range(1,5) ):
 	

@@ -231,6 +231,33 @@ def get_frequency_orbit(ts):
 	return data
 # /
 
+# Functions to set QIE to fixed range mode
+def set_fix_range_all(port, crate, slot, enable=False, rangeSel=0):  
+
+	assert isinstance(rangeSel, int)
+	if rangeSel < 0 or rangeSel > 3 : 
+		print ">> ERROR: you must enter either 1,2,3,4 for rangeSel."
+	
+	for qie in range(24) :
+		if enable :
+			commands = ["put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, qie),
+				    "put HF{0}-{1}-QIE{2}_RangeSel {3}".format(crate, slot, qie, rangeSel)]
+		else :
+			commands = ["put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, qie)]
+
+		raw_ouput = ngccm.send_commands(port, commands)["output"]
+
+# Functions to set QIE to fixed range mode
+def set_cal_mode_all(port, crate, slot, enable=False):  
+
+	for qie in range(24) :
+		if enable :
+			commands = ["put HF{0}-{1}-QIE{2}_CalMode 1".format(crate, slot, qie)]
+		else :
+			commands = ["put HF{0}-{1}-QIE{2}_CalMode 0".format(crate, slot, qie)]
+
+		raw_ouput = ngccm.send_commands(port, commands)["output"]
+
 # Functions to set QIE registers:
 def set_ped(port, crate, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
 	assert isinstance(n, int)
