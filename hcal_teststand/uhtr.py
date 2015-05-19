@@ -203,11 +203,11 @@ def get_links(ts, ip):		# Initializes and sets up links of a uHTR and then retur
 		if i in active_links:
 			data = get_data_parsed(ip, 3, i)
 			qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
-					data["raw"][0][2][1:5],
-					data["raw"][0][1][1:5],
-					data["raw"][0][4][1:5],
-					data["raw"][0][3][1:5]
-				)
+				data["raw"][0][2][1:5],
+				data["raw"][0][1][1:5],
+				data["raw"][0][4][1:5],
+				data["raw"][0][3][1:5]
+			)
 			qie_fiber = data["fiber"][0]
 			qie_half = data["half"][0]
 			links.append(link(ip, i, qie_unique_id, qie_half, qie_fiber, on = True))

@@ -35,7 +35,7 @@ def send_commands(port, cmds):		# Executes ngccm commands in the slowest way, in
 		"output": raw_output.strip(),
 		"log": log.strip(),
 	}
-	
+
 def send_commands_parsed(port, cmds):		# This executes commands as above, but returns the parsed responses in a list of pairs.
 	log = ""
 	output = []

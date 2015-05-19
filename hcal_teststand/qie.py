@@ -6,6 +6,28 @@ import ngccm
 from time import time, sleep
 from numpy import mean, std
 
+# CLASSES:
+#class qie_card:
+#	# CONSTRUCTION:
+#	def __init__(self, crate=-1, slot=-1, ts):
+#		self.crate = crate
+#		self.slot = slot
+#		self.ts = ts
+#	# /CONSTRUCTION
+#	
+#	# METHODS:
+#	def set_ped(self, n):
+#		data = qie.set_ped_all(self.ts.ngccm_port=4242, self.crate, self.slot, n=6)
+#		return data
+#	# /METHODS
+#	
+#	def __str__(self):		# This just defines what the object looks like when it's printed.
+#		if self.crate != -1:
+#			return "<qie card object: crate = {0}, slot = {1}>".format(self.crate, self.slot)
+#		else:
+#			return "<empty qie card object>"
+# /CLASSES
+
 # FUNCTIONS:
 # Functions to fetch component information:
 def get_bridge_info(port, crate, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
@@ -77,6 +99,56 @@ def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and 
 		return result[1:-1].split()[1:3]		# Get the result of the command, strip the quotes, and turn the result into a list (ignoring the first element).
 	else:
 		return []
+
+def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
+	links_by_ip = ts.get_links()
+	qie_map = []
+	for crate, slots in ts.fe.iteritems():
+		for slot in slots:
+			for qie in range(1, 25):
+				print ">> Finding crate {0}, slot {1}, QIE {2} ...".format(crate, slot, qie)
+				set_fix_range(ts.ngccm_port, crate, slot, qie, True, 3)
+				channel_save = []
+				link_save = []
+				for ip, links in links_by_ip.iteritems():
+					for link in [l for l in links if l.on]:
+						data = link.get_data()
+						for channel in range(4):
+							adc_avg = mean([i_bx[channel] for i_bx in data["adc"]])
+#							print adc_avg
+							if adc_avg == 192:
+								channel_save.append(channel)
+								link_save.append(link)
+				if len(channel_save) == 1 and len(link_save):
+					channel = channel_save[0]
+					link = link_save[0]
+					qie_map.append({
+						"crate": crate,
+						"slot": slot,
+						"qie": qie,
+						"id": link.qie_unique_id,
+						"link": link.n,
+						"channel": channel,
+						"half": link.qie_half,
+						"fiber": link.qie_fiber,
+						"ip": link.ip,
+					})
+				else:
+					if len(channel_save) > 1:
+						print "ERROR: Mapping is weird."
+					qie_map.append({
+						"crate": crate,
+						"slot": slot,
+						"qie": qie,
+						"id": [link.qie_unique_id for link in link_save],
+						"link": [link.n for link in link_save],
+						"channel": channel_save,
+						"half": [link.qie_half for link in link_save],
+						"fiber": [link.qie_fiber for link in link_save],
+						"ip": [link.ip for link in link_save],
+					})
+				set_fix_range(ts.ngccm_port, crate, slot, qie, False)
+	return qie_map
 # /
 
 # Functions to set up components:

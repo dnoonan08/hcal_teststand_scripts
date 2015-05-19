@@ -6,6 +6,8 @@ import glib
 import uhtr
 import ngccm
 import qie
+import json
+import os
 
 # FUNCTIONS:
 
@@ -191,8 +193,13 @@ class teststand:
 				print "ERROR: Could not read the teststand information for {0} from the configuration file: {1}".format(self.name, f)
 				print ">> {0}".format(ex)
 		else:
-			print "ERROR: You need to initialize a teststand object with a name (string) and a file location for a teststand configuration."
+			print "ERROR: You need to initialize a teststand object with a name (string) from the teststand configuration file (configuration/teststands.txt)."
+	# /CONSTRUCTION
+	
 	# METHODS:
+	def get_links(self):
+		return uhtr.get_links_all(self)
+	
 	def get_info(self):		# Returns a dictionary of component information, namely versions.
 		data = {}
 		data["amc13"] = amc13.get_info("amc13_{0}_config.xml".format(self.name))
@@ -205,18 +212,60 @@ class teststand:
 			for slot in slots:
 				data["qie"].append(qie.get_info(self.ngccm_port, crate, slot))
 		return data
+	
 	def get_temps(self):		# Returns a list of various temperatures around the teststand.
 		temps = []
 		for crate in self.fe_crates:
 			temps.append(get_temp(crate, self.ngccm_port)["temp"])		# See the "get_temp" funtion above.
 		return temps
+	
 	def get_status(self):		# Sets up and checks that the teststand is working.
 		return get_ts_status(self)
+	
 	def set_ped_all(self, n):
 		for crate, slots in self.fe.iteritems():
 			for slot in slots:
 				qie.set_ped_all(self.ngccm_port, crate, slot, n)
+	
+	def get_qie_map(self):
+		qie_map = qie.get_map(self)
+		return qie_map
+	
+	def save_qie_map(self, f="", d="configuration/maps"):		# Saves the qie map to a file named f in directory d.
+		if f:
+			if f.split(".")[-1] != "json":
+				f += ".json"
+		else:
+			f = "{0}_qie_map.json".format(self.name)
+		if not os.path.exists(d):
+			os.makedirs(d)
+		qie_map = self.get_qie_map()		# A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
+		
+		qie_map_out = {}
+		for qie in qie_map:
+			qie_map_out["{0:02d}{1:02d}{2:02d}".format(qie["crate"], qie["slot"], qie["qie"])] = qie
+		with open("{0}/{1}".format(d, f), "w") as out:
+#			json.dump(qie_map_out, out)
+			json.dump(qie_map, out)
+	
+	def read_qie_map(self, f="", d="configuration/maps"):
+		if f:
+			if f.split(".")[-1] != "json":
+				f += ".json"
+		else:
+			f = "{0}_qie_map.json".format(self.name)
+		
+		path = d + "/" + f
+		if os.path.exists(path):
+			with open(path) as infile:
+				qie_map = json.loads(infile.read())
+		else:
+			"ERROR: Could not find the qie_map at {0}".format(path)
+			qie_map = []
+		return qie_map
 	# /METHODS
+	
+	
 	def __str__(self):		# This just defines what the object looks like when it's printed.
 		if hasattr(self, "name"):
 			return "<teststand object: {0}>".format(self.name)
