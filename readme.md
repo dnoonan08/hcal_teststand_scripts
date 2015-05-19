@@ -48,6 +48,7 @@ Functions related to a specific component are located in of a module named after
 When you initialize a teststand (see above), it reads configuration information from `configuration/teststands.txt`. For example, the presence of front-end crates is specified by a list of identifying integers. The QIE cards are specified as sets of lists for each front-end crate, separated by semicolons. Both of these organizations are stored in the `fe` variable (a dictionary) of your teststand object.
 
 # Recent Changes
+* 150519: Tote fixed a minor bug in `ngccm.send_commands_parsed` to prevent commands from being interpreted as regular expressions. Tote also fixed a few problems with qie settings functions.
 * 150515: Tote added the `ber_test.py` script to check writing and reading to Bridge scratch register.
 * 150505: Tote turned all of the modules into a simple package called `hcal_teststand`. From now on, only keep scripts and `readme.md` in the main directory. Tote renamed `playground.py` to `example.py` and changed its contents a little to be slightly more educational. Tote changed the default teststand of each script to `904`. Tote fixed a minor bug in `ngccm.send_commands_parsed` that saved the wrong command result.
 * 150429: Tote renamed `uhtr.get_links` to `uhtr.find_links`. The `uhtr.get_links` function now does something much more powerful, actually returning link objects which contain the "uHTR mapping" information. Tote moved `ngccm.set_unique_id` (and other similar functions) to the `qie` namespace.

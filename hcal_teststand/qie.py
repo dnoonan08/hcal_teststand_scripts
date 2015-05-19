@@ -231,34 +231,8 @@ def get_frequency_orbit(ts):
 	return data
 # /
 
-# Functions to set QIE to fixed range mode
-def set_fix_range_all(port, crate, slot, enable=False, rangeSel=0):  
-
-	assert isinstance(rangeSel, int)
-	if rangeSel < 0 or rangeSel > 3 : 
-		print ">> ERROR: you must enter either 1,2,3,4 for rangeSel."
-	
-	for qie in range(24) :
-		if enable :
-			commands = ["put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, qie),
-				    "put HF{0}-{1}-QIE{2}_RangeSel {3}".format(crate, slot, qie, rangeSel)]
-		else :
-			commands = ["put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, qie)]
-
-		raw_ouput = ngccm.send_commands(port, commands)["output"]
-
-# Functions to set QIE to fixed range mode
-def set_cal_mode_all(port, crate, slot, enable=False):  
-
-	for qie in range(24) :
-		if enable :
-			commands = ["put HF{0}-{1}-QIE{2}_CalMode 1".format(crate, slot, qie)]
-		else :
-			commands = ["put HF{0}-{1}-QIE{2}_CalMode 0".format(crate, slot, qie)]
-
-		raw_ouput = ngccm.send_commands(port, commands)["output"]
-
 # Functions to set QIE registers:
+## Pedestals:
 def set_ped(port, crate, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
 	assert isinstance(n, int)
 	if abs(n) > 31:
@@ -284,9 +258,65 @@ def set_ped_all(port, crate, slot, n):		# n is the decimal representation of the
 		else:
 			n = n + 32
 		n_str = "{0:#04x}".format(n)		# The "#" prints the "0x". The number of digits to pad with 0s must include these "0x", hence "4" instead of "2".
-		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i+1, n_str) for i in range(24)]
+		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i, n_str) for i in range(1, 25)]
 		raw_output = ngccm.send_commands_fast(port, commands)["output"]
 		# I should include something here to make sure the command didn't return an error? Return 1 if not...
+## /
+
+## Fixed Range Mode:
+def set_fix_range(port, crate, slot, qie, enable=False, rangeSet=0):		# Turn fixed range mode on or off for a given QIE.
+	assert isinstance(rangeSet, int)
+	if rangeSet < 0 or rangeSet > 3 : 
+		print ">> ERROR: the range you select with \"RangeSet\" must be an element of {0, 1, 2, 3}."
+	else:
+		if enable:
+			commands = [
+				"put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, qie),
+				"put HF{0}-{1}-QIE{2}_RangeSet {3}".format(crate, slot, qie, rangeSet)
+			]
+		else :
+			commands = ["put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, qie)]
+		
+		raw_output = ngccm.send_commands_fast(port, commands)["output"]
+#		raw_output = ngccm.send_commands_parsed(port, commands)["output"]
+		return raw_output
+
+def set_fix_range_all(port, crate, slot, enable=False, rangeSet=0):		# Turn fixed range mode on or off for all QIEs on a given board.
+	assert isinstance(rangeSet, int)
+	if rangeSet < 0 or rangeSet > 3: 
+		print ">> ERROR: the range you select with \"RangeSet\" must be an element of {0, 1, 2, 3}."
+	else:
+		commands = []
+		if enable:
+			for qie in range(1, 25):
+				commands.append("put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, qie))
+				commands.append("put HF{0}-{1}-QIE{2}_RangeSet {3}".format(crate, slot, qie, rangeSet))
+		else:
+			for qie in range(1, 25):
+				commands.append("put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, qie))
+				commands.append("put HF{0}-{1}-QIE{2}_RangeSet 0".format(crate, slot, qie))		# Not necessary, but I think it's probably good form.
+		raw_output = ngccm.send_commands_fast(port, commands)["output"]
+#		raw_output = ngccm.send_commands_parsed(port, commands)["output"]
+		return raw_output
+## /
+
+## Cal Mode:
+def set_cal_mode(port, crate, slot, qie, enable=False):
+	value = 1 if enable else 0
+	commands = ["put HF{0}-{1}-QIE{2}_CalMode {3}".format(crate, slot, qie, value)]
+	raw_output = ngccm.send_commands_fast(port, commands)["output"]
+#	raw_output = ngccm.send_commands_parsed(port, commands)["output"]
+	return raw_output
+
+def set_cal_mode_all(port, crate, slot, enable=False):
+	commands = []
+	value = 1 if enable else 0
+	for qie in range(1, 25):
+		commands.append("put HF{0}-{1}-QIE{2}_CalMode {3}".format(crate, slot, qie, value))
+	raw_output = ngccm.send_commands_fast(port, commands)["output"]
+#	raw_output = ngccm.send_commands_parsed(port, commands)["output"]
+	return raw_output
+## /
 # /
 
 # Functions dealing with QIE chip behavior:

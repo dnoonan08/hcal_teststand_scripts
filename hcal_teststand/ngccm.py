@@ -5,7 +5,7 @@
 # ngCCM and the ngccm tool (terribly named).                       #
 ####################################################################
 
-from re import search
+from re import search, escape
 from subprocess import Popen, PIPE
 import pexpect
 from time import time, sleep
@@ -46,16 +46,18 @@ def send_commands_parsed(port, cmds):		# This executes commands as above, but re
 	p = pexpect.spawn('ngccm -z -c -p {0}'.format(port))
 	log += "----------------------------\nYou ran the following script with the ngccm tool:\n"
 	for c in cmds:
+#		print c
 		p.sendline(c)
 		t0 = time()
 		if c != "quit":
-			p.expect("{0} #((\s|E).*)\n".format(c))
+			p.expect("{0} #((\s|E).*)\n".format(escape(c)))
 			t1 = time()
 			output.append({
 				"cmd": c,
 				"result": p.match.group(1).strip(),
 				"times": [t0, t1],
 			})
+#			print output
 		log += c + "\n"
 	log += "----------------------------\n"
 	return {
