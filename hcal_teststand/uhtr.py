@@ -25,7 +25,10 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	# METHODS
 	def get_data(self):
 		data = get_data_parsed(self.ip, 300, self.n)
-		return data
+		if data:
+			return data
+		else:
+			return False
 	
 	def Print(self):
 		print "uHTR Info: {0}, Link {1}".format(self.ip, self.n)
@@ -173,6 +176,8 @@ def find_links(ip):		# Initializes links and then returns a list of link indicie
 		'init',
 		'1',
 		'32',
+		'0',
+		'0',
 		'status',
 		'quit',
 		'exit',
@@ -259,6 +264,8 @@ def get_data(ip, n, ch):
 		'init',
 		'1',
 		'32',
+		'0',
+		'0',
 		'status',
 		'spy',
 		'{0}'.format(ch),
@@ -279,25 +286,28 @@ def get_data(ip, n, ch):
 def get_triggered_data(ip , n , outputFile="testTriggeredData"):
 	log = ""
 
-	commands = [ '0',
-		     'link',
-		     'init',
-		     '1',
-		     '32',
-		     'status',
-		     'l1acapture',
-		     'autorun',
-		     '{0}'.format(n),
-		     '5',
-		     '50',
-		     '0',
-		     '{0}'.format(outputFile),
-		     '6,7,8,9',
-		     'quit',
-		     'quit',
-		     'exit',
-		     'exit',
-		     ]
+	commands = [
+		'0',
+		'link',
+		'init',
+		'1',
+		'32',
+		'0',
+		'0',
+		'status',
+		'l1acapture',
+		'autorun',
+		'{0}'.format(n),
+		'5',
+		'50',
+		'0',
+		'{0}'.format(outputFile),
+		'6,7,8,9',
+		'quit',
+		'quit',
+		'exit',
+		'exit',
+	]
 
 	uhtr_out = send_commands(ip, commands)
 	raw_output = uhtr_out["output"]
@@ -357,8 +367,9 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 	data["links"] = parse_links(raw)
 	if not data["raw"]:
 		print "ERROR: There was no SPY data for some reason."
-#		print raw
-	return data
+		return False
+	else:
+		return data
 
 def get_data_parsed(ip, n, ch):
 	return parse_data(get_data(ip, n, ch)["output"])

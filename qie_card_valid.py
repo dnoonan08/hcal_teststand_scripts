@@ -18,16 +18,16 @@ def check_cid(d):
 	synched_check = check_cid_synched(d)
 	z_synch = synched_check["check"]
 	if (z_rotate):
-		print "\t[O]: The CIDs are rotating correctly."
+		print "\t[OK]: The CIDs are rotating correctly."
 	else:
 		check = 0
-		print "\t[X]: The CIDs are NOT rotating correctly."
+		print "\t[!!]: The CIDs are NOT rotating correctly."
 #		print "\t>> The check values for each channel are {0}.".format(rotating_check["check_cid"])
 	if (z_synch):
-		print "\t[O]: The CIDs are synched across the channels."
+		print "\t[OK]: The CIDs are synched across the channels."
 	else:
 		check = 0
-		print "\t[X]: The CIDs are NOT synched across the channels."
+		print "\t[!!]: The CIDs are NOT synched across the channels."
 #		print "\t>> The check value for the synch is {0}.".format(z_synch)
 #		print "\t>> The error log is below:\n\n{0}".format(synched_check["log"])
 #		print "\t>> ------------------------------------------"
@@ -105,25 +105,26 @@ if __name__ == "__main__":
 		slot = int(ip.split(".")[-1])/4
 		links = uhtr.find_links(ip)
 		print "* uHTR in Slot {0} =======================".format(slot)
-		print "\tActive links:{0}".format(links)
-		z_cids = []
-		for link in links:
-			print "\t== Link {0}".format(link)
-			uhtr_read = uhtr.get_data(ip, 300, link)
-			data = uhtr.parse_data(uhtr_read["output"])
-		#	print uhtr_read["output"]
-		#	print data["cid"]
-		#	print data["adc"]
-		#	print data["tdc_le"]
-		#	print data["tdc_te"]
-			z_cid = check_cid(data)
-			if (z_cid == 1):
-				print "\t[O]: All checks were successful."
+		if links:
+			print "\tActive links:{0}".format(links)
+			z_cids = []
+			for link in links:
+				print "\t== Link {0}".format(link)
+				uhtr_read = uhtr.get_data(ip, 300, link)
+				data = uhtr.parse_data(uhtr_read["output"])
+				if data:
+					z_cid = check_cid(data)
+					if (z_cid == 1):
+						print "\t[OK]: All checks were successful."
+					else:
+						print "\t[!!]: At least one check failed!"
+					z_cids.append(z_cid)
+				else:
+					print "\t[!!]: No data could be collected on this link. Something is wrong with the way I SPY."
+			print "\t== Total"
+			if sum(z_cids) == len(z_cids):
+				print "\t[OK]: All links are good."
 			else:
-				print "\t[X]: At least one check failed!"
-			z_cids.append(z_cid)
-		print "\t== Total"
-		if sum(z_cids) == len(z_cids):
-			print "\t[O]: All links are good."
+				print "\t[!!]: At least one link is bad!"
 		else:
-			print "\t[X]: At least one link is bad!"
+			print "[??]: There were no active links detected."

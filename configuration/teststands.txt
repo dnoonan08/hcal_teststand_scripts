@@ -4,7 +4,7 @@
 # Description: This file contains configuration information about  #
 # teststands. Each teststand is defined by a set of variables and  #
 # is separated from other teststands by a line containing only     #
-3 '%%'. The first teststand is an educational example.             #
+# '%%'. The first teststand is an educational example.             #
 ####################################################################
 
 name = example              # Define the name of the teststand. Keep it simple and unique.
@@ -34,15 +34,15 @@ qie_slots = 1
 %%
 
 name = 904
-fe_crates = 1
+fe_crates = 1,2
 ngccm_port = 4242
 uhtr_ip_base = 192.168.29
-uhtr_slots = 11
+uhtr_slots = 11, 12
 uhtr_settings = 1, 92		# This isn't implemented, yet!
 glib_slot = 10
 mch_ip = 192.168.1.100
 amc13_ips = 192.168.1.165, 192.168.1.164
-qie_slots = 2
+qie_slots = 2;2
 
 %%
 
