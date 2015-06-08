@@ -61,7 +61,7 @@ if __name__ == "__main__":
 	ts = teststand(name)
 
 	ts.set_ped_all(6)
-#	set_ped(crate_port, 3, 31)
+#	ts.set_ped(1, 2, 2, 31)
 	active_links = uhtr.find_links(ts.uhtr_ips[-1])
 	print "The activated links are {0}.".format(active_links)
 	for link_i in active_links:
