@@ -62,11 +62,11 @@ if __name__ == "__main__":
 
 	ts.set_ped_all(6)
 #	set_ped(crate_port, 3, 31)
-	active_links = uhtr.find_links(ts.uhtr_ips[0])
+	active_links = uhtr.find_links(ts.uhtr_ips[-1])
 	print "The activated links are {0}.".format(active_links)
 	for link_i in active_links:
 		print "==== Link {0} ====".format(link_i)
-		uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 300, link_i)
+		uhtr_read = uhtr.get_data(ts.uhtr_ips[-1], 300, link_i)
 		data = uhtr.parse_data(uhtr_read["output"])
 #		print data["adc"]
 		print "Read in {0} bunch crossings.".format(len(data["adc"]))

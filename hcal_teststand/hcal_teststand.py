@@ -197,8 +197,11 @@ class teststand:
 	# /CONSTRUCTION
 	
 	# METHODS:
-	def get_links(self):
-		return uhtr.get_links_all(self)
+	def get_links(self, ip=""):
+		if ip:
+			return uhtr.get_links(self, ip)
+		else:
+			return uhtr.get_links_all(self)
 	
 	def get_info(self):		# Returns a dictionary of component information, namely versions.
 		data = {}
@@ -219,13 +222,24 @@ class teststand:
 			temps.append(get_temp(crate, self.ngccm_port)["temp"])		# See the "get_temp" funtion above.
 		return temps
 	
+	def get_data(self, ip="", i_link=0, n=300):
+		return uhtr.get_data_parsed(ip, n, i_link)
+	
 	def get_status(self):		# Sets up and checks that the teststand is working.
 		return get_ts_status(self)
+	
+	def set_ped(self, crate=0, slot=0, i_qie=0, dac=6):
+		qie.set_ped(self.ngccm_port, crate, slot, i_qie, dac)
 	
 	def set_ped_all(self, n):
 		for crate, slots in self.fe.iteritems():
 			for slot in slots:
 				qie.set_ped_all(self.ngccm_port, crate, slot, n)
+	
+	def set_cal_mode_all(self, enable=False):
+		for crate, slots in self.fe.iteritems():
+			for slot in slots:
+				qie.set_cal_mode_all(self.ngccm_port, crate, slot, enable)
 	
 	def get_qie_map(self):
 		qie_map = qie.get_map(self)
