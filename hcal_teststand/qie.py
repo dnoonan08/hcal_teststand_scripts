@@ -101,6 +101,7 @@ def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and 
 		return []
 
 def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
+	print ">> Getting links ..."
 	links_by_ip = ts.get_links()
 	qie_map = []
 	for crate, slots in ts.fe.iteritems():

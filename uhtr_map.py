@@ -1,47 +1,74 @@
 ####################################################################
 # Type: SCRIPT                                                     #
 #                                                                  #
-# Description: [Add description]                                   #
+# Description: This script can read and save QIE maps, maps        #
+# between link, channel and crate, slot, qie number. Run           #
+#      python uhtr_map.py -h                                       #
+# for more documentation.                                          #
 ####################################################################
 
 from hcal_teststand import *
 from hcal_teststand.hcal_teststand import *
 import sys
+from os.path import exists
+from optparse import OptionParser
 
 # FUNCTIONS:
 # /FUNCTIONS
 
 # MAIN:
 if __name__ == "__main__":
-	name = ""
-	out_file = ""
-	if len(sys.argv) == 1:
-		name = "904"
-		out_file = "uhtr_map.xml"
-	elif len(sys.argv) == 2:
-		name = sys.argv[1]
-		out_file = "uhtr_map.xml"
-	elif len(sys.argv) == 3:
-		name = sys.argv[1]
-		out_file = sys.argv[2]
+	# Script arguments:
+	directory = "configuration/maps"
+	parser = OptionParser()
+	parser.add_option("-t", "--teststand", dest="ts",
+		default="904",
+		help="The name of the teststand you want to use (default is 904)", metavar="STR")
+	parser.add_option("-o", "--fileName", dest="out",
+		default="",
+		help="The desired filename (it will be saved to {0}). Only use this option if you don't want the default.".format(directory), metavar="STR")
+	parser.add_option("-r", "--read", dest="read",
+		default=False,
+		help="Set to true if you want to read the desired map (set with the -o option).", metavar="BOOL")
+	parser.add_option("-s", "--save", dest="save",
+		default=False,
+		help="Set to true if you want to find and save a new map.", metavar="BOOL")
+	(options, args) = parser.parse_args()
+	name = options.ts
+	if not options.out:
+		f_name = "{0}_qie_map.json".format(name)
 	else:
-		name = "904"
-		out_file = "uhtr_map.xml"
+		f_name = options.out
+	save = False
+	if options.save:
+		if options.save.lower() == "true" or options.save  == "1":
+			save = True
+	read = False
+	if options.read:
+		if options.read.lower() == "true" or options.read  == "1":
+			read = True
+	
 	ts = teststand(name)
-#	print ts.fe
 	
-	log = ""
+	if save:
+		if exists("{0}/{1}".format(directory, f_name)):
+			print ">> WARNING: There's already a map for this teststand in {0} called {1}.".format(directory, f_name)
+			do = raw_input(">> Do you want to overwrite it with a new one? (y/n)\n")
+			if do == "y" or do.lower() == "yes":
+				ts.save_qie_map(f=f_name, d=directory)
+			else:
+				print ">> Okay, I didn't do anything."
+		else:
+			print ">> Saving a new map to {0}/{1} ...".format(directory, f_name)
+			ts.save_qie_map(f=f_name, d=directory)
 	
-	print "The {0} teststand has {1} uHTR(s) at the following IP addresses:".format(ts.name, len(ts.uhtr_ips))
-	for ip in ts.uhtr_ips:
-		print "\t{0}".format(ip)
-	print "\n"
-	link_container = uhtr.get_links_all(ts)
-	for ip, links in link_container.iteritems():
-		print "Below are the active links of the uHTR at {0}:".format(ip)
-		for link in links:
-			if link.on:
-				print "==== Link {0} ====".format(link.n)
-				link.Print()
-				print ""
+	if read:
+		if exists("{0}/{1}".format(directory, f_name)):
+			print ">> Reading the map at {0}/{1} ...".format(directory, f_name)
+			print ts.read_qie_map(f=f_name, d=directory)
+		else:
+			print ">> [!!] There's not map at {0}/{1}.".format(directory, f_name)
+	
+	if not read and not save:
+		print ">> Nothing happened. Run with the -h argument for help."
 # /MAIN

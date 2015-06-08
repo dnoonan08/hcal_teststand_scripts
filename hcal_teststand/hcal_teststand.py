@@ -43,12 +43,19 @@ def get_temp(crate, port):		# It's more flexible to not have the input be a test
 def get_ts_status(ts):		# This function does basic initializations and checks. If all the "status" bits for each component are 1, then things are good.
 	status = {}
 	log = ""
+	print ">> Checking the MCHs ..."
 	status["mch"] = mch.get_status(ts)
+	print ">> Checking the AMC13s ..."
 	status["amc13"] = amc13.get_status(ts)
+	print ">> Checking the GLIBs ..."
 	status["glib"] = glib.get_status(ts)
+	print ">> Checking the uHTRs ..."
 	status["uhtr"] = uhtr.get_status(ts)
+	print ">> Checking the backplanes ..."
 	status["bkp"] = ngccm.get_status_bkp(ts)
+	print ">> Checking the ngCCMs ..."
 	status["ngccm"] = ngccm.get_status(ts)
+	print ">> Checking the QIE cards ..."
 	status["qie"] = qie.get_status(ts)
 	st = []
 	for component in ["amc13", "glib", "mch", "uhtr", "bkp", "ngccm", "qie"]:
