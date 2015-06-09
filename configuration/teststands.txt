@@ -46,6 +46,19 @@ qie_slots = 2;2
 
 %%
 
+name = 157
+fe_crates = 1
+ngccm_port = 4242
+uhtr_ip_base = 192.168.29
+uhtr_slots = 12
+uhtr_settings = 1, 92		# This isn't implemented, yet!
+glib_slot = 10
+mch_ip = 192.168.1.51
+amc13_ips = 192.168.1.73, 192.168.1.72
+qie_slots = 2
+
+%%
+
 name = fnal
 fe_crates = 2
 ngccm_port = 4242
