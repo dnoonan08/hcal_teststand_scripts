@@ -119,7 +119,6 @@ def get_status(ts=False):
 		# Use the AMC13Tool.exe to issue "i 1-12":
 		results = send_commands(ts=ts, cmds="i 1-12")["output"]
 		result = results[1]["result"]
-		print result
 	#	log += amc13_output
 		if 'parsed list "1-12" as mask 0xfff\r\nAMC13 out of run mode\r\nAMC13 is back in run mode and ready' in result:
 			status["status"].append(1)
