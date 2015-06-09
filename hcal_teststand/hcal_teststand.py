@@ -46,7 +46,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 	print ">> Checking the MCHs ..."
 	status["mch"] = mch.get_status(ts)
 	print ">> Checking the AMC13s ..."
-	status["amc13"] = amc13.get_status(ts)
+	status["amc13"] = amc13.get_status(ts=ts)
 	print ">> Checking the GLIBs ..."
 	status["glib"] = glib.get_status(ts)
 	print ">> Checking the uHTRs ..."
@@ -212,7 +212,7 @@ class teststand:
 	
 	def get_info(self):		# Returns a dictionary of component information, namely versions.
 		data = {}
-		data["amc13"] = amc13.get_info("amc13_{0}_config.xml".format(self.name))
+		data["amc13"] = amc13.get_info(ts=self)
 		data["glib"] = glib.get_info(self.ngccm_port)
 		data["uhtr"] = uhtr.get_info(self)
 		data["ngccm"] = []

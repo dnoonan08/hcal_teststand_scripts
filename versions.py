@@ -11,7 +11,7 @@ import sys
 
 # FUNCTIONS:
 def print_amc13_info(ts):		# Fetches and prints AMC13 version information.
-	amc_info = amc13.get_info("amc13_{0}_config.xml".format(ts.name))
+	amc_info = amc13.get_info(ts=ts)
 	print "* AMC13  ================================="
 	if (amc_info["sn"] == -1):
 		print "\tERROR: There was a problem fetching the AMC13 information."
