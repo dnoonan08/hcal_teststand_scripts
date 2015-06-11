@@ -173,11 +173,6 @@ def find_links(ip):		# Initializes links and then returns a list of link indicie
 	commands = [
 		'0',
 		'link',
-		'init',
-		'1',
-		'32',
-		'0',
-		'0',
 		'status',
 		'quit',
 		'exit',

@@ -8,8 +8,8 @@ def get_power(ts):
 	raw_output = p.before.strip()		# Collect all of the script's output.
 	results = [float(value[:-1]) for value in raw_output.split()]
 	return {
-		"v": results[0],
-		"a": results[1],
+		"V": results[0],
+		"I": results[1],
 #		"time": time_string(),
 		"time": time(),
 	}

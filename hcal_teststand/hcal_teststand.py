@@ -39,6 +39,21 @@ def get_temp(crate, port):		# It's more flexible to not have the input be a test
 		"log":	log,
 	}
 
+def get_temps(ts=False):		# It's more flexible to not have the input be a teststand object. I should make it accept both.
+	output = {}
+	
+	if ts:
+		for crate, slots in ts.fe.iteritems():
+			output[crate] = []
+			for slot in slots:
+				cmds = [
+					"get HF{0}-{1}-bkp_temp_f".format(crate, slot),		# The temperature sensor on the QIE card, near the bottom, labeled "U40".
+				]
+				output[crate] += ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+		return output
+	else:
+		return output
+
 # Functions for the whole system (BE and FE):
 def get_ts_status(ts):		# This function does basic initializations and checks. If all the "status" bits for each component are 1, then things are good.
 	status = {}

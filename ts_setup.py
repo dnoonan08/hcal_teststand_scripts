@@ -1,0 +1,125 @@
+####################################################################
+# Type: SCRIPT                                                     #
+#                                                                  #
+# Description: This script performs the basic setup procedure for  #
+# the desired teststand.                                           #
+####################################################################
+
+from hcal_teststand import *
+from hcal_teststand.hcal_teststand import teststand
+from hcal_teststand.utilities import *
+import sys
+from os.path import exists
+from optparse import OptionParser
+
+# CLASSES:
+# /CLASSES
+
+# FUNCTIONS:
+# /FUNCTIONS
+
+# MAIN:
+if __name__ == "__main__":
+	# Script arguments:
+	directory = "data/logs_157"
+	parser = OptionParser()
+	parser.add_option("-t", "--teststand", dest="ts",
+		default="157",
+		help="The name of the teststand you want to use (default is \"157\").",
+		metavar="STR"
+	)
+	parser.add_option("-v", "--verbose", dest="verbose",
+		default=False,
+		help="Turn on verbose mode (default is off)",
+		metavar="BOOL"
+	)
+	(options, args) = parser.parse_args()
+	name = options.ts
+	v = False
+	if options.verbose:
+		if options.verbose.lower() == "true" or options.verbose  == "1":
+			v = True
+	
+	# Set up teststand:
+	ts = teststand(name)
+	print "> Setting up the {0} teststand ...".format(ts.name)
+	if ts.name == "157":
+		print ">> Setting up the AMC13 ..."
+		result = amc13.get_status(ts=ts)["status"]
+		status = True
+		if result:
+			if result[0]:
+				print ">>> Can ping T1."
+			else:
+				print ">>> [!!] Can't ping T1."
+				status = False
+			if result[1]:
+				print ">>> Can ping T2."
+			else:
+				print ">>> [!!] Can't ping T1."
+				status = False
+			if result[2]:
+				print ">>> Can fetch FW versions."
+			else:
+				print ">>> [!!] Can't fetch FW versions."
+				status = False
+			if status:
+				result = amc13.setup(ts=ts, mode=1)		# Set up the AMC13 in TTC mode.
+				if result:
+					if result[0]:
+						print ">>> Initialization succeeded."
+					else:
+						print ">>> [!!] Initialization failed."
+						status = False
+				else:
+					print ">>> [!!] Initialization failed."
+					status = False
+				if status:
+					print ">> [OK] AMC13 set up."
+				else:
+					print ">> [!!] AMC13 failed to set up."
+		else:
+			print ">> [!!] AMC13 failed to set up."
+			status = False
+		if status:
+			print ">> Setting up the FE backplane ..."
+			output = ngccm.setup(ts=ts)
+			results = output["result"]
+			if v:
+				for cmd in output["log"]:
+					print "\t{0} -> {1}".format(cmd["cmd"], cmd["result"])
+			for b in results:
+				if b:
+					print ">>> Backplane powercycled."
+					print ">>> Backplane reset."
+				else:
+					status = False
+			if status:
+				print ">> [OK] Backplane set up."
+			else:
+				print ">> [!!] Backplane set up failed."
+		if status:
+			print ">> Setting up the uHTR ..."
+			cmds = [
+				"0",
+				"clock",
+				"setup",
+				"3",
+				"quit",
+				"exit",
+				"exit",
+			]
+			output = uhtr.send_commands(ts.uhtr_ips[0], cmds)["output"]
+			if output:
+				print ">> uHTR set up."
+			else:
+				print ">> [!!] uHTR failed to set up."
+				status = False
+		if status:
+			print "> [OK] Teststand set up correctly."
+		else:
+			print "> [!!] Set up aborted."
+		
+	else:
+		print "> ERROR: The {0} teststand's setup hasn't been defined, yet.".format(ts.name)
+# /MAIN

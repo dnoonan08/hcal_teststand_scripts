@@ -36,12 +36,12 @@ qie_slots = 1
 name = 904
 fe_crates = 1,2
 ngccm_port = 4242
-uhtr_ip_base = 192.168.29
-uhtr_slots = 11, 12
+uhtr_ip_base = 192.168.43
+uhtr_slots = 1, 2, 3
 uhtr_settings = 1, 92		# This isn't implemented, yet!
 glib_slot = 10
-mch_ip = 192.168.1.100
-amc13_ips = 192.168.1.165, 192.168.1.164
+mch_ip = 192.168.1.51
+amc13_ips = 192.168.1.73, 192.168.1.72
 qie_slots = 2;2
 
 %%
@@ -53,8 +53,8 @@ uhtr_ip_base = 192.168.29
 uhtr_slots = 12
 uhtr_settings = 1, 92		# This isn't implemented, yet!
 glib_slot = 10
-mch_ip = 192.168.1.51
-amc13_ips = 192.168.1.73, 192.168.1.72
+mch_ip = 192.168.1.28
+amc13_ips = 192.168.1.165, 192.168.1.164
 qie_slots = 2
 
 %%

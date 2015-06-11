@@ -25,7 +25,8 @@ def send_commands(ts=False, cmds=[], config=""):		# Sends commands to "AMC13Tool
 		# Set up list of commands to send:
 		if isinstance(cmds, str):		# If you only want to execute one command, you can input it as a string, rather than a list with one element.
 			cmds = [cmds]
-		cmds.append("q")		# Append the "quit" command to the end of the command list in case it was left off.
+		if "q" not in cmds:
+			cmds.append("q")		# Append the "quit" command to the end of the command list in case it was left off.
 		cmds_str = ""
 		for c in cmds:
 			cmds_str += "{0}\n".format(c)
@@ -96,7 +97,41 @@ def get_info(ts=False):		# Returns a dictionary of information about the AMC13, 
 			"log":			"",
 		}
 
-def get_status(ts=False):
+def setup(ts=False, mode=0):		# Mode: 0 for normal, 1 for TTC generation.
+	log = ""
+	output = []
+	
+	if ts:
+		if mode == 0:		# Normal mode.
+			results = send_commands(ts=ts, cmds="i 1-12")["output"]
+			result = results[1]["result"]
+		#	log += amc13_output
+			if 'parsed list "1-12" as mask 0xfff\r\nAMC13 out of run mode\r\nAMC13 is back in run mode and ready' in result:
+				output.append(1)
+			else:
+				output.append(0)
+			return result
+		elif mode == 1:		# TTC mode.
+			cmds = [
+				"ttc h on",
+				"wv CONF.TTC.ENABLE_INTERNAL_L1A 1",
+				"wv CONF.TTC.BGO0.COMMAND 0x4",
+				"wv CONF.TTC.BGO0.BX 1",
+				"wv CONF.TTC.BGO0.ENABLE 1",
+				"wv CONF.TTC.ENABLE_BGO 1",
+				"i 1-12 t",
+#				"q",
+			]
+			results = send_commands(ts=ts, cmds=cmds)["output"]
+			if 'i 1-12 t\r\nparsed list "1-12" as mask 0xfff\r\nEnabling TTS as TTC for loop-back\r\nAMC13 out of run mode\r\nAMC13 is back in run mode and ready' in results[-1]["result"]:
+				output.append(1)
+			else:
+				output.append(0)
+			return output
+	else:
+		return output
+
+def get_status(ts=False):		# This should not do anything to the AMC13, but should only be a passive assessment. See "setup".
 	log = ""
 	status = {}
 	status["status"] = []
@@ -127,6 +162,12 @@ def get_status(ts=False):
 		return status
 	else:
 		return status
+
+#def check_scratch(ts=False, values=['0xffffffff', '0xffffffff', '0xffffffff', '0xffffffff']):
+#	if ts:
+#		output = ngccm.send_commands
+#	else:
+#		return False
 # /FUNCTIONS
 
 if __name__ == "__main__":

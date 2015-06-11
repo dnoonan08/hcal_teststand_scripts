@@ -70,20 +70,11 @@ def make_amc13_configs(f):		# Write configuration files for AMC13.
 	ts_info = parse_ts_configuration(f)
 	for name, info in ts_info.iteritems():
 		if info:
-			string = ""
-			if name == "904":		# A temporary kludge until I figure this out better.
-				string = '''
+			string = '''
 <?xml version="1.0" encoding="UTF-8"?>
 <connections>
 	<connection id="T1" uri="chtcp-2.0://localhost:10203?target=''' + info["amc13_ips"][0] + ''':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1.xml" />
 	<connection id="T2" uri="chtcp-2.0://localhost:10203?target=''' + info["amc13_ips"][1] + ''':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2.xml" />
-</connections>'''.strip()
-			else:
-				string = '''
-<?xml version="1.0" encoding="UTF-8"?>
-<connections>
-	<connection id="T1" uri="chtcp-2.0://localhost:10203?target=''' + info["amc13_ips"][0] + ''':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1_v0x4002.xml" />
-	<connection id="T2" uri="chtcp-2.0://localhost:10203?target=''' + info["amc13_ips"][1] + ''':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2_v0x21.xml" />
 </connections>'''.strip()
 			try:
 				out = open("configuration/amc13_" + name + "_config.xml", "w")
@@ -112,6 +103,10 @@ export PATH=$PATH:/opt/ngccm/bin
 source /nfshome0/hcalsw/bin/env.sh
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/nfshome0/hcalpro/ngFEC
 export PATH=$PATH:/nfshome0/hcalpro/ngFEC
+				'''.strip()
+			elif name == "157":
+				string = '''
+source /home/daq/environment.sh
 				'''.strip()
 			elif name == "fnal":
 				string = '''

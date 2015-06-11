@@ -5,7 +5,7 @@
 ####################################################################
 
 from hcal_teststand import *
-from hcal_teststand.hcal_teststand import *
+from hcal_teststand.hcal_teststand import teststand
 import sys
 
 # CLASSES:
