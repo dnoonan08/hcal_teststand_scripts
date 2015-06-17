@@ -44,45 +44,45 @@ if __name__ == "__main__":
 	ts = teststand(name)
 	print "> Setting up the {0} teststand ...".format(ts.name)
 	if ts.name == "157":
-		print ">> Setting up the AMC13 ..."
+		print "> Setting up the AMC13 ..."
 		result = amc13.get_status(ts=ts)["status"]
 		status = True
 		if result:
 			if result[0]:
-				print ">>> Can ping T1."
+				print "> Can ping T1."
 			else:
-				print ">>> [!!] Can't ping T1."
+				print "> [!!] Can't ping T1."
 				status = False
 			if result[1]:
-				print ">>> Can ping T2."
+				print "> Can ping T2."
 			else:
-				print ">>> [!!] Can't ping T1."
+				print "> [!!] Can't ping T1."
 				status = False
 			if result[2]:
-				print ">>> Can fetch FW versions."
+				print "> Can fetch FW versions."
 			else:
-				print ">>> [!!] Can't fetch FW versions."
+				print "> [!!] Can't fetch FW versions."
 				status = False
 			if status:
 				result = amc13.setup(ts=ts, mode=1)		# Set up the AMC13 in TTC mode.
 				if result:
 					if result[0]:
-						print ">>> Initialization succeeded."
+						print "> Initialization succeeded."
 					else:
-						print ">>> [!!] Initialization failed."
+						print "> [!!] Initialization failed."
 						status = False
 				else:
-					print ">>> [!!] Initialization failed."
+					print "> [!!] Initialization failed."
 					status = False
 				if status:
-					print ">> [OK] AMC13 set up."
+					print "> [OK] AMC13 set up."
 				else:
-					print ">> [!!] AMC13 failed to set up."
+					print "> [!!] AMC13 failed to set up."
 		else:
-			print ">> [!!] AMC13 failed to set up."
+			print "> [!!] AMC13 failed to set up."
 			status = False
 		if status:
-			print ">> Setting up the FE backplane ..."
+			print "> Setting up the FE backplane ..."
 			output = ngccm.setup(ts=ts)
 			results = output["result"]
 			if v:
@@ -90,30 +90,37 @@ if __name__ == "__main__":
 					print "\t{0} -> {1}".format(cmd["cmd"], cmd["result"])
 			for b in results:
 				if b:
-					print ">>> Backplane powercycled."
-					print ">>> Backplane reset."
+					print "> Backplane powercycled."
+					print "> Backplane reset."
 				else:
 					status = False
 			if status:
-				print ">> [OK] Backplane set up."
+				print "> [OK] Backplane set up."
 			else:
-				print ">> [!!] Backplane set up failed."
+				print "> [!!] Backplane set up failed."
 		if status:
-			print ">> Setting up the uHTR ..."
+			print "> Setting up the uHTR ..."
 			cmds = [
 				"0",
 				"clock",
 				"setup",
 				"3",
 				"quit",
+				"link",
+				"init",
+				"1",
+                                "32",
+                                "0",
+                                "0",
+                                "quit",
 				"exit",
 				"exit",
 			]
 			output = uhtr.send_commands(ts.uhtr_ips[0], cmds)["output"]
 			if output:
-				print ">> uHTR set up."
+				print "> uHTR set up."
 			else:
-				print ">> [!!] uHTR failed to set up."
+				print "> [!!] uHTR failed to set up."
 				status = False
 		if status:
 			print "> [OK] Teststand set up correctly."

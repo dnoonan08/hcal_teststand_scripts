@@ -166,6 +166,38 @@ def parse_links(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you
 		log += ">> ERROR: Uh, there were an odd number of \"status\" lines, which is weird."
 	return list(set(active))
 
+def parse_links_full(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you use the "find_links" function below, which uses this function.
+	log = ""
+	active = []
+	n_times = 0
+	for line in raw.split("\n"):
+		if search("^BadCounter(\s*(X|ON)){12}", line):
+#			print line
+			n_times += 1
+			statuses = line.split()[1:]
+			for i in range(len(statuses)):
+				if statuses[i].strip() == "ON":
+					active.append( 12 * ((n_times - 1) % 2) + i )
+	if n_times < 2:
+		log += ">> ERROR: No correct \"status\" was called on the link."
+	elif n_times > 2:
+		log += ">> ERROR: Hm, \"status\" was called on the link multiple times, so the active link list might be unreliable. (n_times = {0})".format(n_times)
+	if (n_times % 2 != 0):
+		log += ">> ERROR: Uh, there were an odd number of \"status\" lines, which is weird."
+	n_times = 0
+	orbit = []
+	for line in raw.split("\n"):
+		if search("^OrbitRate\(kHz\)", line):
+#			print line
+			n_times += 1
+			orbits = line.split()[1:]
+			for i in range(len(orbits)):
+				orbit.append( float(orbits[i]) )
+	return {
+		"active": list(set(active)),
+		"orbit": orbit,
+	}
+
 def find_links(ip):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
 	log = ""
 	
@@ -183,6 +215,25 @@ def find_links(ip):		# Initializes links and then returns a list of link indicie
 	log += uhtr_out["log"]
 	active_links = parse_links(raw_output)		# A list of the indices of the active links.
 	return active_links
+
+def find_links_full(ip):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
+	log = ""
+	
+	# Identify active links:
+	commands = [
+		'0',
+		'link',
+		'status',
+		'quit',
+		'exit',
+		'exit',
+	]
+	uhtr_out = send_commands(ip, commands)
+	raw_output = uhtr_out["output"]
+#	print raw_output
+	log += uhtr_out["log"]
+	link_results = parse_links_full(raw_output)		# A list of the indices of the active links.
+	return link_results
 
 def get_links(ts, ip):		# Initializes and sets up links of a uHTR and then returns a list of links.
 	# Set up the QIE card unique IDs:
@@ -259,12 +310,6 @@ def get_data(ip, n, ch):
 	commands = [
 		'0',
 		'link',
-		'init',
-		'1',
-		'32',
-		'0',
-		'0',
-		'status',
 		'spy',
 		'{0}'.format(ch),
 		'0',

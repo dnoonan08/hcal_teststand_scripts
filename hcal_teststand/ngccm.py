@@ -43,22 +43,28 @@ def send_commands_parsed(port, cmds):		# This executes commands as above, but re
 		cmds = [cmds]
 	if "quit" not in cmds:
 		cmds.append("quit")
-	p = pexpect.spawn('ngFEC.exe -z -c -p {0}'.format(port))
-	log += "----------------------------\nYou ran the following script with the ngccm tool:\n"
-	for c in cmds:
-#		print c
-		p.sendline(c)
-		t0 = time()
-		if c != "quit":
-			p.expect("{0} #((\s|E).*)\n".format(escape(c)))
-			t1 = time()
-			output.append({
-				"cmd": c,
-				"result": p.match.group(1).strip(),
-				"times": [t0, t1],
-			})
-#			print output
-		log += c + "\n"
+	try:
+		p = pexpect.spawn('ngFEC.exe -z -c -p {0}'.format(port))
+		log += "----------------------------\nYou ran the following script with the ngccm tool:\n"
+		for c in cmds:
+	#		print c
+			p.sendline(c)
+			t0 = time()
+			if c != "quit":
+				p.expect("{0} #((\s|E).*)\n".format(escape(c)))
+				t1 = time()
+				output.append({
+					"cmd": c,
+					"result": p.match.group(1).strip(),
+					"times": [t0, t1],
+				})
+	#			print output
+			else:
+				sleep(1)
+			log += c + "\n"
+		p.close()
+	except Exception as ex:
+		log += str(ex)
 	log += "----------------------------\n"
 	return {
 		"output": output,
@@ -480,7 +486,7 @@ cmds_HF1_2 = [
 	"get HF1-2-QIE19_CapID3pedestal",
 	"get HF1-2-QIE4_TimingThresholdDAC",
 	"get HF1-2-iTop_Spy96bits",
-	"get HF1-2-Input",
+#	"get HF1-2-Input",		# This is used for internal debugging.
 	"get HF1-2-QIE19_ChargeInjectDAC",
 	"get HF1-2-QIE4_Trim",
 	"get HF1-2-iTop_StatFromSERDES_busy",
@@ -496,7 +502,7 @@ cmds_HF1_2 = [
 	"get HF1-2-QIE19_IdcBias",
 	"get HF1-2-QIE5_CapID1pedestal",
 	"get HF1-2-iTop_StatusReg_QieDLLNoLock",
-	"get HF1-2-Output",
+#	"get HF1-2-Output",		# This is used for internal debugging.
 	"get HF1-2-QIE19_IsetpBias",
 	"get HF1-2-QIE5_CapID2pedestal",
 	"get HF1-2-iTop_UniqueID",
@@ -527,7 +533,7 @@ cmds_HF1_2 = [
 	"get HF1-2-QIE10_ChargeInjectDAC",
 	"get HF1-2-QIE19_Trim",
 	"get HF1-2-QIE5_Lvds",
-	"get HF1-2-scan",
+#	"get HF1-2-scan",		# Useless
 	"get HF1-2-QIE10_DiscOn",
 	"get HF1-2-QIE1_CalMode",
 	"get HF1-2-QIE5_PedestalDAC",
@@ -991,11 +997,11 @@ cmds_HF1_2 = [
 	"get HF1-link_ctrl_gtx_rx_sync_rst",
 	"get HF1-link_ctrl_gtx_tx_reset",
 	"get HF1-m-Control",
-	"get HF1-m-scan",
+#	"get HF1-m-scan",		# Useless
 	"get HF1-m-vtrx-EN_EMB",
 	"get HF1-m-vtrx-PRE_F",
 	"get HF1-mezz_SERDES_LANE_SEL",
-	"get HF1-m-Input",
+#	"get HF1-m-Input",		# This is used for internal debugging.
 	"get HF1-m-vtrx-Bias_Current",
 	"get HF1-m-vtrx-EXTCON",
 	"get HF1-m-vtrx-PRE_R",
@@ -1015,7 +1021,7 @@ cmds_HF1_2 = [
 	"get HF1-m-vtrx-PREDRV",
 	"get HF1-mezz_FPGA_MAJOR_VERSION",
 	"get HF1-mezz_reg3",
-	"get HF1-m-Output",
+#	"get HF1-m-Output",		# This is used for internal debugging.
 	"get HF1-m-vtrx-EN_A",
 	"get HF1-m-vtrx-PREHF",
 	"get HF1-mezz_FPGA_MINOR_VERSION",
@@ -1034,10 +1040,10 @@ cmds_HF1_2 = [
 	"get HF1-n-Input_BytesA",
 	"get HF1-n-Input_BytesBB",
 	"get HF1-n-Output_Bytes",
-	"get HF1-n-scan",
-	"get HF1-n-Input",
+#	"get HF1-n-scan",		# Useless.
+#	"get HF1-n-Input",		# This is used for internal debugging.
 	"get HF1-n-Input_BytesBA",
-	"get HF1-n-Output",
+#	"get HF1-n-Output",		# This is used for internal debugging.
 	"get HF1-n-Status",
 	"get HF1-power",
 	"get HF1-pulser-daccontrol_ToggleFunctionEnable",
@@ -1071,6 +1077,87 @@ cmds_HF1_2 = [
 	"get HF1-VIN_current_f",
 	"get HF1-VIN_voltage_f",
 	"get HF1-wte",
+	"get fec1-BC0_cnt",
+	"get fec1-firmware_dd",
+	"get fec1-gbt_phase_mon_reset",
+	"get fec1-sfp1_status.TxFault",
+	"get fec1-tclka_dr_en",
+	"get fec1-v6_cpld",
+	"get fec1-DbErr_cnt",
+	"get fec1-firmware_mm",
+	"get fec1-gtx_conf",
+	"get fec1-sfp2_status.Mod_abs",
+	"get fec1-tclkb_dr_en",
+	"get fec1-xpoint_2x2_s1",
+	"get fec1-EC0_cnt",
+	"get fec1-firmware_ver_build",
+	"get fec1-gtx_global_reset",
+	"get fec1-sfp2_status.RxLOS",
+	"get fec1-user_board_id",
+	"get fec1-xpoint_2x2_s2",
+	"get fec1-LHC_clk_freq",
+	"get fec1-firmware_ver_major",
+	"get fec1-icap_page",
+	"get fec1-sfp2_status.TxFault",
+	"get fec1-user_firmware_dd",
+	"get fec1-xpoint_4x4_s1",
+	"get fec1-SinErr_cnt",
+	"get fec1-firmware_ver_minor",
+	"get fec1-icap_trigg",
+	"get fec1-sfp3_status.Mod_abs",
+	"get fec1-user_firmware_mm",
+	"get fec1-xpoint_4x4_s2",
+	"get fec1-board_id",
+	"get fec1-firmware_yy",
+	"get fec1-pcie_clk_fsel",
+	"get fec1-sfp3_status.RxLOS",
+	"get fec1-user_firmware_yy",
+	"get fec1-xpoint_4x4_s3",
+	"get fec1-cdce_ctrl_sel",
+	"get fec1-fmc1_presence",
+	"get fec1-pcie_clk_mr",
+	"get fec1-sfp3_status.TxFault",
+	"get fec1-user_sys_id",
+	"get fec1-xpoint_4x4_s4",
+	"get fec1-cdce_lock",
+	"get fec1-fmc2_presence",
+	"get fec1-pcie_clk_oe",
+	"get fec1-sfp4_status.Mod_abs",
+	"get fec1-user_ver_build",
+	"get fec1-cdce_powerup",
+	"get fec1-fpga_program_b_trst",
+	"get fec1-qie_reset_cnt",
+	"get fec1-sfp4_status.RxLOS",
+	"get fec1-user_ver_major",
+	"get fec1-cdce_refsel",
+	"get fec1-fpga_reset",
+	"get fec1-sfp1_status.Mod_abs",
+	"get fec1-sfp4_status.TxFault",
+	"get fec1-user_ver_minor",
+	"get fec1-cdce_sync",
+	"get fec1-gbe_int",
+	"get fec1-sfp1_status.RxLOS",
+	"get fec1-sma_output",
+	"get fec1-user_wb_regs",
+	"get softf1",
+	"get softf2u",
+	"get softf3s",
+	"get testsoft",
+	"get testsoft32",
+	"get testsoftread","get HF1-1wA_config",
+	"get HF1-1wA_id",
+	"get HF1-1wA_user1",
+	"get HF1-1wB_config",
+	"get HF1-1wB_id",
+	"get HF1-1wB_user1",
+	"get HF1-1wA_f",
+	"get HF1-1wA_t",
+	"get HF1-1wA_user2",
+	"get HF1-1wB_f",
+	"get HF1-1wB_t",
+	"get HF1-1wB_user2",
+	"get HF1-tmr_errors",
+	"get HF1-tmr_errors2",
 ]
 # /VARIABLES
 
