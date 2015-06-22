@@ -61,6 +61,7 @@ def parse_log(log_raw):
 		if log_parsed["links"]:
 			log_parsed["links"]["links"] = ast.literal_eval(log_parsed["links"]["lines"][0])		# Turn the list of links into a python list.
 			log_parsed["links"]["orbits"] = ast.literal_eval(log_parsed["links"]["lines"][1])
+			log_parsed["links"]["adc"] = ast.literal_eval(log_parsed["links"]["lines"][2])
 	
 	return log_parsed
 
@@ -167,13 +168,30 @@ def check_link_orbits(log_parsed):
 		print ex
 	return check(result=result, error=error.strip(), scale=0)
 
+def check_link_adc(log_parsed):
+	result = False
+	error = ""
+	try:
+		adcs_per_link = log_parsed["links"]["adc"]
+		adcs = []
+		for link in adcs_per_link:
+			adcs.extend(link)
+		if (min(adcs) > 0 and max(adcs) < 10):
+			result = True
+		else:
+			error += "ERROR: The pedestal values are wrong! Look: {0}.\n".format(adcs)
+	except Exception as ex:
+		error += str(ex)
+		print ex
+	return check(result=result, error=error.strip(), scale=0)
+
 def check_power(log_parsed):
 	result = False
 	error = ""
 	try:
 		V = float(log_parsed["power"]["lines"][0].split()[0])
 		I = float(log_parsed["power"]["lines"][1].split()[0])
-		if (I > 1.13 and I < 3.85) or ( V == -1):
+		if (I > 1.13 and I < 3.9) or ( V == -1):
 #		if (I > 3.0 and I < 3.6) or ( V == -1):
 			result = True
 		else:
@@ -193,7 +211,7 @@ def check_cntrl_link(log_parsed):
 		if status == 0:
 			result = True
 		else:
-			error += "ERROR: get fec1-sfp1_status.RxLOS -> {0} ({1})\n".format(log_parsed["registers"]["registers"]["get fec1-sfp1_status.RxLOS"], status)
+			error += "ERROR: get fec1-sfp1_status.RxLOS -> {0}\n".format(log_parsed["registers"]["registers"]["get fec1-sfp1_status.RxLOS"], status)
 	except Exception as ex:
 		error += str(ex)
 		print ex
@@ -212,9 +230,10 @@ def send_email(subject="", body=""):
 		"alerts@connivance.net", 
 		[
 			"tote@physics.rutgers.edu",
-			"sdg@cern.ch",
+#			"sdg@cern.ch",
 			"tullio.grassi@gmail.com",
 			"yw5mj@virginia.edu",
+			"whitbeck.andrew@gmail.com",
 		],
 		msg.as_string()
 	)
@@ -226,7 +245,7 @@ def setup_157():
 	raw_output = p.before.strip()		# Collect all of the script's output.
 	return raw_output
 
-def power_cycle():
+def power_cycle(n=10):
 	log = ""
 	print "> Conducting a power cycle ..."
 	log += "Conducting a power cycle ...\n"
@@ -234,15 +253,15 @@ def power_cycle():
 	log += "Disabling power supply ...\n"
 	log += ts_157.enable_power(enable=0)
 	log += "\n"
-	print "> Sleeping 10 seconds ..."
-	log += "Sleeping 10 seconds ...\n"
-	sleep(10)
+	print "> Sleeping {0} seconds ...".format(n)
+	log += "Sleeping {0} seconds ...\n".format(n)
+	sleep(n)
 	print "> Configuring power supply ..."
 	log += "Configuring power supply ...\n"
 	config_result = ts_157.config_power()
 	log += config_result
 	log += "\n"
-	if ("OVP 11.00" in config_result) and ("V 10.00" in config_result) and ("I 4.00" in config_result):
+	if ("OVP 11.00" in config_result) and ("V 10.00" in config_result) and ("I 4.40" in config_result):
 		print "> Enabling power supply ..."
 		log += "Enabling power supply ...\n"
 		log += ts_157.enable_power(enable=1)
@@ -255,6 +274,12 @@ def power_cycle():
 		print "> [!!] Power cycle aborted. The OVP wasn't 11 V."
 		log += "[!!] Power cycle aborted. The OVP wasn't 11 V.\n"
 	return log
+
+def disable_qie(crate=1):
+	cmds = [
+		"put HF{0}-bkp_pwr_enable 0".format(crate),
+	]
+	return ngccm.send_commands_parsed(4242, cmds)["output"]
 # /FUNCTIONS
 
 # MAIN:
@@ -290,6 +315,7 @@ if __name__ == "__main__":
 	n_sleep = 0
 	last_log = ""
 	t_last_log = time()
+	status_last = -1
 	while z == True:
 		# Set up variables:
 		dt_last_log = time() - t_last_log
@@ -328,12 +354,20 @@ if __name__ == "__main__":
 					checks = []
 					checks.append(check_temps(parsed))
 					checks.append(check_clocks(parsed))
-					checks.append(check_ngccm_static_regs(parsed))
+					cntrl_link = check_ngccm_static_regs(parsed)
+					checks.append(cntrl_link)
 					checks.append(check_link_number(parsed))
 					checks.append(check_link_orbits(parsed))
 					checks.append(check_power(parsed))
 					checks.append(check_cntrl_link(parsed))
+					checks.append(check_link_adc(parsed))
 #					checks.append(check(result=False, scale=1, error="This is a fake error message"))
+					
+					# Control link status:
+					if status_last != -1:
+						if cntrl_link.result != status_last:
+							send_email(subject="Update: control link", body="The state of the control link changed from {0} to {1}.".format(status_last, cntrl_link.result))
+					status_last = cntrl_link.result
 					
 					# Deal with failed checks:
 					failed = [c for c in checks if not c.result]
@@ -361,11 +395,17 @@ if __name__ == "__main__":
 							
 							# Power cycle if any have scale 2 or greater:
 							if [c for c in critical if c.scale > 1]:
-								power_log = power_cycle()
-								email_body += "A power cycle was triggered. Here's how it went:\n\n"
+#								power_log = power_cycle()
+#								power_log = setup_157()
+								power_log = str(disable_qie())
+#								email_body += "A power cycle was triggered. Here's how it went:\n\n"
+#								email_body += "A power enable cycle was triggered. Here's how it went:\n\n"
+								email_body += "A QIE card disable was triggered. Here's how it went:\n\n"
 								email_body += power_log
 								email_body += "\n"
-								error_log += "A power cycle was triggered. Here's how it went:\n\n"
+#								error_log += "A power cycle was triggered. Here's how it went:\n\n"
+#								error_log += "A power enable cycle was triggered. Here's how it went:\n\n"
+								error_log += "A QIE card disable was triggered. Here's how it went:\n\n"
 								error_log += power_log
 							
 							# Send email:

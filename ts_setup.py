@@ -98,7 +98,8 @@ if __name__ == "__main__":
 				print "> [OK] Backplane set up."
 			else:
 				print "> [!!] Backplane set up failed."
-		if status:
+#		if status:
+		if True:
 			print "> Setting up the uHTR ..."
 			cmds = [
 				"0",
@@ -109,10 +110,10 @@ if __name__ == "__main__":
 				"link",
 				"init",
 				"1",
-                                "32",
-                                "0",
-                                "0",
-                                "quit",
+				"32",
+				"0",
+				"0",
+				"quit",
 				"exit",
 				"exit",
 			]

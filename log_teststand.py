@@ -13,6 +13,7 @@ import sys
 import os
 from optparse import OptionParser
 from time import sleep, time
+import numpy
 
 # CLASSES:
 # /CLASSES
@@ -95,10 +96,20 @@ def log_links(ts, scale=0):
 	for link in active_links:
 		orbits.append(link_results["orbit"][link])
 	log += "{0}\n".format(orbits)
+	adc_avg = []
+	data_full = ""
+	for i in active_links:
+		adc_avg_link = []
+		uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 300, i)["output"]
+		if scale == 1:
+			data_full += uhtr_read
+		data = uhtr.parse_data(uhtr_read)["adc"]
+		for j in range(4):
+			adc_avg_link.append(numpy.mean([i_bx[j] for i_bx in data]))
+		adc_avg.append(adc_avg_link)
+	log += "{0}\n".format(adc_avg)
 	if scale == 1:
-		for i in active_links:
-			uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 300, i)["output"]
-			log += uhtr_read
+		log += data_full
 	return log
 
 def record(ts=False, path="data/unsorted", scale=0):
