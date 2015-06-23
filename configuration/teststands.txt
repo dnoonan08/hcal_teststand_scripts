@@ -34,7 +34,7 @@ qie_slots = 1
 %%
 
 name = 904
-fe_crates = 2
+fe_crates = 1
 ngccm_port = 4242
 uhtr_ip_base = 192.168.29
 uhtr_slots = 11, 12
