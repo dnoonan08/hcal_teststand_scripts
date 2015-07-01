@@ -10,8 +10,9 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	qie_half_labels = ['bottom', 'top']
 	
 	# CONSTRUCTION
-	def __init__(self, uhtr_ip = "unknown", link_number = -1, qie_unique_id = "unknown", qie_half = -1, qie_fiber = -1, on = False):
-		self.ip = uhtr_ip
+	def __init__(self, ts="uknown", uhtr_slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False):
+		self.ts = ts
+		self.slot = uhtr_slot
 		self.n = link_number
 		self.qie_unique_id = qie_unique_id
 		self.qie_half = qie_half
@@ -24,7 +25,8 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	
 	# METHODS
 	def get_data(self):
-		data = get_data_parsed(self.ip, 300, self.n)
+		print self.ts
+		data = get_data_parsed(self.ts, self.slot , 300, self.n)
 		if data:
 			return data
 		else:
@@ -46,7 +48,7 @@ class link:		# An object that represents a uHTR link. It contains information ab
 # /CLASSES
 
 # FUNCTIONS:
-def send_commands(ip, cmds):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a IP address and a list of commands.
+def send_commands(ts, uhtr_slot, cmds):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
 	log = ""
 	raw_output = ""
 	if isinstance(cmds, str):
@@ -56,7 +58,10 @@ def send_commands(ip, cmds):		# Sends commands to "uHTRtool.exe" and returns the
 	cmds_str = ""
 	for c in cmds:
 		cmds_str += "{0}\n".format(c)
-	raw_output = Popen(['printf "{0}" | uHTRtool.exe {1}'.format(cmds_str, ip)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
+	uhtr_cmd = "uHTRtool.exe {0}".format(ts.uhtr[uhtr_slot])
+	if hasattr(ts, "control_hub"):
+		uhtr_cmd += " -o {0}".format(ts.control_hub)
+	raw_output = Popen(['printf "{0}" | {1}'.format(cmds_str, uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
 	log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
 
 	return {
@@ -64,7 +69,30 @@ def send_commands(ip, cmds):		# Sends commands to "uHTRtool.exe" and returns the
 		"log": log,
 	}
 
-def get_info_ip(ip):		# Returns a dictionary of information about the uHTR, such as the FW versions.
+def send_commands_script(ts, uhtr_slot, cmds):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
+	log = ""
+	raw_output = ""
+	if isinstance(cmds, str):
+		print 'WARNING: You probably didn\'t intend to run "uHTRtool.exe" with only one command: {0}'.format(cmds)
+		print 'INFO: The "uhtr.send_commands" function takes a list of commands as an argument.'
+		cmds = [cmds]
+	cmds_str = ""
+	for c in cmds:
+		cmds_str += "{0}\n".format(c)
+	uhtr_cmd = "uHTRtool.exe {0}".format(ts.uhtr[uhtr_slot])
+	if hasattr(ts, "control_hub"):
+		uhtr_cmd += " -o {0}".format(ts.control_hub)
+	with open("uhtr_script.cmd", "w") as out:
+		out.write(cmds_str)
+	raw_output = Popen(['{0} < uhtr_script.cmd'.format(uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
+	log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
+
+	return {
+		"output": raw_output[0] + raw_output[1],
+		"log": log,
+	}
+
+def get_info_ip(ts, uhtr_slot):		# Returns a dictionary of information about the uHTR, such as the FW versions.
 	log = ""
 	data = {	# "HF-4800 (41) 00.0f.00" => FW = [00, 0f, 00], FW_type = [HF-4800, 41] (repeat for "back")
 		"version_fw_front": [0, 0, 0],
@@ -72,7 +100,7 @@ def get_info_ip(ip):		# Returns a dictionary of information about the uHTR, such
 		"version_fw_back": [0, 0, 0],
 		"version_fw_type_back": [0, 0],
 	}
-	raw_output = send_commands(ip, ["0", "exit", "exit"])["output"]
+	raw_output = send_commands(ts, uhtr_slot, ["0", "exit", "exit"])["output"]
 #	log += raw_output
 	match = search("Front Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
 	if match:
@@ -137,8 +165,8 @@ def get_status(ts):		# Perform basic checks with the uHTRTool.exe:
 	# Activate links:
 	# * Check that there are 6 active links per IP?
 	status["links"] = []
-	for ip in ts.uhtr_ips:
-		links = find_links(ip)
+	for uhtr_slot in ts.uhtr_slots:
+		links = find_links(ts, uhtr_slot)
 		status["links"].append(links)
 		if links:
 			status["status"].append(1)
@@ -151,6 +179,7 @@ def parse_links(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you
 	active = []
 	n_times = 0
 	for line in raw.split("\n"):
+#		print line
 		if search("^BadCounter(\s*(X|ON)){12}", line):
 #			print line
 			n_times += 1
@@ -198,7 +227,7 @@ def parse_links_full(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly
 		"orbit": orbit,
 	}
 
-def find_links(ip):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
+def find_links(ts, uhtr_slot):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
 	log = ""
 	
 	# Identify active links:
@@ -210,13 +239,13 @@ def find_links(ip):		# Initializes links and then returns a list of link indicie
 		'exit',
 		'exit',
 	]
-	uhtr_out = send_commands(ip, commands)
+	uhtr_out = send_commands(ts, uhtr_slot, commands)
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]
 	active_links = parse_links(raw_output)		# A list of the indices of the active links.
 	return active_links
 
-def find_links_full(ip):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
+def find_links_full(ts, uhtr_slot):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
 	log = ""
 	
 	# Identify active links:
@@ -228,14 +257,14 @@ def find_links_full(ip):		# Initializes links and then returns a list of link in
 		'exit',
 		'exit',
 	]
-	uhtr_out = send_commands(ip, commands)
+	uhtr_out = send_commands(ts, uhtr_slot, commands)
 	raw_output = uhtr_out["output"]
 #	print raw_output
 	log += uhtr_out["log"]
 	link_results = parse_links_full(raw_output)		# A list of the indices of the active links.
 	return link_results
 
-def get_links(ts, ip):		# Initializes and sets up links of a uHTR and then returns a list of links.
+def get_links(ts, uhtr_slot):		# Initializes and sets up links of a uHTR and then returns a list of links.
 	# Set up the QIE card unique IDs:
 	is_set = qie.set_unique_id_all(ts)
 #	if is_set:
@@ -244,7 +273,9 @@ def get_links(ts, ip):		# Initializes and sets up links of a uHTR and then retur
 #		print ">> ERROR: Something went wrong setting up the unique IDs."
 	
 	# Get a list of the active links:
-	active_links = find_links(ip)
+	print "Fetching links from uHTR in slot {0}".format(uhtr_slot)
+	active_links = find_links(ts, uhtr_slot)
+	print active_links
 	
 	# For each active link, read QIE unique ID and fiber number from SPY data:
 	# (self, uhtr_ip = "unknown", link_number = -1, qie_unique_id = "unknown", qie_half = -1, qie_fiber = -1, on = False)
@@ -252,7 +283,8 @@ def get_links(ts, ip):		# Initializes and sets up links of a uHTR and then retur
 	links = []
 	for i in range(96):
 		if i in active_links:
-			data = get_data_parsed(ip, 3, i)
+			data = get_data_parsed(ts, uhtr_slot, 3, i)
+#			print data
 			if data:
 				qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
 					data["raw"][0][2][1:5],
@@ -262,18 +294,19 @@ def get_links(ts, ip):		# Initializes and sets up links of a uHTR and then retur
 				)
 				qie_fiber = data["fiber"][0]
 				qie_half = data["half"][0]
-				links.append(link(ip, i, qie_unique_id, qie_half, qie_fiber, on = True))
+				links.append(link(ts=ts, uhtr_slot=uhtr_slot, link_number=i, qie_unique_id=qie_unique_id, qie_half=qie_half, qie_fiber=qie_fiber, on = True))
 			else:
-				links.append(link(on = True))
+				links.append(link(ts=ts, on=True))
 		else:
-			links.append(link(uhtr_ip = ip, link_number = i, on = False))
+			links.append(link(ts=ts, uhtr_slot=uhtr_slot, link_number=i, on=False))
 	hcal_teststand.set_mode_all(ts, 0)
 	return links
 
 def get_links_all(ts):		# Calls "get_links" for all uHTRs in the system.
 	container = {}
-	for ip in ts.uhtr_ips:
-		container[ip] = get_links(ts, ip)
+	for uhtr_slot in ts.uhtr.keys():
+		print "uhtr 283: {0}".format(uhtr_slot)
+		container[uhtr_slot] = get_links(ts, uhtr_slot)
 	return container
 
 # calls the uHTRs histogramming functionality
@@ -282,7 +315,7 @@ def get_links_all(ts):		# Calls "get_links" for all uHTRs in the system.
 # sepCapID - whether to distinguish between different cap IDs
 # (currently I think this means you can only read out range 0)
 # fileName - output file name
-def get_histo(ip , n , sepCapID , fileName ): 
+def get_histo(ts, uhtr_slot, n , sepCapID , fileName ): 
 	
 	log = ""
 	commands = [
@@ -300,11 +333,11 @@ def get_histo(ip , n , sepCapID , fileName ):
 		'exit'
 		]
 	
-	log = send_commands(ip,commands)["log"]
+	log = send_commands(ts, uhtr_slot,commands)["log"]
 	# ... seems that send_commands returns a 
 	# dictionary which contains all of the outputs
 
-def get_data(ip, n, ch):
+def get_data(ts, uhtr_slot, n, ch):
 	log = ""
 	
 	commands = [
@@ -320,13 +353,13 @@ def get_data(ip, n, ch):
 		'exit',
 	]
 	
-	uhtr_out = send_commands(ip, commands)
+	uhtr_out = send_commands(ts, uhtr_slot, commands)
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]
 	return uhtr_out
 
 ### get triggered data -
-def get_triggered_data(ip , n , outputFile="testTriggeredData"):
+def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
 	log = ""
 
 	commands = [
@@ -352,7 +385,7 @@ def get_triggered_data(ip , n , outputFile="testTriggeredData"):
 		'exit',
 	]
 
-	uhtr_out = send_commands(ip, commands)
+	uhtr_out = send_commands(ts, uhtr_slot, commands)
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]
 	#return uhtr_out
@@ -414,8 +447,8 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 	else:
 		return data
 
-def get_data_parsed(ip, n, ch):
-	return parse_data(get_data(ip, n, ch)["output"])
+def get_data_parsed(ts, uhtr_slot, n, ch):
+	return parse_data(get_data(ts, uhtr_slot, n, ch)["output"])
 # /FUNCTIONS
 
 if __name__ == "__main__":

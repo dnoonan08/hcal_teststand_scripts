@@ -20,7 +20,7 @@ import os
 def get_temp(crate, port):		# It's more flexible to not have the input be a teststand object. I should make it accept both.
 	log =""
 	command = "get HF{0}-adc56_f".format(crate)
-	raw_output = ngccm.send_commands(port, command)["output"]
+	raw_output = ngccm.send_commands(ts, command)["output"]
 #		print raw_output
 	temp = -1
 	try:
@@ -49,7 +49,7 @@ def get_temps(ts=False):		# It's more flexible to not have the input be a testst
 				cmds = [
 					"get HF{0}-{1}-bkp_temp_f".format(crate, slot),		# The temperature sensor on the QIE card, near the bottom, labeled "U40".
 				]
-				output[crate] += ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+				output[crate] += ngccm.send_commands_parsed(ts, cmds)["output"]
 		return output
 	else:
 		return output
@@ -86,9 +86,9 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 		"log": log,
 	}
 
-def parse_ts_configuration(f):		# This function is used to parse the "teststands.txt" configuration file. It is run by the "teststand" class; usually you want to use that instead of running this yourself.
+def parse_ts_configuration(f="teststands.txt"):		# This function is used to parse the "teststands.txt" configuration file. It is run by the "teststand" class; usually you want to use that instead of running this yourself.
 	# WHEN YOU EDIT THIS SCRIPT, MAKE SURE TO UPDATE install.py!
-	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "glib_slot", "mch_ip", "amc13_ips", "qie_slots"]
+	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "uhtr_settings", "glib_slot", "mch_ip", "amc13_ips", "qie_slots", "control_hub"]
 	teststand_info = {}
 	raw = ""
 	if ("/" in f):
@@ -117,7 +117,10 @@ def parse_ts_configuration(f):		# This function is used to parse the "teststands
 							teststand_info[ts_name][variable] = value.strip()
 						elif (variable == "uhtr_slots"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
-							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
+							teststand_info[ts_name][variable] = sorted([int(i) for i in value.split(",")])
+						elif (variable == "uhtr_settings"):
+							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							teststand_info[ts_name][variable] = [i for i in value.split(",")]
 						elif (variable == "glib_slot"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							teststand_info[ts_name][variable] = int(value)
@@ -139,6 +142,9 @@ def parse_ts_configuration(f):		# This function is used to parse the "teststands
 							# Let a semicolon be at the end of the last list without adding an empty list:
 							if not teststand_info[ts_name][variable][-1]:
 								del teststand_info[ts_name][variable][-1]
+						elif (variable == "control_hub"):
+							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							teststand_info[ts_name][variable] = value.strip()
 	return teststand_info
 
 def set_mode(ts, crate, slot, n):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
@@ -150,7 +156,7 @@ def set_mode(ts, crate, slot, n):		# 0: normal mode, 1: link test mode A (test m
 			"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot, n),
 			"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot, n),
 		]
-		output = ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+		output = ngccm.send_commands_parsed(ts, cmds)["output"]
 #		print output
 		if "ERROR" not in output[0]["result"] and "ERROR" not in output[1]["result"]:
 			s = 1
@@ -161,7 +167,7 @@ def set_mode(ts, crate, slot, n):		# 0: normal mode, 1: link test mode A (test m
 			"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot, n),
 			"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot, n),
 		]
-		output = ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+		output = ngccm.send_commands_parsed(ts, cmds)["output"]
 		if "ERROR" not in output[0]["result"] and "ERROR" not in output[1]["result"]:
 			s = 1
 	elif n == 2:
@@ -171,7 +177,7 @@ def set_mode(ts, crate, slot, n):		# 0: normal mode, 1: link test mode A (test m
 			"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot, n),
 			"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot, n),
 		]
-		output = ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+		output = ngccm.send_commands_parsed(ts, cmds)["output"]
 #		print output
 		if "ERROR" not in output[0]["result"] and "ERROR" not in output[1]["result"]:
 			s = 1
@@ -204,8 +210,11 @@ class teststand:
 					setattr(self, key, value)
 				# Assign a few other calculable attributes:
 				self.uhtr_ips = []
+				self.uhtr = {}
 				for slot in self.uhtr_slots:
-					self.uhtr_ips.append("{0}.{1}".format(self.uhtr_ip_base, slot*4))
+					ip = "{0}.{1}".format(self.uhtr_ip_base, slot*4)
+					self.uhtr_ips.append(ip)
+					self.uhtr[slot] = ip
 				self.glib_ip = "192.168.1.{0}".format(160 + self.glib_slot)
 				self.fe = {}
 				if len(self.fe_crates) <= len(self.qie_slots):
@@ -219,8 +228,8 @@ class teststand:
 	# /CONSTRUCTION
 	
 	# METHODS:
-	def get_links(self, ip=""):
-		if ip:
+	def get_links(self, uhtr_slot=False):
+		if uhtr_slot:
 			return uhtr.get_links(self, ip)
 		else:
 			return uhtr.get_links_all(self)
@@ -244,24 +253,24 @@ class teststand:
 			temps.append(get_temp(crate, self.ngccm_port)["temp"])		# See the "get_temp" funtion above.
 		return temps
 	
-	def get_data(self, ip="", i_link=0, n=300):
-		return uhtr.get_data_parsed(ip, n, i_link)
+	def get_data(self, uhtr_slot=12, i_link=0, n=300):
+		return uhtr.get_data_parsed(self, uhtr_slot, n, i_link)
 	
 	def get_status(self):		# Sets up and checks that the teststand is working.
 		return get_ts_status(self)
 	
 	def set_ped(self, crate=0, slot=0, i_qie=0, dac=6):
-		qie.set_ped(self.ngccm_port, crate, slot, i_qie, dac)
+		qie.set_ped(self, crate, slot, i_qie, dac)
 	
 	def set_ped_all(self, n):
 		for crate, slots in self.fe.iteritems():
 			for slot in slots:
-				qie.set_ped_all(self.ngccm_port, crate, slot, n)
+				qie.set_ped_all(self, crate, slot, n)
 	
 	def set_cal_mode_all(self, enable=False):
 		for crate, slots in self.fe.iteritems():
 			for slot in slots:
-				qie.set_cal_mode_all(self.ngccm_port, crate, slot, enable)
+				qie.set_cal_mode_all(self, crate, slot, enable)
 	
 	def get_qie_map(self):
 		qie_map = qie.get_map(self)

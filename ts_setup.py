@@ -24,26 +24,24 @@ if __name__ == "__main__":
 	directory = "data/logs_157"
 	parser = OptionParser()
 	parser.add_option("-t", "--teststand", dest="ts",
-		default="157",
+		default="904",
 		help="The name of the teststand you want to use (default is \"157\").",
 		metavar="STR"
 	)
 	parser.add_option("-v", "--verbose", dest="verbose",
+		action="store_true",
 		default=False,
 		help="Turn on verbose mode (default is off)",
 		metavar="BOOL"
 	)
 	(options, args) = parser.parse_args()
 	name = options.ts
-	v = False
-	if options.verbose:
-		if options.verbose.lower() == "true" or options.verbose  == "1":
-			v = True
+	v = options.verbose
 	
 	# Set up teststand:
 	ts = teststand(name)
 	print "> Setting up the {0} teststand ...".format(ts.name)
-	if ts.name == "157":
+	if ts.name == "157" or ts.name == "904":
 		print "> Setting up the AMC13 ..."
 		result = amc13.get_status(ts=ts)["status"]
 		status = True
@@ -100,29 +98,31 @@ if __name__ == "__main__":
 				print "> [!!] Backplane set up failed."
 #		if status:
 		if True:
-			print "> Setting up the uHTR ..."
-			cmds = [
-				"0",
-				"clock",
-				"setup",
-				"3",
-				"quit",
-				"link",
-				"init",
-				"1",
-				"32",
-				"0",
-				"0",
-				"quit",
-				"exit",
-				"exit",
-			]
-			output = uhtr.send_commands(ts.uhtr_ips[0], cmds)["output"]
-			if output:
-				print "> uHTR set up."
-			else:
-				print "> [!!] uHTR failed to set up."
-				status = False
+			print "> Setting up the uHTRs ..."
+			for uhtr_slot in ts.uhtr:
+				print "> Setting up uHTR in slot {0} ...".format(uhtr_slot)
+				cmds = [
+					"0",
+					"clock",
+					"setup",
+					"3",
+					"quit",
+					"link",
+					"init",
+					"1",
+					"32",
+					"0",
+					"0",
+					"quit",
+					"exit",
+					"exit",
+				]
+				output = uhtr.send_commands(ts, uhtr_slot, cmds)["output"]
+				if output:
+					print "> uHTR set up."
+				else:
+					print "> [!!] uHTR failed to set up."
+					status = False
 		if status:
 			print "> [OK] Teststand set up correctly."
 		else:

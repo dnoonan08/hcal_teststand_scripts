@@ -59,14 +59,16 @@ if __name__ == "__main__":
 	else:
 		name = "904"
 	ts = teststand(name)
+	uhtr_slot = 12
 
 	ts.set_ped_all(6)
+	qie.set_fix_range_all(ts, 1, 2, False)
 #	ts.set_ped(1, 2, 2, 31)
-	active_links = uhtr.find_links(ts.uhtr_ips[-1])
+	active_links = uhtr.find_links(ts, uhtr_slot)
 	print "The activated links are {0}.".format(active_links)
 	for link_i in active_links:
 		print "==== Link {0} ====".format(link_i)
-		uhtr_read = uhtr.get_data(ts.uhtr_ips[-1], 300, link_i)
+		uhtr_read = uhtr.get_data(ts, uhtr_slot, 300, link_i)
 		data = uhtr.parse_data(uhtr_read["output"])
 #		print data["adc"]
 		print "Read in {0} bunch crossings.".format(len(data["adc"]))

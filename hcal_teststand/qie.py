@@ -30,14 +30,14 @@ from numpy import mean, std
 
 # FUNCTIONS:
 # Functions to fetch component information:
-def get_bridge_info(port, crate, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
+def get_bridge_info(ts, crate, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
 	data = [
 		["version_fw_major", 'get HF{0}-{1}-B_FIRMVERSION_MAJOR'.format(crate, slot), 0],
 		["version_fw_minor", 'get HF{0}-{1}-B_FIRMVERSION_MINOR'.format(crate, slot), 0],
 		["version_fw_svn", 'get HF{0}-{1}-B_FIRMVERSION_SVN'.format(crate, slot), 0],
 	]
 	log = ""
-	parsed_output = ngccm.send_commands_parsed(port, [info[1] for info in data])["output"]
+	parsed_output = ngccm.send_commands_parsed(ts, [info[1] for info in data])["output"]
 #	print parsed_output
 	for info in data:
 		result = parsed_output[data.index(info)]["result"]
@@ -56,7 +56,7 @@ def get_bridge_info(port, crate, slot):		# Returns a dictionary of information a
 		"log":			log.strip(),
 	}
 
-def get_igloo_info(port, crate, slot):		# Returns a dictionary of information about the IGLOO2, such as the FW versions.
+def get_igloo_info(ts, crate, slot):		# Returns a dictionary of information about the IGLOO2, such as the FW versions.
 	data = [
 		["version_fw_major_top", 'get HF{0}-{1}-iTop_FPGA_MAJOR_VERSION'.format(crate, slot), 0],
 		["version_fw_minor_top", 'get HF{0}-{1}-iTop_FPGA_MINOR_VERSION'.format(crate, slot), 0],
@@ -64,7 +64,7 @@ def get_igloo_info(port, crate, slot):		# Returns a dictionary of information ab
 		["version_fw_minor_bot", 'get HF{0}-{1}-iBot_FPGA_MINOR_VERSION'.format(crate, slot), 0],
 	]
 	log = ""
-	parsed_output = ngccm.send_commands_parsed(port, [info[1] for info in data])["output"]
+	parsed_output = ngccm.send_commands_parsed(ts, [info[1] for info in data])["output"]
 #	print parsed_output
 	for info in data:
 		result = parsed_output[data.index(info)]["result"]
@@ -86,14 +86,14 @@ def get_igloo_info(port, crate, slot):		# Returns a dictionary of information ab
 		"log":			log.strip(),
 	}
 
-def get_info(port, crate, slot):
+def get_info(ts, crate, slot):
 	return{
-		"bridge": get_bridge_info(port, crate, slot),
-		"igloo": get_igloo_info(port, crate, slot),
+		"bridge": get_bridge_info(ts, crate, slot),
+		"igloo": get_igloo_info(ts, crate, slot),
 	}
 
 def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and slot and returns it as a list.
-	ngccm_output = ngccm.send_commands_parsed(ts.ngccm_port, ["get HF{0}-{1}-UniqueID".format(crate,slot)])		# Results in something like "get HF1-1-UniqueID # '1 0x5f000000 0x9b46ce70'"
+	ngccm_output = ngccm.send_commands_parsed(ts, ["get HF{0}-{1}-UniqueID".format(crate,slot)])		# Results in something like "get HF1-1-UniqueID # '1 0x5f000000 0x9b46ce70'"
 	result = ngccm_output["output"][0]["result"]
 	if "'" in result: 
 		return result[1:-1].split()[1:3]		# Get the result of the command, strip the quotes, and turn the result into a list (ignoring the first element).
@@ -103,23 +103,26 @@ def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and 
 def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
 	print ">> Getting links ..."
 	links_by_ip = ts.get_links()
+#	print links_by_ip
 	qie_map = []
 	for crate, slots in ts.fe.iteritems():
 		for slot in slots:
 			for qie in range(1, 25):
 				print ">> Finding crate {0}, slot {1}, QIE {2} ...".format(crate, slot, qie)
-				set_fix_range(ts.ngccm_port, crate, slot, qie, True, 3)
+				set_fix_range(ts, crate, slot, qie, True, 3)
 				channel_save = []
 				link_save = []
 				for ip, links in links_by_ip.iteritems():
 					for link in [l for l in links if l.on]:
 						data = link.get_data()
-						for channel in range(4):
-							adc_avg = mean([i_bx[channel] for i_bx in data["adc"]])
-#							print adc_avg
-							if adc_avg == 192:
-								channel_save.append(channel)
-								link_save.append(link)
+#						print data
+						if data:
+							for channel in range(4):
+								adc_avg = mean([i_bx[channel] for i_bx in data["adc"]])
+								print adc_avg
+								if adc_avg == 192:
+									channel_save.append(channel)
+									link_save.append(link)
 				if len(channel_save) == 1 and len(link_save):
 					channel = channel_save[0]
 					link = link_save[0]
@@ -148,7 +151,7 @@ def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from Q
 						"fiber": [link.qie_fiber for link in link_save],
 						"ip": [link.ip for link in link_save],
 					})
-				set_fix_range(ts.ngccm_port, crate, slot, qie, False)
+				set_fix_range(ts, crate, slot, qie, False)
 	return qie_map
 # /
 
@@ -156,7 +159,7 @@ def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from Q
 def set_unique_id(ts, crate, slot):		# Saves the unique ID of a crate slot to the associated QIE card to IGLOO registers.
 	unique_id = get_unique_id(ts, crate, slot)
 	if unique_id:
-		ngccm_output = ngccm.send_commands(ts.ngccm_port , [
+		ngccm_output = ngccm.send_commands(ts, [
 			"put HF{0}-{1}-iTop_UniqueID {2} {3}".format(crate, slot, unique_id[0], unique_id[1]),
 			"put HF{0}-{1}-iBot_UniqueID {2} {3}".format(crate, slot, unique_id[0], unique_id[1])
 		])
@@ -187,7 +190,7 @@ def get_status(ts):		# Perform basic checks of the QIE cards:
 		for slot in slots:
 			i_qie += 1
 			# Check Bridge FPGA and IGLOO2 version are accessible:
-			qie_info = get_info(ts.ngccm_port, crate, slot)
+			qie_info = get_info(ts, crate, slot)
 			if (qie_info["bridge"]["version_fw"] != "00.00.0000"):
 				status["status"].append(1)
 			else:
@@ -224,7 +227,7 @@ def read_counter_qie_bridge(ts, crate, slot):
 	log = ""
 	count = -1
 	cmd = "get HF{0}-{1}-B_RESQIECOUNTER".format(crate, slot)
-	output = ngccm.send_commands_parsed(ts.ngccm_port, cmd)["output"]
+	output = ngccm.send_commands_parsed(ts, cmd)["output"]
 	try:
 		count = int(output[0]["result"], 16)
 	except Exception as ex:
@@ -241,7 +244,7 @@ def read_counter_qie_igloo(ts, crate, slot):
 		"get HF{0}-{1}-iTop_RST_QIE_count".format(crate, slot),
 		"get HF{0}-{1}-iBot_RST_QIE_count".format(crate, slot),
 	]
-	result = ngccm.send_commands_parsed(ts.ngccm_port, cmds)
+	result = ngccm.send_commands_parsed(ts, cmds)
 	output = result["output"]
 	for i in range(2):
 		try:
@@ -306,20 +309,26 @@ def get_frequency_orbit(ts):
 
 # Functions to set QIE registers:
 ## Pedestals:
-def set_ped(port, crate, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
+def set_ped(ts, crate, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
 	assert isinstance(n, int)
 	if abs(n) > 31:
+		print n
 		print ">> ERROR: You must enter a decimal integer between -31 and 31. The pedestals have not been changed."
 	else:
-		n = n + 31
+		if n <= 0:
+			n = abs(n)
+		else:
+			n = n + 32
 		n_str = "{0:#04x}".format(n)		# The "#" prints the "0x". The number of digits to pad with 0s must include these "0x", hence "4" instead of "2".
 		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i, n_str)]
-		raw_output = ngccm.send_commands(port, commands)["output"]
+		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
 		# Maybe I should include something here to make sure the command didn't return an error? Return 1 if not...
 
-def set_ped_all(port, crate, slot, n):		# n is the decimal representation of the pedestal register.
+def set_ped_all(ts, crate, slot, n):		# n is the decimal representation of the pedestal register.
 	# This function is faster than running "set_ped" 24 times.
 	assert isinstance(n, int)
+#	for i in range(1, 25):
+#		set_ped(ts, crate, slot, i, n)
 	if abs(n) > 31:
 		print ">> ERROR: You must enter a decimal integer between -31 and 31. The pedestals have not been changed."
 	else:
@@ -329,12 +338,14 @@ def set_ped_all(port, crate, slot, n):		# n is the decimal representation of the
 			n = n + 32
 		n_str = "{0:#04x}".format(n)		# The "#" prints the "0x". The number of digits to pad with 0s must include these "0x", hence "4" instead of "2".
 		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i, n_str) for i in range(1, 25)]
-		raw_output = ngccm.send_commands_fast(port, commands)["output"]
+#		print commands
+		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
+#		print raw_output
 		# I should include something here to make sure the command didn't return an error? Return 1 if not...
 ## /
 
 ## Fixed Range Mode:
-def set_fix_range(port, crate, slot, qie, enable=False, rangeSet=0):		# Turn fixed range mode on or off for a given QIE.
+def set_fix_range(ts, crate, slot, qie, enable=False, rangeSet=0):		# Turn fixed range mode on or off for a given QIE.
 	assert isinstance(rangeSet, int)
 	if rangeSet < 0 or rangeSet > 3 : 
 		print ">> ERROR: the range you select with \"RangeSet\" must be an element of {0, 1, 2, 3}."
@@ -347,11 +358,11 @@ def set_fix_range(port, crate, slot, qie, enable=False, rangeSet=0):		# Turn fix
 		else :
 			commands = ["put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, qie)]
 		
-		raw_output = ngccm.send_commands_fast(port, commands)["output"]
-#		raw_output = ngccm.send_commands_parsed(port, commands)["output"]
+		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
+#		raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
 		return raw_output
 
-def set_fix_range_all(port, crate, slot, enable=False, rangeSet=0):		# Turn fixed range mode on or off for all QIEs on a given board.
+def set_fix_range_all(ts, crate, slot, enable=False, rangeSet=0):		# Turn fixed range mode on or off for all QIEs on a given board.
 	assert isinstance(rangeSet, int)
 	if rangeSet < 0 or rangeSet > 3: 
 		print ">> ERROR: the range you select with \"RangeSet\" must be an element of {0, 1, 2, 3}."
@@ -365,26 +376,26 @@ def set_fix_range_all(port, crate, slot, enable=False, rangeSet=0):		# Turn fixe
 			for qie in range(1, 25):
 				commands.append("put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, qie))
 				commands.append("put HF{0}-{1}-QIE{2}_RangeSet 0".format(crate, slot, qie))		# Not necessary, but I think it's probably good form.
-		raw_output = ngccm.send_commands_fast(port, commands)["output"]
-#		raw_output = ngccm.send_commands_parsed(port, commands)["output"]
+		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
+#		raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
 		return raw_output
 ## /
 
 ## Cal Mode:
-def set_cal_mode(port, crate, slot, qie, enable=False):
+def set_cal_mode(ts, crate, slot, qie, enable=False):
 	value = 1 if enable else 0
 	commands = ["put HF{0}-{1}-QIE{2}_CalMode {3}".format(crate, slot, qie, value)]
-	raw_output = ngccm.send_commands_fast(port, commands)["output"]
-#	raw_output = ngccm.send_commands_parsed(port, commands)["output"]
+	raw_output = ngccm.send_commands_fast(ts, commands)["output"]
+#	raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
 	return raw_output
 
-def set_cal_mode_all(port, crate, slot, enable=False):
+def set_cal_mode_all(ts, crate, slot, enable=False):
 	commands = []
 	value = 1 if enable else 0
 	for qie in range(1, 25):
 		commands.append("put HF{0}-{1}-QIE{2}_CalMode {3}".format(crate, slot, qie, value))
-	raw_output = ngccm.send_commands_fast(port, commands)["output"]
-#	raw_output = ngccm.send_commands_parsed(port, commands)["output"]
+	raw_output = ngccm.send_commands_fast(ts, commands)["output"]
+#	raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
 	return raw_output
 ## /
 # /

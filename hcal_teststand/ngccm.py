@@ -12,14 +12,17 @@ from time import time, sleep
 from print_table import *
 
 # FUNCTIONS:
-def send_commands(port, cmds):		# Executes ngccm commands in the slowest way, in order to read all of the output.
+def send_commands(ts, cmds):		# Executes ngccm commands in the slowest way, in order to read all of the output.
 	log = ""
 	raw_output = ""
 	if isinstance(cmds, str):
 		cmds = [cmds]
 	if "quit" not in cmds:
 		cmds.append("quit")
-	p = pexpect.spawn('ngFEC.exe -z -c -p {0}'.format(port))
+	ngfec_cmd = 'ngFEC.exe -z -c -p {0}'.format(ts.ngccm_port)
+	if hasattr(ts, "control_hub"):
+		ngfec_cmd += " -H {0}".format(ts.control_hub)
+	p = pexpect.spawn(ngfec_cmd)
 	log += "----------------------------\nYou ran the following script with the ngccm tool:\n"
 	for c in cmds:
 #		print ">> {0}".format(c)
@@ -36,7 +39,7 @@ def send_commands(port, cmds):		# Executes ngccm commands in the slowest way, in
 		"log": log.strip(),
 	}
 
-def send_commands_parsed(port, cmds):		# This executes commands as above, but returns the parsed responses in a list of pairs.
+def send_commands_parsed(ts, cmds):		# This executes commands as above, but returns the parsed responses in a list of pairs.
 	log = ""
 	output = []
 	if isinstance(cmds, str):
@@ -44,10 +47,12 @@ def send_commands_parsed(port, cmds):		# This executes commands as above, but re
 	if "quit" not in cmds:
 		cmds.append("quit")
 	try:
-		p = pexpect.spawn('ngFEC.exe -z -c -p {0}'.format(port))
+		ngfec_cmd = 'ngFEC.exe -z -c -p {0}'.format(ts.ngccm_port)
+		if hasattr(ts, "control_hub"):
+			ngfec_cmd += " -H {0}".format(ts.control_hub)
+		p = pexpect.spawn(ngfec_cmd)
 		log += "----------------------------\nYou ran the following script with the ngccm tool:\n"
 		for c in cmds:
-	#		print c
 			p.sendline(c)
 			t0 = time()
 			if c != "quit":
@@ -64,6 +69,7 @@ def send_commands_parsed(port, cmds):		# This executes commands as above, but re
 			log += c + "\n"
 		p.close()
 	except Exception as ex:
+		print ex
 		log += str(ex)
 	log += "----------------------------\n"
 	return {
@@ -71,7 +77,7 @@ def send_commands_parsed(port, cmds):		# This executes commands as above, but re
 		"log": log.strip(),
 	}
 
-def send_commands_fast(port, cmds):		# This executes ngccm commands in a fast way, but some "get" results might not appear in the output.
+def send_commands_fast(ts, cmds):		# This executes ngccm commands in a fast way, but some "get" results might not appear in the output.
 	log = ""
 	raw_output = ""
 	if isinstance(cmds, str):
@@ -81,7 +87,10 @@ def send_commands_fast(port, cmds):		# This executes ngccm commands in a fast wa
 		cmds_str += "{0}\n".format(c)
 	cmds_str += "quit\n"
 	log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
-	p = Popen(['printf "{0}" | ngFEC.exe -z -c -p {1}'.format(cmds_str, port)], shell = True, stdout = PIPE, stderr = PIPE)
+	ngfec_cmd = 'ngFEC.exe -z -c -p {0}'.format(ts.ngccm_port)
+	if hasattr(ts, "control_hub"):
+		ngfec_cmd += " -H {0}".format(ts.control_hub)
+	p = Popen(['printf "{0}" | {1}'.format(cmds_str, ngfec_cmd)], shell = True, stdout = PIPE, stderr = PIPE)
 	raw_output_temp = p.communicate()		# This puts the output of the commands into a list called "raw_output_temp" the first element of the list is stdout, the second is stderr.
 	raw_output += raw_output_temp[0] + raw_output_temp[1]
 	return {
@@ -89,7 +98,7 @@ def send_commands_fast(port, cmds):		# This executes ngccm commands in a fast wa
 		"log": log.strip(),
 	}
 
-def get_info(port, crate):		# Returns a dictionary of information about the ngCCM, such as the FW versions.
+def get_info(ts, crate):		# Returns a dictionary of information about the ngCCM, such as the FW versions.
 	log =""
 	version_fw_mez_major = -1
 	version_fw_mez_minor = -1
@@ -98,7 +107,7 @@ def get_info(port, crate):		# Returns a dictionary of information about the ngCC
 		"get HF{0}-mezz_FPGA_MAJOR_VERSION".format(crate),
 		"get HF{0}-mezz_FPGA_MINOR_VERSION".format(crate),
 	]
-	output = send_commands_parsed(port, cmds)["output"]
+	output = send_commands_parsed(ts, cmds)["output"]
 	result = output[0]["result"]
 	if "ERROR" not in output[0]["result"]:
 #		version_str_x = "{0:#08x}".format(int(match.group(3),16))		# Deprecated
@@ -132,7 +141,7 @@ def setup(ts):
 				"put HF{0}-bkp_reset 0".format(crate),
 				"get HF{0}-bkp_pwr_bad".format(crate),
 			]
-			results = send_commands_parsed(ts.ngccm_port, cmds)["output"]
+			results = send_commands_parsed(ts, cmds)["output"]
 			for cmd in results:
 				log.append(cmd)
 			for cmd in results[:-1]:
@@ -157,7 +166,7 @@ def get_status(ts):		# Perform basic checks of the ngCCMs:
 	# Check that versions are accessible:
 	if ts.name != "bhm":
 		for crate in ts.fe_crates:
-			ngccm_info = get_info(ts.ngccm_port, crate)
+			ngccm_info = get_info(ts, crate)
 			if (ngccm_info["version_fw_mez_major"] != -1):
 				status["status"].append(1)
 			else:
@@ -183,9 +192,9 @@ def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:
 	status["status"] = []
 	# Enable, reset, and check the BKP power:
 	for crate in ts.fe_crates:
-		ngccm_output = send_commands_fast(ts.ngccm_port, ["put HF{0}-bkp_pwr_enable 1".format(crate), "put HF{0}-bkp_reset 1".format(crate), "put HF{0}-bkp_reset 0".format(crate)])["output"]
+		ngccm_output = send_commands_fast(ts, ["put HF{0}-bkp_pwr_enable 1".format(crate), "put HF{0}-bkp_reset 1".format(crate), "put HF{0}-bkp_reset 0".format(crate)])["output"]
 		log += ngccm_output
-		ngccm_output = send_commands_fast(ts.ngccm_port, "get HF{0}-bkp_pwr_bad".format(crate))["output"]
+		ngccm_output = send_commands_fast(ts, "get HF{0}-bkp_pwr_bad".format(crate))["output"]
 		log += ngccm_output
 		match = search("{0} # ([01])".format("get HF{0}-bkp_pwr_bad".format(crate)), ngccm_output)
 		if match:
@@ -211,7 +220,7 @@ def get_power(ts=False):
 				"get HF{0}-1V5_current_f".format(crate),		# This is really the current of 1.5 V plust the current of 1.2 V.
 				"get HF{0}-1V2_voltage_f".format(crate),
 			]
-			output[crate] = send_commands_parsed(ts.ngccm_port, cmds)["output"]
+			output[crate] = send_commands_parsed(ts, cmds)["output"]
 			return output
 	else:
 		return output
@@ -228,7 +237,7 @@ def set_CI_mode(ts , crate , slot , enable = True , DAC = 0 ) :
 			    #"put HF{0}-{1}-iBot_CntrReg_CImode 0".format(crate,slot)]
 
 	
-	ngccm_output = send_commands_parsed( ts.ngccm_port , commands )
+	ngccm_output = send_commands_parsed( ts , commands )
 
 # sets all QIE clock phases
 def set_qie_clk_phase(ts , crate , slot , phase = 0 ) :
@@ -237,7 +246,7 @@ def set_qie_clk_phase(ts , crate , slot , phase = 0 ) :
 	for qie in range(24) :
 		commands.append("put HF{0}-{1}-Qie{2}_ck_ph {3}".format(crate,slot,qie+1,phase))
 	
-	ngccm_output = send_commands_parsed( ts.ngccm_port , commands )
+	ngccm_output = send_commands_parsed( ts , commands )
 
 # This function should be moved to "qie.py":
 def get_qie_shift_reg(ts , crate , slot , qie_list = range(1,5) ):
@@ -268,7 +277,7 @@ def get_qie_shift_reg(ts , crate , slot , qie_list = range(1,5) ):
 		for setting in qie_settings : 
 			commands.append("get HF{0}-{1}-QIE{2}_{3}".format(crate,slot,qie,setting))
 	
-	ngccm_output = send_commands_parsed( ts.ngccm_port , commands )
+	ngccm_output = send_commands_parsed(ts , commands)
 	
 	for qie in qie_list : 
 		qieLabels.append("QIE {0}".format(qie))

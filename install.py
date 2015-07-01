@@ -10,9 +10,9 @@
 from re import search, split
 
 # FUNCTIONS:
-def parse_ts_configuration(f):		# This function is a clone of the function of the same name in hcal_teststand but modified to be compatible with Python 2.4.
+def parse_ts_configuration(f="teststands.txt"):		# This function is a clone of the function of the same name in hcal_teststand but modified to be compatible with Python 2.4.
 	# WHEN YOU EDIT THIS SCRIPT, MAKE SURE TO UPDATE hcal_teststand.py IF YOU NEED TO!
-	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "glib_slot", "mch_ip", "amc13_ips", "qie_slots"]
+	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "uhtr_settings", "glib_slot", "mch_ip", "amc13_ips", "qie_slots", "control_hub"]
 	teststand_info = {}
 	raw = ""
 	if ("/" in f):
@@ -41,7 +41,10 @@ def parse_ts_configuration(f):		# This function is a clone of the function of th
 							teststand_info[ts_name][variable] = value.strip()
 						elif (variable == "uhtr_slots"):
 							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
+							teststand_info[ts_name][variable] = sorted([int(i) for i in value.split(",")])
+						elif (variable == "uhtr_settings"):
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
+							teststand_info[ts_name][variable] = [i for i in value.split(",")]
 						elif (variable == "glib_slot"):
 							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name][variable] = int(value)
@@ -63,18 +66,25 @@ def parse_ts_configuration(f):		# This function is a clone of the function of th
 							# Let a semicolon be at the end of the last list without adding an empty list:
 							if not teststand_info[ts_name][variable][-1]:
 								del teststand_info[ts_name][variable][-1]
+						elif (variable == "control_hub"):
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
+							teststand_info[ts_name][variable] = value.strip()
 	return teststand_info
 
-def make_amc13_configs(f):		# Write configuration files for AMC13.
+def make_amc13_configs(f="teststands.txt"):		# Write configuration files for AMC13.
 	names = []
-	ts_info = parse_ts_configuration(f)
+	ts_info = parse_ts_configuration(f=f)
 	for name, info in ts_info.iteritems():
+		if "control_hub" in info:
+			ch = info["control_hub"]
+		else:
+			ch = "localhost"
 		if info:
 			string = '''
 <?xml version="1.0" encoding="UTF-8"?>
 <connections>
-	<connection id="T1" uri="chtcp-2.0://localhost:10203?target=''' + info["amc13_ips"][0] + ''':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1.xml" />
-	<connection id="T2" uri="chtcp-2.0://localhost:10203?target=''' + info["amc13_ips"][1] + ''':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2.xml" />
+	<connection id="T1" uri="chtcp-2.0://''' + ch + ''':10203?target=''' + info["amc13_ips"][0] + ''':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1.xml" />
+	<connection id="T2" uri="chtcp-2.0://''' + ch + ''':10203?target=''' + info["amc13_ips"][1] + ''':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2.xml" />
 </connections>'''.strip()
 			try:
 				out = open("configuration/amc13_" + name + "_config.xml", "w")
@@ -127,6 +137,6 @@ export PATH=$PATH:/home/hcalpro/ngFEC
 
 # MAIN:
 if __name__ == "__main__":
-	make_amc13_configs("teststands.txt")
+	make_amc13_configs()
 	make_setup_scripts("teststands.txt")
  # /MAIN
