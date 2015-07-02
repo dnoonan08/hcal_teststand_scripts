@@ -107,6 +107,7 @@ def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from Q
 	qie_map = []
 	for crate, slots in ts.fe.iteritems():
 		for slot in slots:
+			set_fix_range_all(ts, crate, slot, False)
 			for qie in range(1, 25):
 				print ">> Finding crate {0}, slot {1}, QIE {2} ...".format(crate, slot, qie)
 				set_fix_range(ts, crate, slot, qie, True, 3)
@@ -135,7 +136,7 @@ def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from Q
 						"channel": channel,
 						"half": link.qie_half,
 						"fiber": link.qie_fiber,
-						"ip": link.ip,
+						"uhtr_slot": link.slot,
 					})
 				else:
 					if len(channel_save) > 1:
@@ -149,7 +150,7 @@ def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from Q
 						"channel": channel_save,
 						"half": [link.qie_half for link in link_save],
 						"fiber": [link.qie_fiber for link in link_save],
-						"ip": [link.ip for link in link_save],
+						"uhtr_slot": [link.slot for link in link_save],
 					})
 				set_fix_range(ts, crate, slot, qie, False)
 	return qie_map

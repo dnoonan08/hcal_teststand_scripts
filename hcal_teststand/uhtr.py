@@ -21,6 +21,9 @@ class link:		# An object that represents a uHTR link. It contains information ab
 		self.on = on
 		if self.qie_half in [0, 1]: 
 			self.qie_half_label = self.qie_half_labels[self.qie_half]
+		self.ip = ""
+		if hasattr(ts, "uhtr_ip_base"):
+			self.ip = ts.uhtr_ip_base + ".{0}".format(self.slot * 4)
 	# /CONSTRUCTION
 	
 	# METHODS
@@ -333,7 +336,7 @@ def get_histo(ts, uhtr_slot, n , sepCapID , fileName ):
 		'exit'
 		]
 	
-	log = send_commands(ts, uhtr_slot,commands)["log"]
+	log = send_commands_script(ts, uhtr_slot, commands)["log"]
 	# ... seems that send_commands returns a 
 	# dictionary which contains all of the outputs
 
