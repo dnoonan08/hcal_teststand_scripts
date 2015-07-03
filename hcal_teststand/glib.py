@@ -7,14 +7,14 @@ from time import time, sleep
 from numpy import mean, std
 
 # FUNCTIONS:
-def get_info(port):		# Returns a dictionary of information about the GLIB, such as the FW version.
+def get_info(ts):		# Returns a dictionary of information about the GLIB, such as the FW version.
 	data = {
 		"version_fw_d": ['get fec1-user_firmware_dd', 0],
 		"version_fw_m": ['get fec1-user_firmware_mm', 0],
 		"version_fw_y": ['get fec1-user_firmware_yy', 0],
 	}
 	log = ""
-	raw_output = ngccm.send_commands(port, [data[info][0] for info in data.keys()])["output"]
+	raw_output = ngccm.send_commands(ts, [data[info][0] for info in data.keys()])["output"]
 	for info in data.keys():
 		match = search("{0} # ((0x)?[0-9a-f]+)".format(data[info][0]), raw_output)
 		if match:
@@ -41,13 +41,13 @@ def get_status(ts):		# Perform basic checks of the GLIB with the ngccm tool.
 	else:
 		status["status"].append(0)
 	# Check that the version was accessible:
-	glib_info = get_info(ts.ngccm_port)
+	glib_info = get_info(ts)
 	if (int(glib_info["version_fw"]) != 0):
 		status["status"].append(1)
 	else:
 		status["status"].append(0)
 	# Check the control (1) and clock (2):
-	ngccm_output = ngccm.send_commands(ts.ngccm_port, ["get fec1-ctrl", "get fec1-user_wb_regs"])["output"]
+	ngccm_output = ngccm.send_commands(ts, ["get fec1-ctrl", "get fec1-user_wb_regs"])["output"]
 	log += ngccm_output
 	## (1) check control data:
 	match = search("{0} # ((0x)?[0-9a-f]+)".format("get fec1-ctrl"), ngccm_output)
@@ -87,7 +87,7 @@ def get_status(ts):		# Perform basic checks of the GLIB with the ngccm tool.
 def read_counter_qie(ts):
 	count = -1
 	cmd = "get fec1-qie_reset_cnt"
-	raw_output = ngccm.send_commands(ts.ngccm_port, cmd)["output"]
+	raw_output = ngccm.send_commands(ts, cmd)["output"]
 	match = search(cmd + " # ((0x)?[0-9a-f]+)", raw_output)
 	if match:
 		count = int(match.group(1),16)

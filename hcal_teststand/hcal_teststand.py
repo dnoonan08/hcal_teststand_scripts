@@ -17,7 +17,7 @@ import os
 # ngCCM and ngccm tool functions are in "ngccm.py" (not yet, actually)
 
 # Return the temperatures of your system.
-def get_temp(crate, port):		# It's more flexible to not have the input be a teststand object. I should make it accept both.
+def get_temp(ts, crate):		# It's more flexible to not have the input be a teststand object. I should make it accept both.
 	log =""
 	command = "get HF{0}-adc56_f".format(crate)
 	raw_output = ngccm.send_commands(ts, command)["output"]
@@ -237,20 +237,20 @@ class teststand:
 	def get_info(self):		# Returns a dictionary of component information, namely versions.
 		data = {}
 		data["amc13"] = amc13.get_info(ts=self)
-		data["glib"] = glib.get_info(self.ngccm_port)
+		data["glib"] = glib.get_info(self)
 		data["uhtr"] = uhtr.get_info(self)
 		data["ngccm"] = []
 		data["qie"] = []
 		for crate, slots in self.fe.iteritems():
-			data["ngccm"].append(ngccm.get_info(self.ngccm_port, crate))
+			data["ngccm"].append(ngccm.get_info(self, crate))
 			for slot in slots:
-				data["qie"].append(qie.get_info(self.ngccm_port, crate, slot))
+				data["qie"].append(qie.get_info(self, crate, slot))
 		return data
 	
 	def get_temps(self):		# Returns a list of various temperatures around the teststand.
 		temps = []
 		for crate in self.fe_crates:
-			temps.append(get_temp(crate, self.ngccm_port)["temp"])		# See the "get_temp" funtion above.
+			temps.append(get_temp(self, crate)["temp"])		# See the "get_temp" funtion above.
 		return temps
 	
 	def get_data(self, uhtr_slot=12, i_link=0, n=300):
