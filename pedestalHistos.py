@@ -16,11 +16,11 @@ from ROOT import *
 if __name__ == "__main__":
 	name = ""
 	if len(sys.argv) == 1:
-		name = "bhm"
+		name = "904"
 	elif len(sys.argv) == 2:
 		name = sys.argv[1]
 	else:
-		name = "bhm"
+		name = "904"
 	ts = teststand(name)
 
 	#ts.set_ped_all(6)
