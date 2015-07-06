@@ -2,7 +2,7 @@
 
 ## μHTR
 
-#### Class
+#### Classes
 
 **link** -- *An object that represents a uHTR link. It contains information about what it's connected to.*
 
@@ -23,7 +23,7 @@ def Print(self)
 </pre>
 methods: 
 
-#### Function 
+#### Functions
 
  - **send_commands** -- *Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.*
 <pre>
