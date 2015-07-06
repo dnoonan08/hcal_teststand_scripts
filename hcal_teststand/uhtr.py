@@ -36,7 +36,7 @@ class link:		# An object that represents a uHTR link. It contains information ab
 			return False
 	
 	def Print(self):
-		print "uHTR Info: {0}, Link {1}".format(self.ip, self.n)
+		print "uHTR Info: Slot {0}, Link {1}".format(self.slot, self.n)
 		print "QIE card ID:", self.qie_unique_id
 		print "QIE card half:", self.qie_half_label
 		print "Fiber:", self.qie_fiber
@@ -242,6 +242,12 @@ def find_links(ts, uhtr_slot):		# Initializes links and then returns a list of l
 	active_links = parse_links(raw_output)		# A list of the indices of the active links.
 	return active_links
 
+def find_links_all(ts):
+	result = {}
+	for uhtr_slot in ts.uhtr_slots:
+		result[uhtr_slot] = find_links(ts, uhtr_slot)
+	return result
+
 def find_links_full(ts, uhtr_slot):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
 	log = ""
 	
@@ -278,11 +284,11 @@ def get_links(ts, uhtr_slot):		# Initializes and sets up links of a uHTR and the
 	# (self, uhtr_ip = "unknown", link_number = -1, qie_unique_id = "unknown", qie_half = -1, qie_fiber = -1, on = False)
 	hcal_teststand.set_mode_all(ts, 2)
 	links = []
-	for i in range(96):
+	for i in range(24):		# Every uHTR has 24 possible links labeled 0 to 23.
 		if i in active_links:
-			data = get_data_parsed(ts, uhtr_slot, 3, i)
-#			print data
+			data = get_data_parsed(ts, uhtr_slot, 50, i)		# Reading fewer than 50 "samples" sometimes results in no data ...
 			if data:
+#				print data["raw"]
 				qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
 					data["raw"][0][2][1:5],
 					data["raw"][0][1][1:5],
@@ -305,6 +311,28 @@ def get_links_all(ts):		# Calls "get_links" for all uHTRs in the system.
 		print "uhtr 283: {0}".format(uhtr_slot)
 		container[uhtr_slot] = get_links(ts, uhtr_slot)
 	return container
+
+def get_links_all_from_map(ts=False, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
+	links = []
+	if ts:
+		qie_map = ts.read_qie_map(f=f, d=d)
+#		uhtr_info = ts.uhtr_from_qie()
+		for qie in [i for i in qie_map if i["channel"] == 0]:
+			uhtr_slot = qie["uhtr_slot"]
+			link_i = qie["link"]
+			links.append(link(
+				ts=ts,
+				uhtr_slot=uhtr_slot,
+				link_number=link_i,
+				qie_unique_id=qie["id"],
+				qie_half=qie["half"],
+				qie_fiber=qie["fiber"],
+				on=True
+			))
+		return links
+	else:
+		print "ERROR (get_links_from_map): One of the arguments needs to be a teststand object."
+		return links
 
 # calls the uHTRs histogramming functionality
 # ip - ip address of the uHTR (e.g. teststand("904").uhtr_ips[0])
@@ -364,7 +392,7 @@ def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
 		'link',
 		'init',
 		'1',
-		'32',
+		'92',
 		'0',
 		'0',
 		'status',
@@ -393,7 +421,7 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 	n = 0
 	raw_data = []
 	for line in raw.split("\n"):
-		if search("\s*\d+\s*[0123456789ABCDEF]{5}", line):
+		if search("\s*\d+\s*[0-9A-F]{5}", line):
 			raw_data.append(line.strip())
 	data = {
 		"cid": [],
@@ -406,7 +434,7 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 	}
 	raw_temp = []
 	for line in raw_data:
-#		print line
+		print line
 		cid_match = search("CAPIDS", line)
 		if cid_match:
 			data["cid"].append([int(i) for i in line.split()[-4:]])
@@ -428,24 +456,30 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 		fiber_match = search("fiber\s([012])", line)
 		if fiber_match:
 			data["fiber"].append(int(fiber_match.group(1)))
-		raw_match = search("\d+\s+([0123456789ABCDEF]{5})\s*(.*)", line)
+		raw_match = search("\d+\s+([0-9A-F]{5})\s*(.*)", line)
 		if raw_match:
 			raw_string = raw_match.group(1)
 			raw_thing = raw_match.group(2)
+			raw_temp.append(raw_string)
 			if not raw_thing:
 				data["raw"].append(raw_temp)
 				raw_temp = []
-			else:
-				raw_temp.append(raw_string)
 	data["links"] = parse_links(raw)
 	if not data["raw"]:
-		print "ERROR: There was no SPY data for some reason."
+#		print raw
+#		print data
+#		print "ERROR: There was no SPY data for some reason."
 		return False
 	else:
 		return data
 
 def get_data_parsed(ts, uhtr_slot, n, ch):
-	return parse_data(get_data(ts, uhtr_slot, n, ch)["output"])
+	result = parse_data(get_data(ts, uhtr_slot, n, ch)["output"])
+	if result:
+		return result
+	else:
+		print "ERROR: There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, ch)
+		return False
 # /FUNCTIONS
 
 if __name__ == "__main__":

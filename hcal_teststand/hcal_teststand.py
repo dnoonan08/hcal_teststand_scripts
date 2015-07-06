@@ -308,8 +308,22 @@ class teststand:
 			"ERROR: Could not find the qie_map at {0}".format(path)
 			qie_map = []
 		return qie_map
-	# /METHODS
 	
+	def uhtr_from_qie(self, qie_id="", f="", d="configuration/maps"):
+		result = {}
+		qie_map = self.read_qie_map(f=f, d=d)
+		if qie_id:
+			uhtr_info = sorted(list(set([(qie["uhtr_slot"], qie["link"]) for qie in qie_map if qie["id"] == qie_id])))
+		else:
+			uhtr_info = sorted(list(set([(qie["uhtr_slot"], qie["link"]) for qie in qie_map])))
+		print uhtr_info
+		for slot, link in uhtr_info:
+			if slot in result:
+				result[slot].append(link)
+			else:
+				result[slot] = [link]
+		return result
+	# /METHODS
 	
 	def __str__(self):		# This just defines what the object looks like when it's printed.
 		if hasattr(self, "name"):

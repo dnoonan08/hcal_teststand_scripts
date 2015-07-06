@@ -96,8 +96,8 @@ if __name__ == "__main__":
 				print "> [OK] Backplane set up."
 			else:
 				print "> [!!] Backplane set up failed."
-#		if status:
-		if True:
+		if status:
+#		if True:
 			print "> Setting up the uHTRs ..."
 			for uhtr_slot in ts.uhtr:
 				print "> Setting up uHTR in slot {0} ...".format(uhtr_slot)
@@ -109,8 +109,8 @@ if __name__ == "__main__":
 					"quit",
 					"link",
 					"init",
-					"1",
-					"32",
+					"1",		# Auto realign
+					"92",		# Orbit delay
 					"0",
 					"0",
 					"quit",
