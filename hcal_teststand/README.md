@@ -6,8 +6,21 @@
 
 **link** -- *An object that represents a uHTR link. It contains information about what it's connected to.*
 
+constructors:
+
+<pre>
+def __init__(self, ts="uknown", uhtr_slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False)
+</pre>
 data members:  
 
+ - get_data -- *??*
+<pre>
+def get_data(self)
+</pre>
+ - Print -- *prints out information about the link, ip address of μHTR, μTCA slot, QIE card ID, IGLOO2, frontend fiber number, active or not.*
+<pre>
+def Print(self)
+</pre>
 methods: 
 
 #### Function 
