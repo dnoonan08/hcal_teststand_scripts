@@ -11,6 +11,60 @@ import pexpect
 from time import time, sleep
 from print_table import *
 
+
+# CLASSES:
+class status:
+	# Construction:
+	def __init__(self, ts=None, status=[], crate=-1, fw=[]):
+		if not ts:
+			ts = None
+		self.ts = ts
+		if not status:
+			status = []
+		self.status = status
+		self.crate = crate
+		if not fw:
+			fw = []
+		self.fw = fw
+		if len(self.fw) == 2:
+			self.fw_major = self.fw[0]
+			self.fw_minor = self.fw[1]
+		else:
+			self.fw_major = -1
+			self.fw_minor = -1
+	
+	# String behavior
+	def __str__(self):
+		if self.ts:
+			return "<ngccm.status object: {0}>".format(self.status)
+		else:
+			return "<empty ngccm.status object>"
+	
+	# Methods:
+	def update(self):
+		self.good = (False, True)[bool(self.status) and len(self.status) == sum(self.status)]
+		if len(self.fw) == 2:
+			self.fw_major = self.fw[0]
+			self.fw_minor = self.fw[1]
+	
+	def Print(self, verbose=True):
+		if verbose:
+			print "[{0}] ngCCM of crate {1} status: {2} <- {3}".format(("!!", "OK")[self.good], self.crate, ("BAD", "GOOD")[self.good], self.status)
+			if self.good:
+				print "\tFW major: {0}".format(self.fw_major)
+				print "\tFW minor: {0}".format(self.fw_minor)
+		else:
+			print "[{0}] ngCCM of crate {1} status: {2}".format(("!!", "OK")[self.good], self.crate, ("BAD", "GOOD")[self.good])
+	
+	def log(self):
+		output = "%% ngCCM {0}\n".format(self.crate)
+		output += "{0}\n".format(int(self.good))
+		output += "{0}\n".format(self.status)
+		output += "{0}\n".format(self.fw)
+		return output.strip()
+	# /methods
+# /CLASSES
+
 # FUNCTIONS:
 def send_commands(ts, cmds):		# Executes ngccm commands in the slowest way, in order to read all of the output.
 	log = ""
@@ -160,31 +214,50 @@ def setup(ts):
 			"log": log,
 		}
 
-def get_status(ts):		# Perform basic checks of the ngCCMs:
-	status = {}
-	status["status"] = []
-	# Check that versions are accessible:
-	if ts.name != "bhm":
-		for crate in ts.fe_crates:
+def get_status(ts=None, crate=-1):		# Perform basic checks of the ngCCMs:
+	log = ""
+	s = status(ts=ts, crate=crate)
+	
+	if ts:
+		# Check that versions are accessible:
+		if crate in ts.fe_crates:
+			s.crate = crate
 			ngccm_info = get_info(ts, crate)
-			if (ngccm_info["version_fw_mez_major"] != -1):
-				status["status"].append(1)
+			s.fw = [
+				ngccm_info["version_fw_mez_major"],
+				ngccm_info["version_fw_mez_minor"]
+			]
+			if (s.fw[0] != -1):
+				s.status.append(1)
 			else:
-				status["status"].append(0)
-	# Check the temperature:
-	temp = ts.get_temps()[0]
-	status["temp"] = temp
-	if ts.name == "bhm":
-		if (temp != -1) and (temp < 30.5):
-			status["status"].append(1)
+				s.status.append(0)
+			s.update()
 		else:
-			status["status"].append(0)
-	else:
-		if (temp != -1) and (temp < 37):
-			status["status"].append(1)
-		else:
-			status["status"].append(0)
-	return status
+			print "ERROR (ngccm.get_status): The crate you want ({0}) is not in the teststand object you supplied.".format(crate)
+		
+#		# Check the temperature:
+#		temp = ts.get_temps()[0]
+#		status["temp"] = temp
+#		if ts.name == "bhm":
+#			if (temp != -1) and (temp < 30.5):
+#				status["status"].append(1)
+#			else:
+#				status["status"].append(0)
+#		else:
+#			if (temp != -1) and (temp < 37):
+#				status["status"].append(1)
+#			else:
+#				status["status"].append(0)
+	return s
+
+def get_status_all(ts=None):
+	log = ""
+	ss = []
+	
+	if ts:
+		for crate in ts.fe_crates:
+			ss.append(get_status(ts=ts, crate=crate))
+	return ss
 
 def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:
 	log = ""

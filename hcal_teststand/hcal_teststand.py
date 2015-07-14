@@ -183,7 +183,7 @@ def set_mode(ts, crate, slot, n):		# 0: normal mode, 1: link test mode A (test m
 			s = 1
 	return s
 
-def set_mode_all(ts, n):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
+def set_mode_all(ts=False, n=0):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
 	s = 1
 	for crate, slots in ts.fe.iteritems():
 		for slot in slots:
@@ -273,7 +273,7 @@ class teststand:
 				qie.set_cal_mode_all(self, crate, slot, enable)
 	
 	def get_qie_map(self):
-		qie_map = qie.get_map(self)
+		qie_map = qie.get_map_slow(self)
 		return qie_map
 	
 	def save_qie_map(self, f="", d="configuration/maps"):		# Saves the qie map to a file named f in directory d.

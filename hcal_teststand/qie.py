@@ -5,27 +5,60 @@ from subprocess import Popen, PIPE
 import ngccm
 from time import time, sleep
 from numpy import mean, std
+import uhtr
 
 # CLASSES:
-#class qie_card:
-#	# CONSTRUCTION:
-#	def __init__(self, crate=-1, slot=-1, ts):
-#		self.crate = crate
-#		self.slot = slot
-#		self.ts = ts
-#	# /CONSTRUCTION
-#	
-#	# METHODS:
-#	def set_ped(self, n):
-#		data = qie.set_ped_all(self.ts.ngccm_port=4242, self.crate, self.slot, n=6)
-#		return data
-#	# /METHODS
-#	
-#	def __str__(self):		# This just defines what the object looks like when it's printed.
-#		if self.crate != -1:
-#			return "<qie card object: crate = {0}, slot = {1}>".format(self.crate, self.slot)
-#		else:
-#			return "<empty qie card object>"
+class status:
+	# Construction:
+	def __init__(self, ts=None, status=[], crate=-1, slot=-1, fw_top=[], fw_bot="", fw_b=[]):
+		if not ts:
+			ts = None
+		self.ts = ts
+		if not status:
+			status = []
+		self.status = status
+		self.crate = crate
+		self.slot = slot
+		if not fw_top:
+			fw_top = []
+		self.fw_top = fw_top
+		if not fw_bot:
+			fw_bot = []
+		self.fw_bot = fw_bot
+		if not fw_b:
+			fw_b = []
+		self.fw_b = fw_b
+	
+	# String behavior
+	def __str__(self):
+		if self.ts:
+			return "<qie.status object: {0}>".format(self.status)
+		else:
+			return "<empty qie.status object>"
+	
+	# Methods:
+	def update(self):
+		self.good = (False, True)[bool(self.status) and len(self.status) == sum(self.status)]
+	
+	def Print(self, verbose=True):
+		if verbose:
+			print "[{0}] QIE card in crate {1}, slot {2} status: {3} <- {4}".format(("!!", "OK")[self.good], self.crate, self.slot, ("BAD", "GOOD")[self.good], self.status)
+			if self.good:
+				print "\tFW IGLOO2 top: {0}".format(self.fw_top)
+				print "\tFW IGLOO2 bottom: {0}".format(self.fw_bot)
+				print "\tFW bridge: {0}".format(self.fw_b)
+		else:
+			print "[{0}] QIE card in crate {1}, slot {2} status: {3}".format(("!!", "OK")[self.good], self.crate, self.slot, ("BAD", "GOOD")[self.good])
+	
+	def log(self):
+		output = "%% QIE {0}, {1}\n".format(self.crate, self.slot)
+		output += "{0}\n".format(int(self.good))
+		output += "{0}\n".format(self.status)
+		output += "{0}\n".format(self.fw_top)
+		output += "{0}\n".format(self.fw_bot)
+		output += "{0}\n".format(self.fw_b)
+		return output.strip()
+	# /Methods
 # /CLASSES
 
 # FUNCTIONS:
@@ -100,7 +133,67 @@ def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and 
 	else:
 		return []
 
-def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
+def get_map(ts, v=False):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
+	# THIS IS A WORK IN PROGRESS. User get_map_slow until this is fixed.
+	print ">> Getting links ..."
+	links_by_slot = ts.get_links()
+	qie_map = []
+	
+	# Make sure the teststand is set up:
+	print "Disabling fixed-range mode ..."
+	for crate, slots in ts.fe.iteritems():
+		for slot in slots:
+			set_fix_range_all(ts, crate, slot, False)
+	
+	# Do the mapping:
+	for crate, slots in ts.fe.iteritems():
+		for slot in slots:
+			print ">> Mapping crate {0}, slot {1} ...".format(crate, slot)
+			for i in range(2):		# Do the following step twice (for QIEs 1-12, and for 13-24).
+				print ">> Doing the cycle {0} ...".format(i)
+				uhtr_data = []
+				set_fix_range_all(ts, crate, slot, False)
+				for qie in range(i*12 + 1, i*12 + 13):
+					if (v): print "{0} -> {1}".format(qie, int((qie - i*12 - 1)/4) + 1)
+					set_fix_range(ts, crate, slot, qie, True, int((qie - i*12 - 1)/4) + 1)
+				files_histo = {}
+				for uhtr_slot in links_by_slot.keys():
+					files_histo[uhtr_slot] = uhtr.get_histo(ts=ts, uhtr_slot=uhtr_slot, sepCapID=0)
+					uhtr_data_temp = uhtr.read_histo(files_histo[uhtr_slot])
+					temp = {}
+					for datum in uhtr_data_temp:
+						temp = datum
+						temp["uhtr_slot"] = uhtr_slot
+						uhtr_data.append(temp)
+				
+				groups = [[] for j in range(4)]
+				for r in range(1, 4):
+					for datum in uhtr_data:
+						if datum["mean"] > r*64 - 10 and datum["mean"] < r*64 + 10:
+#							print datum["mean"]
+							groups[r].append(datum)
+				
+				for r in range(4):
+					if len(groups[r]) == 4:
+						if len([j["link"] for j in groups[r]]) == 1 and len([j["uhtr_link"] for j in groups[r]]) == 1:
+							i_link = groups[r][0]["link"]
+							uhtr_slot = groups[r][0]["uhtr_slot"]
+						else:
+							print "ERROR (qie.get_map): Something is strange about how things are organized ..."
+							print groups[r]
+					else:
+						print "ERROR (qie.get_map): The following group doesn't contain four QIEs"
+						print groups[r]
+	
+	# Make sure the teststand is set up:
+	print "Disabling fixed-range mode ..."
+	for crate, slots in ts.fe.iteritems():
+		for slot in slots:
+			set_fix_range_all(ts, crate, slot, False)
+	
+	return qie_map
+
+def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
 	print ">> Getting links ..."
 	links_by_ip = ts.get_links()
 #	print links_by_ip
@@ -110,7 +203,7 @@ def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from Q
 			set_fix_range_all(ts, crate, slot, False)
 			for qie in range(1, 25):
 				print ">> Finding crate {0}, slot {1}, QIE {2} ...".format(crate, slot, qie)
-				set_fix_range(ts, crate, slot, qie, True, 3)
+				set_fix_range(ts, crate, slot, qie, True, 2)
 				channel_save = []
 				link_save = []
 				for ip, links in links_by_ip.iteritems():
@@ -121,7 +214,7 @@ def get_map(ts):		# Determines the QIE map of the teststand. A qie map is from Q
 							for channel in range(4):
 								adc_avg = mean([i_bx[channel] for i_bx in data["adc"]])
 								print adc_avg
-								if adc_avg == 192:
+								if adc_avg == 128:
 									channel_save.append(channel)
 									link_save.append(link)
 				if len(channel_save) == 1 and len(link_save):
@@ -180,49 +273,78 @@ def set_unique_id_all(ts):		# Repeats the "set_unique_id" function from above fo
 # /
 
 # Functions to "status" components, including calculating clocks:
-def get_status(ts):		# Perform basic checks of the QIE cards:
-	status = {}
-	status["status"] = []
-	status["orbit"] = []
-	f_orbit = get_frequency_orbit(ts)
-	# Loop over all QIE cards:
-	i_qie = -1
-	for crate, slots in ts.fe.iteritems():
-		for slot in slots:
-			i_qie += 1
-			# Check Bridge FPGA and IGLOO2 version are accessible:
-			qie_info = get_info(ts, crate, slot)
-			if (qie_info["bridge"]["version_fw"] != "00.00.0000"):
-				status["status"].append(1)
-			else:
-				status["status"].append(0)
-			if (qie_info["igloo"]["version_fw_top"] != "00.00"):
-				status["status"].append(1)
-			else:
-				status["status"].append(0)
-			if (qie_info["igloo"]["version_fw_bot"] != "00.00"):
-				status["status"].append(1)
-			else:
-				status["status"].append(0)
-			# Check QIE resets in the BRIDGE (1) and the IGLOO2s (2):
-			orbit_temp = []
-			f_orbit_bridge = f_orbit["bridge"][i_qie]
-			f_orbit_igloo = f_orbit["igloo"][i_qie]
-			## (1) Check the BRIDGE:
-			if (f_orbit_bridge["f"] < 13000 and f_orbit_bridge["f"] > 10000 and f_orbit_bridge["f_e"] < 500):
-				status["status"].append(1)
-			else:
-				status["status"].append(0)
-			orbit_temp.append([f_orbit_bridge["f"], f_orbit_bridge["f_e"]])
-			## (2) Check the IGLOO2s:
-			for i in range(2):
-				if (f_orbit_igloo["f"][i] < 13000 and f_orbit_igloo["f"][i] > 10000 and f_orbit_igloo["f_e"][i] < 600):
-					status["status"].append(1)
-				else:
-					status["status"].append(0)
-				orbit_temp.append([f_orbit_igloo["f"][i], f_orbit_igloo["f_e"][i]])
-			status["orbit"].append(orbit_temp)
-	return status
+def get_status(ts=None, crate=-1, slot=-1):		# Perform basic checks of the QIE cards:
+	log =""
+	s = status(ts=ts, crate=crate, slot=slot)
+	
+#	f_orbit = get_frequency_orbit(ts)
+	if ts:
+		# Check Bridge FPGA and IGLOO2 version are accessible:
+		qie_info = get_info(ts, crate, slot)
+		
+		## Top:
+		s.fw_top = [
+			qie_info["igloo"]["version_fw_major_top"],
+			qie_info["igloo"]["version_fw_minor_top"],
+		]
+		if (s.fw_top[0] != 0):
+			s.status.append(1)
+		else:
+			s.status.append(0)
+		
+		## Bottom:
+		s.fw_bot = [
+			qie_info["igloo"]["version_fw_major_bot"],
+			qie_info["igloo"]["version_fw_minor_bot"],
+		]
+		if (s.fw_bot[0] != 0):
+			s.status.append(1)
+		else:
+			s.status.append(0)
+		
+		## Bridge:
+		qie_info = get_info(ts, crate, slot)
+		s.fw_b = [
+			qie_info["bridge"]["version_fw_major"],
+			qie_info["bridge"]["version_fw_minor"],
+			qie_info["bridge"]["version_fw_svn"]
+		]
+		if (s.fw_b[0] != 0):
+			s.status.append(1)
+		else:
+			s.status.append(0)
+		
+		
+#		# Check QIE resets in the BRIDGE (1) and the IGLOO2s (2):
+#		orbit_temp = []
+#		f_orbit_bridge = f_orbit["bridge"][i_qie]
+#		f_orbit_igloo = f_orbit["igloo"][i_qie]
+#		## (1) Check the BRIDGE:
+#		if (f_orbit_bridge["f"] < 13000 and f_orbit_bridge["f"] > 10000 and f_orbit_bridge["f_e"] < 500):
+#			status["status"].append(1)
+#		else:
+#			status["status"].append(0)
+#		orbit_temp.append([f_orbit_bridge["f"], f_orbit_bridge["f_e"]])
+#		## (2) Check the IGLOO2s:
+#		for i in range(2):
+#			if (f_orbit_igloo["f"][i] < 13000 and f_orbit_igloo["f"][i] > 10000 and f_orbit_igloo["f_e"][i] < 600):
+#				status["status"].append(1)
+#			else:
+#				status["status"].append(0)
+#			orbit_temp.append([f_orbit_igloo["f"][i], f_orbit_igloo["f_e"][i]])
+#		status["orbit"].append(orbit_temp)
+		s.update()
+	return s
+
+def get_status_all(ts=None):
+	log = ""
+	ss = []
+	
+	if ts:
+		for crate, slots in ts.fe.iteritems():
+			for slot in slots:
+				ss.append(get_status(ts=ts, crate=crate, slot=slot))
+	return ss
 
 def read_counter_qie_bridge(ts, crate, slot):
 	log = ""
@@ -370,13 +492,11 @@ def set_fix_range_all(ts, crate, slot, enable=False, rangeSet=0):		# Turn fixed 
 	else:
 		commands = []
 		if enable:
-			for qie in range(1, 25):
-				commands.append("put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, qie))
-				commands.append("put HF{0}-{1}-QIE{2}_RangeSet {3}".format(crate, slot, qie, rangeSet))
+			commands.append("put HF{0}-{1}-QIE[1-24]_FixRange 24*1".format(crate, slot))
+			commands.append("put HF{0}-{1}-QIE[1-24]_RangeSet 24*{3}".format(crate, slot, rangeSet))
 		else:
-			for qie in range(1, 25):
-				commands.append("put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, qie))
-				commands.append("put HF{0}-{1}-QIE{2}_RangeSet 0".format(crate, slot, qie))		# Not necessary, but I think it's probably good form.
+			commands.append("put HF{0}-{1}-QIE[1-24]_FixRange 24*0".format(crate, slot))
+			commands.append("put HF{0}-{1}-QIE[1-24]_RangeSet 24*0".format(crate, slot))		# Not necessary, but I think it's probably good form.
 		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
 #		raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
 		return raw_output

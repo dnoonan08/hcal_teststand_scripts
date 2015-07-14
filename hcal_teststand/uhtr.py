@@ -7,6 +7,71 @@ import qie
 from ROOT import *
 
 # CLASSES:
+
+class status:
+	# Construction:
+	def __init__(self, ts=None, status=[], slot=-1, ips={}, fw_front=[], fw_type_front="", fw_back=[], fw_type_back="", links=[], dump=""):
+		if not ts:
+			ts = None
+		self.ts = ts
+		if not status:
+			status = []
+		self.status = status
+		self.slot = slot
+		if not ips:
+			ips = {}
+		self.ips = ips
+		if not fw_front:
+			fw_front = []
+		self.fw_front = fw_front
+		self.fw_type_front = fw_type_front
+		if not fw_back:
+			fw_back = []
+		self.fw_back = fw_back
+		self.fw_type_back = fw_type_back
+		if not links:
+			links = []
+		self.links = links
+		self.dump = dump
+	
+	# String behavior
+	def __str__(self):
+		if self.ts:
+			return "<uhtr.status object: {0}>".format(self.status)
+		else:
+			return "<empty uhtr.status object>"
+	
+	# Methods:
+	def update(self):
+		self.good = (False, True)[bool(self.status) and len(self.status) == sum(self.status)]
+	
+	def Print(self, verbose=True):
+		if verbose:
+			print "[{0}] uHTR in slot {1} status: {2} <- {3}".format(("!!", "OK")[self.good], self.slot, ("BAD", "GOOD")[self.good], self.status)
+			if self.good:
+				print "\tFW front type: {0}".format(self.fw_type_front)
+				print "\tFW front: {0}".format(self.fw_front)
+				print "\tFW back type: {0}".format(self.fw_type_back)
+				print "\tFW back: {0}".format(self.fw_back)
+				print "\tLinks: {0}".format(self.links)
+				print "\tIPs: {0}".format(self.ips)
+		else:
+			print "[{0}] uHTR in slot {1} status: {2}".format(("!!", "OK")[self.good], self.slot, ("BAD", "GOOD")[self.good])
+	
+	def log(self):
+		output = "%% uHTR {0}\n".format(self.slot)
+		output += "{0}\n".format(int(self.good))
+		output += "{0}\n".format(self.status)
+		output += "{0}\n".format(self.fw_type_front)
+		output += "{0}\n".format(self.fw_front)
+		output += "{0}\n".format(self.fw_type_back)
+		output += "{0}\n".format(self.fw_back)
+		output += "{0}\n".format(self.links)
+		output += "{0}\n".format(self.ips)
+		output += "{0}\n".format(self.dump)
+		return output.strip()
+	# /Methods
+
 class link:		# An object that represents a uHTR link. It contains information about what it's connected to.
 	qie_half_labels = ['bottom', 'top']
 	
@@ -143,34 +208,56 @@ def get_info(ts):		# A get_info function that accepts either an IP address or a 
 		info.append(get_info_slot(ts, uhtr_slot))
 	return info
 
-def get_status(ts):		# Perform basic checks with the uHTRTool.exe:
-	status = {}
-	status["status"] = []
-	# Ping uHTR IPs:
-	for ip in ts.uhtr_ips:
-		ping_result = Popen(["ping -c 1 {0}".format(ip)], shell = True, stdout = PIPE, stderr = PIPE).stdout.read()
-		if ping_result:
-			status["status"].append(1)
+def get_status(ts=None, slot=-1, ping=True):		# Perform basic checks with the uHTRTool.exe:
+	log = ""
+	s = status(ts=ts, slot=slot)
+	
+	if ts:
+		# Ping uHTR IPs:
+		ip = ts.uhtr[slot]
+		if ping:
+			s.ips[ip] = 0
+			ping_result = Popen(["ping -c 1 {0}".format(ip)], shell = True, stdout = PIPE, stderr = PIPE).stdout.read()
+			if ping_result:
+				s.ips[ip] = 1
+				s.status.append(1)
+			else:
+				s.status.append(0)
 		else:
-			status["status"].append(0)
-	# Make sure the versions are accessible:
-	for ip in ts.uhtr_ips:
-		uhtr_info = get_info(ip)
-		if uhtr_info["version_fw_front"][1] != 0:
-			status["status"].append(1)
+			s.ips[ip] = -1
+		
+		# Make sure the versions are accessible:
+		uhtr_info = get_info_slot(ts, slot)
+		s.fw_type_front = uhtr_info["version_fw_type_front"]
+		s.fw_front = uhtr_info["version_fw_front"]
+		s.fw_type_back = uhtr_info["version_fw_type_back"]
+		s.fw_back = uhtr_info["version_fw_back"]
+		if s.fw_type_front[1] != 0:
+			s.status.append(1)
 		else:
-			status["status"].append(0)
-	# Activate links:
-	# * Check that there are 6 active links per IP?
-	status["links"] = []
-	for uhtr_slot in ts.uhtr_slots:
-		links = find_links(ts, uhtr_slot)
-		status["links"].append(links)
-		if links:
-			status["status"].append(1)
-		else:
-			status["status"].append(0)
-	return status
+			s.status.append(0)
+		
+		# Active links:
+		s.links = find_links(ts, slot)
+#		if s.links:
+#				s.status.append(1)
+#		else:
+#				s.status.append(0)
+		
+		# Additional info:
+		s.dump = get_dump(ts, slot)
+		
+		s.update()
+	return s
+
+def get_status_all(ts=None, ping=True):
+	log = ""
+	ss = []
+	
+	if ts:
+		for slot in ts.uhtr_slots:
+			ss.append(get_status(ts=ts, slot=slot, ping=ping))
+	return ss
 
 def parse_links(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you use the "find_links" function below, which uses this function.
 	log = ""
@@ -500,6 +587,31 @@ def get_data_parsed(ts, uhtr_slot, n, ch):
 	else:
 		print "ERROR: There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, ch)
 		return False
+
+def get_dump(ts, uhtr_slot):
+	log = ""
+	
+	commands = [
+		"0",
+		"LINK",
+		"STATUS",
+		"QUIT",
+		"DTC",
+		"STATUS",
+		"QUIT",
+		"LUMI",
+		"QUIT",
+		"DAQ",
+		"STATUS",
+		"QUIT",
+		"EXIT",
+		"EXIT",
+	]
+	
+	uhtr_out = send_commands(ts, uhtr_slot, commands)
+	raw_output = uhtr_out["output"]
+	log += uhtr_out["log"]
+	return raw_output
 # /FUNCTIONS
 
 if __name__ == "__main__":

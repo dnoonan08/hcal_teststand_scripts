@@ -10,46 +10,6 @@ from hcal_teststand.hcal_teststand import *
 import sys
 import numpy
 
-def get_channel_map(ip, crate_port):
-	# This function gets each active link and tries to map each channel inside to a board QIE number, as assigned by ngccm software.
-	channels = []
-	links = uhtr_get_active_links(ip_uhtr)
-	set_ped_all(crate_port, 31)
-	if (len(links) != 6):
-		print "ERROR: Not all of the links are active. A channel map can't be identified."
-		print ">> The activated links are {0}.".format(links)
-	else:
-		for n in range(24):
-#		for n in [24]:
-			n += 1
-			print n
-			channel = {
-				"number": n,
-				"link": -1,
-				"sublink": -1,
-				"targets": [],
-			}
-			set_ped(crate_port, n, -31)
-			for l in links:
-				uhtr_read = get_data_from_uhtr(ip, 10, l)
-				data = parse_uhtr_raw(uhtr_read["output"])
-#				print data["adc"]
-				for sl in range(4):
-					adc_avg = numpy.mean([i_bx[sl] for i_bx in data["adc"]])
-#					print adc_avg
-					if (adc_avg == 0):
-						channel["targets"].append([l, sl])
-			if ( len(channel["targets"]) == 1 ):
-				channel["link"] = channel["targets"][0][0]
-				channel["sublink"] = channel["targets"][0][1]
-			else:
-				print "ERROR: The map is not one-to-one!"
-				print ">> Checking n = {0} resulted in {1}.".format(n, channel["targets"])
-			channels.append(channel)
-			set_ped(crate_port, n, 31)
-	set_ped_all(crate_port, 6)
-	return channels
-
 if __name__ == "__main__":
 	name = ""
 	if len(sys.argv) == 1:
