@@ -4,13 +4,14 @@ from re import search
 from subprocess import Popen, PIPE
 import hcal_teststand
 import qie
+from ROOT import *
 
 # CLASSES:
 class link:		# An object that represents a uHTR link. It contains information about what it's connected to.
 	qie_half_labels = ['bottom', 'top']
 	
 	# CONSTRUCTION
-	def __init__(self, ts="uknown", uhtr_slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False):
+	def __init__(self, ts="unknown", uhtr_slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False):
 		self.ts = ts
 		self.slot = uhtr_slot
 		self.n = link_number
@@ -278,7 +279,7 @@ def get_links(ts, uhtr_slot):		# Initializes and sets up links of a uHTR and the
 	# Get a list of the active links:
 	print "Fetching links from uHTR in slot {0}".format(uhtr_slot)
 	active_links = find_links(ts, uhtr_slot)
-	print active_links
+#	print active_links
 	
 	# For each active link, read QIE unique ID and fiber number from SPY data:
 	# (self, uhtr_ip = "unknown", link_number = -1, qie_unique_id = "unknown", qie_half = -1, qie_fiber = -1, on = False)
@@ -336,31 +337,50 @@ def get_links_all_from_map(ts=False, f="", d="configuration/maps"):		# Returns a
 
 # calls the uHTRs histogramming functionality
 # ip - ip address of the uHTR (e.g. teststand("904").uhtr_ips[0])
-# n  - number of orbits to integrate over
+# n_orbits  - number of orbits to integrate over
 # sepCapID - whether to distinguish between different cap IDs
 # (currently I think this means you can only read out range 0)
 # fileName - output file name
-def get_histo(ts, uhtr_slot, n , sepCapID , fileName ): 
-	
+def get_histo(ts=False, uhtr_slot=-1, n_orbits=1000, sepCapID=1, file_out=""):
+	# Set up some variables:
 	log = ""
-	commands = [
+	if not file_out:
+		file_out = "histo_uhtr{0}.root".format(uhtr_slot)
+	
+	# Histogram:
+	cmds = [
 		'0',
 		'link',
 		'histo',
 		'integrate',
-		'{0}'.format(n), # number of orbit to integrate over
+		'{0}'.format(n_orbits),		# number of orbits to integrate over
 		'{0}'.format(sepCapID),
-		'{0}'.format(fileName),
+		'{0}'.format(file_out),
 		'0',
 		'quit',
 		'quit',
 		'exit',
 		'exit'
-		]
+	]
 	
-	log = send_commands_script(ts, uhtr_slot, commands)["log"]
-	# ... seems that send_commands returns a 
-	# dictionary which contains all of the outputs
+	result = send_commands_script(ts, uhtr_slot, cmds)
+	log += result["log"]
+#	raw_output = result["output"]
+	return file_out
+
+def read_histo(file_in=""):
+	result = []
+	tf = TFile(file_in, "READ")
+	tc = TCanvas("tc", "tc", 500, 500)
+	for i_link in range(24):
+			for i_ch in range(4):
+				th = tf.Get("h{0}".format(4*i_link + i_ch))
+				info = {}
+				info["link"] = i_link
+				info["channel"] = i_ch
+				info["mean"] = th.GetMean()
+				result.append(info)
+	return result
 
 def get_data(ts, uhtr_slot, n, ch):
 	log = ""
@@ -434,7 +454,7 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 	}
 	raw_temp = []
 	for line in raw_data:
-		print line
+#		print line
 		cid_match = search("CAPIDS", line)
 		if cid_match:
 			data["cid"].append([int(i) for i in line.split()[-4:]])
