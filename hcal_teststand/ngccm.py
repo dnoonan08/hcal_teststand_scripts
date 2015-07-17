@@ -114,7 +114,7 @@ def send_commands_parsed(ts, cmds):		# This executes commands as above, but retu
 				t1 = time()
 				output.append({
 					"cmd": c,
-					"result": p.match.group(1).strip(),
+					"result": p.match.group(1).strip().replace("'", ""),
 					"times": [t0, t1],
 				})
 	#			print output
