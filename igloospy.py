@@ -40,10 +40,7 @@ if __name__=="__main__":
 	    if opt['cmd'][-3:] == 'Reg':
 		    deco=bin(int(opt['result'][:-5],16))
 		    ostr+=sepcut
-		    lth=deco[:-2]
-		    if lth=='0b':
-			    lth+='0'
-		    ostr+='(Data_left:{0},  Empty:{1},  Full:{2})\n'.format(int(lth,2),deco[-2],deco[-1])
+		    ostr+='(Data_left:{0},  Empty:{1},  Full:{2})\n'.format(int(deco[:-2],2),deco[-2],deco[-1])
 	    if opt['cmd'][-3:] == 'Spy':
 		    ostr+=''
 		    if opt['cmd'][-12:-9] == 'Top':
