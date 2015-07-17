@@ -43,7 +43,7 @@ if __name__ == "__main__":
 	
 	# Set up the AMC13:
 	print "> Setting up the AMC13 ..."
-	result = amc13.get_status(ts=ts)["status"]
+	result = amc13.get_status(ts=ts).status
 	status = True
 	if result:
 		if result[0]:

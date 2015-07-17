@@ -37,11 +37,11 @@ name = 904
 fe_crates = 1
 ngccm_port = 4242
 uhtr_ip_base = 192.168.29
-uhtr_slots = 12 #, 11
+uhtr_slots = 11 #, 12 is broken?
 uhtr_settings = 1, 92		# This isn't implemented, yet!
 glib_slot = 10
 mch_ip = 192.168.1.28
-amc13_ips = 192.168.1.165, 192.168.1.164
+amc13_ips = 192.168.2.137, 192.168.2.136
 qie_slots = 2, 10 # 12, 2 has the injector plugged into half of it
 control_hub = hcal904daq01
 
