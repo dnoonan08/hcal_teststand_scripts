@@ -59,7 +59,7 @@ if __name__ == "__main__":
 	result = [0]*24
 	registers = []
 	for q in range(24) : 
-		registers.append( register(ts,"QIE{0}".format(q+1),48) )
+		registers.append( register(ts,"HF1-10-QIE{0}".format(q+1),48) )
 
 	for i in range( 5 ) :
 		#print "test",i

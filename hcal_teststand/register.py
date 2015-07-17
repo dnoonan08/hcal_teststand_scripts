@@ -36,7 +36,8 @@ class register :
         
         errors = 0 
         executeErrors = 0 
-        
+        totalTests = 0 
+
         output = ngccm.send_commands_parsed( self.ts , self.commandCache )["output"]
 
         if self.verbosity >= 1 :
@@ -52,6 +53,9 @@ class register :
             else :
                 value = output[i*2]["cmd"].split()[2:]
 
+            if self.verbosity >= 1 : 
+                print "value:",value
+
             valueNum = []
             for v in value :
                 valueNum.append( int(v,16) )
@@ -59,12 +63,18 @@ class register :
             if output[i*2]["result"] != "OK" : 
                 executeErrors = executeErrors + 1
                 continue
+            else :
+                totalTests = totalTests + 1
 
             if output[i*2+1]["cmd"].find("get ") == -1 :
                 print "ERROR, register::testCach() - commands executed in wrong order??"
                 return -999 
             else : 
-                check = output[i*2+1]["result"].split("'")[1].split()
+                #check = output[i*2+1]["result"].split("'")[1].split()
+                check = output[i*2+1]["result"].split()
+
+            if self.verbosity >= 1 :
+                print "check:",check
 
             checkNum = []
             for c in check[::-1] :
@@ -72,8 +82,6 @@ class register :
 
             ### valueNum and checkNum are compared so that
             ### leading zeroes will be conveniently ignored
-            if self.verbosity >= 1 :
-                print "value",value,"check",check
             if valueNum != checkNum : 
                 errors = errors + 1
 
@@ -82,15 +90,16 @@ class register :
         print "--------------------------------"
         print "errors:",errors
         print "execution errors:",executeErrors
-                
+        print "success rate:", 100. * ( 1. - float( errors ) / float( totalTests ) ),"%"
+
     def addTestToCache( self, value ) :
 
-        self.commandCache.append( "put HF1-10-{0} {1}".format( self.name , value ) )
-        self.commandCache.append( "get HF1-10-{0}".format( self.name , value ) )
+        self.commandCache.append( "put {0} {1}".format( self.name , value ) )
+        self.commandCache.append( "get {0}".format( self.name , value ) )
         
     def read( self ) :
         
-        output = ngccm.send_commands_parsed( self.ts, ["get HF1-10-{0}".format(self.name)] )["output"][0]["result"]
+        output = ngccm.send_commands_parsed( self.ts, ["get {0}".format(self.name)] )["output"][0]["result"]
         if self.verbosity >= 1 : 
             print "REGISTER::READ() --"
             print output
@@ -99,7 +108,7 @@ class register :
 
     def write( self , value = '') :
         
-        output = ngccm.send_commands_parsed(self.ts, ["put HF1-10-{0} {1}".format(self.name,value)] )["output"][0]["result"]
+        output = ngccm.send_commands_parsed(self.ts, ["put {0} {1}".format(self.name,value)] )["output"][0]["result"]
         if self.verbosity >= 1 : 
             print "REGISTER::WRITE() --"
             print output
