@@ -8,6 +8,58 @@ from numpy import mean, std
 import uhtr
 
 # CLASSES:
+class qie:
+	# Construction:
+	def __init__(self, ts=None, unique_id="", crate=-1, slot=-1, n=-1, uhtr_slot=-1, fiber=-1, half=-1, link=-1, channel=-1):
+		if not ts:
+			ts = None
+		self.ts = ts
+		self.id = unique_id
+		self.crate = crate
+		self.slot = slot
+		self.n = n
+		self.uhtr_slot = uhtr_slot
+		self.fiber = fiber
+		self.half = half
+		self.link = link
+		self.channel = channel
+	
+	# String behavior
+	def __str__(self):
+		if self.ts:
+			return "<qie.qie object: {0}, {1}>".format(self.id, self.n)
+		else:
+			return "<empty qie.qie object>"
+	
+	# Methods:
+	def get_data(self, method=0):		# Method 0 is for uHTR SPY. Nothing else is implemented, yet.
+		if method == 0:
+			return uhtr.get_data_parsed_new(self.ts, self.uhtr_slot, 300, self.link)[channel]
+		else:
+			print "ERROR (qie object {0}): Could not get data because method value {1} wasn't recognized.".format(self.id, method)
+			return False
+	# /Methods
+
+class datum:
+	# Construction:
+	def __init__(self, adc=-1, cid=-1, tdc_le=-1, tdc_te=-1, raw="", bx=-1):
+		self.adc = adc
+		self.cid = cid
+		self.tdc_le = tdc_le
+		self.tdc_te = tdc_te
+		self.raw = raw
+		self.bx = bx
+	
+	# String behavior
+	def __str__(self):
+		if self.adc != -1:
+			return "<qie.datum object>"
+		else:
+			return "<empty qie.datum object>"
+	
+	# Methods:
+	# /Methods
+
 class status:
 	# Construction:
 	def __init__(self, ts=None, status=[], crate=-1, slot=-1, fw_top=[], fw_bot="", fw_b=[]):
@@ -128,8 +180,8 @@ def get_info(ts, crate, slot):
 def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and slot and returns it as a list.
 	ngccm_output = ngccm.send_commands_parsed(ts, ["get HF{0}-{1}-UniqueID".format(crate,slot)])		# Results in something like "get HF1-1-UniqueID # '1 0x5f000000 0x9b46ce70'"
 	result = ngccm_output["output"][0]["result"]
-	if "'" in result: 
-		return result[1:-1].split()[1:3]		# Get the result of the command, strip the quotes, and turn the result into a list (ignoring the first element).
+	if "ERROR" not in result: 
+		return result.split()[1:3]		# Get the result of the command, and turn the result into a list (ignoring the first element).
 	else:
 		return []
 
@@ -492,11 +544,21 @@ def set_fix_range_all(ts, crate, slot, enable=False, rangeSet=0):		# Turn fixed 
 	else:
 		commands = []
 		if enable:
-			commands.append("put HF{0}-{1}-QIE[1-24]_FixRange 24*1".format(crate, slot))
-			commands.append("put HF{0}-{1}-QIE[1-24]_RangeSet 24*{3}".format(crate, slot, rangeSet))
+			for i_qie in range(1, 25):
+				commands.append("put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, i_qie))
+				commands.append("put HF{0}-{1}-QIE{2}_RangeSet {3}".format(crate, slot, i_qie, rangeSet))
 		else:
-			commands.append("put HF{0}-{1}-QIE[1-24]_FixRange 24*0".format(crate, slot))
-			commands.append("put HF{0}-{1}-QIE[1-24]_RangeSet 24*0".format(crate, slot))		# Not necessary, but I think it's probably good form.
+			for i_qie in range(1, 25):
+				commands.append("put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, i_qie))
+				commands.append("put HF{0}-{1}-QIE{2}_RangeSet 0".format(crate, slot, i_qie))
+		
+		# This should work, but I've had trouble with these "mass settings" before:
+#		if enable:
+#			commands.append("put HF{0}-{1}-QIE[1-24]_FixRange 24*1".format(crate, slot))
+#			commands.append("put HF{0}-{1}-QIE[1-24]_RangeSet 24*{2}".format(crate, slot, rangeSet))
+#		else:
+#			commands.append("put HF{0}-{1}-QIE[1-24]_FixRange 24*0".format(crate, slot))
+#			commands.append("put HF{0}-{1}-QIE[1-24]_RangeSet 24*0".format(crate, slot))		# Not necessary, but I think it's probably good form.
 		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
 #		raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
 		return raw_output
@@ -518,6 +580,15 @@ def set_cal_mode_all(ts, crate, slot, enable=False):
 	raw_output = ngccm.send_commands_fast(ts, commands)["output"]
 #	raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
 	return raw_output
+## /
+
+## QIE clock phase:
+def set_clk_phase(ts, crate, slot, qie, phase=0):
+	return send_commands_parsed(ts, "put HF{0}-{1}-Qie{2}_ck_ph {3}".format(crate, slot, qie, phase))
+
+def set_clk_phase_all(ts, crate, slot, phase=0):
+	cmds = ["put HF{0}-{1}-Qie{2}_ck_ph {3}".format(crate, slot, qie, phase) for qie in range(1, 25)]
+	return send_commands_parsed(ts, cmds)
 ## /
 # /
 

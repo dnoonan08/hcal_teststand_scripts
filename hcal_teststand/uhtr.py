@@ -588,6 +588,25 @@ def get_data_parsed(ts, uhtr_slot, n, ch):
 		print "ERROR: There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, ch)
 		return False
 
+def get_data_parsed_new(ts, uhtr_slot, n, i_link):		# Eventually, this should replace the normally named one ...
+	result = parse_data(get_data(ts, uhtr_slot, n, i_link)["output"])
+	if result:
+		data = [[]]*4
+		n_bx = len(result["adc"])
+		for i_bx in range(n_bx):
+			for ch in range(4):
+				data[ch].append(qie.datum(
+					adc=result["adc"][i_bx][ch],
+					cid=result["cid"][i_bx][ch],
+					tdc_le=result["tdc_le"][i_bx][ch],
+					tdc_te=result["tdc_te"][i_bx][ch],
+					raw=result["raw"][i_bx][ch],
+				))
+		return data
+	else:
+		print "ERROR (uhtr.get_data_parsed): There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, ch)
+		return False
+
 def get_dump(ts, uhtr_slot):
 	log = ""
 	

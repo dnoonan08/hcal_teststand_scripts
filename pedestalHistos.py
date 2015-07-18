@@ -28,13 +28,13 @@ if __name__ == "__main__":
 
 	#ts.set_ped_all(6)
 	#set_ped(crate_port, 3, 31)
-	links = uhtr.get_links(ts,12)
+	links = uhtr.get_links(ts,11)
 	#for link in links : 
 	#        link.Print()
 
 	d = time_string()
 	print "pedestalTest_{0}.root".format(d)
-	uhtr.get_histo(ts,12,1000,0,"pedestalTest_{0}.root".format(d))
+	uhtr.get_histo(ts,11,1000,0,"pedestalTest_{0}.root".format(d))
 
 	inputFile = TFile("pedestalTest_{0}.root".format(d),"READ")
 	gStyle.SetFillColor(0)

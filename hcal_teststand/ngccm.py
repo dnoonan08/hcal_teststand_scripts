@@ -312,15 +312,6 @@ def set_CI_mode(ts , crate , slot , enable = True , DAC = 0 ) :
 	
 	ngccm_output = send_commands_parsed( ts , commands )
 
-# sets all QIE clock phases
-def set_qie_clk_phase(ts , crate , slot , phase = 0 ) :
-
-	commands = []
-	for qie in range(24) :
-		commands.append("put HF{0}-{1}-Qie{2}_ck_ph {3}".format(crate,slot,qie+1,phase))
-	
-	ngccm_output = send_commands_parsed( ts , commands )
-
 # This function should be moved to "qie.py":
 def get_qie_shift_reg(ts , crate , slot , qie_list = range(1,5) ):
 	
