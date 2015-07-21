@@ -584,11 +584,11 @@ def set_cal_mode_all(ts, crate, slot, enable=False):
 
 ## QIE clock phase:
 def set_clk_phase(ts, crate, slot, qie, phase=0):
-	return send_commands_parsed(ts, "put HF{0}-{1}-Qie{2}_ck_ph {3}".format(crate, slot, qie, phase))
+	return ngccm.send_commands_parsed(ts, "put HF{0}-{1}-Qie{2}_ck_ph {3}".format(crate, slot, qie, phase))
 
 def set_clk_phase_all(ts, crate, slot, phase=0):
 	cmds = ["put HF{0}-{1}-Qie{2}_ck_ph {3}".format(crate, slot, qie, phase) for qie in range(1, 25)]
-	return send_commands_parsed(ts, cmds)
+	return ngccm.send_commands_parsed(ts, cmds)
 ## /
 # /
 
