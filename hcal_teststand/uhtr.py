@@ -413,7 +413,7 @@ def get_link_from_map(ts=False, uhtr_slot=-1, i_link=-1, f="", d="configuration/
 #		uhtr_info = ts.uhtr_from_qie()
 		qies = []
 		for ch in range(4):
-			qies.append([i for i in qie_map if i["uhtr_slot"] == uhtr_slot and i["link"] == i_link and i["channel"] == ch])
+			qies.extend([i for i in qie_map if i["uhtr_slot"] == uhtr_slot and i["link"] == i_link and i["channel"] == ch])
 		if len(qies) == 4:
 			qie = qies[0]
 			return link(
