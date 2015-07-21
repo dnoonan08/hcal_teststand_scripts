@@ -1,19 +1,18 @@
 from hcal_teststand import *
 from hcal_teststand.hcal_teststand import teststand
 import sys
-crate=1
-slot=10
+from optparse import OptionParser
 adcorder=[8,0,11,3,10,2,9,1]
 tdcorder=[14,6,13,5,12,4]
 if __name__=="__main__":
-    	name = ""
-	if len(sys.argv) == 1:
-		name = "904"
-	elif len(sys.argv) == 2:
-		name = sys.argv[1]
-	else:
-		name = "904"
-	ts = teststand(name)		# Initialize a teststand object. This object stores the teststand configuration and has a number of useful methods.
+	parser=OptionParser()
+	parser.add_option('-t','--teststand',dest='name',default='904',help="The name of the teststand you want to use (default is \"904\").")
+	parser.add_option('-q','--qieid',dest='qieid',default='0x8D000000 0xAA24DA70',help="The ID of the QIE card we read.")
+	(options, args) = parser.parse_args()
+	ts = teststand(options.name)
+	crateslot=ts.crate_slot_from_qie(qie_id=options.qieid)
+	crate=crateslot[0]
+	slot=crateslot[1]
 	fldec=open('igloodec.txt','w')
 	sepcut='---------------------------------------------------------------------------------------------------------------\n'
 	ostr=sepcut+'channel(T/B)\t'
@@ -34,7 +33,7 @@ if __name__=="__main__":
                 if opt['result']=='OK':
                     continue
                 else:
-                    print 'ERROR'
+                    print 'ERROR: Cannot put CntrReg,',opt['cmd'],'failed'
                     exit()
 	    ostr=''
 	    if opt['cmd'][-3:] == 'Reg':
