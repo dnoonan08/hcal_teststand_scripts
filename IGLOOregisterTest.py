@@ -2,7 +2,7 @@ from hcal_teststand.register import *
 from hcal_teststand.hcal_teststand import teststand
 import sys
 import random
-
+from optparse import OptionParser
 def getRandomValue( registerSize ) : 
 
 	randomInt = random.randint(0,1)	
@@ -16,31 +16,30 @@ def getRandomValue( registerSize ) :
 		
 # MAIN:
 if __name__ == "__main__":
-	name = ""
-	if len(sys.argv) == 1:
-		name = "904"
-	elif len(sys.argv) == 2:
-		name = sys.argv[1]
-	else:
-		name = "904"
-	ts = teststand(name)		# Initialize a teststand object. This object stores the teststand configuration and has a number of useful methods.
-
+	parser=OptionParser()
+	parser.add_option('-t','--teststand',dest='name',default='904',help="The name of the teststand you want to use (default is \"904\").")
+	parser.add_option('-q','--qieid',dest='qieid',default='0x8D000000 0xAA24DA70',help="The ID of the QIE card we read.")
+	(options, args) = parser.parse_args()
+	ts = teststand(options.name)
+	crateslot=ts.crate_slot_from_qie(qie_id=options.qieid)
+	crate=crateslot[0]
+	slot=crateslot[1]
 	result = [0]*24
 	registers = [ 
-		     register( ts , "HF1-10-iBot_CntrReg_CImode" , 1 ) , 
-		     register( ts , "HF1-10-iBot_CntrReg" , 1 ) , 
-		     register( ts , "HF1-10-iBot_LinkTestMode_BC0Enable" , 1 ) , 
-		     register( ts , "HF1-10-iBot_LinkTestMode_Enable" , 1 ) , 
-		     register( ts , "HF1-10-iBot_LinkTestMode" , 1 ) , 
-		     register( ts , "HF1-10-iBot_LinkTestPattern" , 32 ) , 
-		     register( ts , "HF1-10-iBot_scratch" , 32 ) , 
-		     register( ts , "HF1-10-iTop_CntrReg_CImode" , 1 ) , 
-		     register( ts , "HF1-10-iTop_CntrReg" , 1 ) , 
-		     register( ts , "HF1-10-iTop_LinkTestMode_BC0Enable" , 1 ) , 
-		     register( ts , "HF1-10-iTop_LinkTestMode_Enable" , 1 ) , 
-		     register( ts , "HF1-10-iTop_LinkTestMode" , 1 ) , 
-		     register( ts , "HF1-10-iTop_LinkTestPattern" , 32 ) , 
-		     register( ts , "HF1-10-iTop_scratch" , 32 )
+		     register( ts , "HF{0}-{1}-iBot_CntrReg_CImode".format(crate,slot) , 1 ) , 
+		     register( ts , "HF{0}-{1}-iBot_CntrReg".format(crate,slot), 1 ) , 
+		     register( ts , "HF{0}-{1}-iBot_LinkTestMode_BC0Enable".format(crate,slot), 1 ) , 
+		     register( ts , "HF{0}-{1}-iBot_LinkTestMode_Enable".format(crate,slot) , 1 ) , 
+		     register( ts , "HF{0}-{1}-iBot_LinkTestMode".format(crate,slot) , 1 ) , 
+		     register( ts , "HF{0}-{1}-iBot_LinkTestPattern".format(crate,slot) , 32 ) , 
+		     register( ts , "HF{0}-{1}-iBot_scratch".format(crate,slot) , 32 ) , 
+		     register( ts , "HF{0}-{1}-iTop_CntrReg_CImode".format(crate,slot) , 1 ) , 
+		     register( ts , "HF{0}-{1}-iTop_CntrReg".format(crate,slot) , 1 ) , 
+		     register( ts , "HF{0}-{1}-iTop_LinkTestMode_BC0Enable".format(crate,slot) , 1 ) , 
+		     register( ts , "HF{0}-{1}-iTop_LinkTestMode_Enable".format(crate,slot) , 1 ) , 
+		     register( ts , "HF{0}-{1}-iTop_LinkTestMode".format(crate,slot) , 1 ) , 
+		     register( ts , "HF{0}-{1}-iTop_LinkTestPattern".format(crate,slot) , 32 ) , 
+		     register( ts , "HF{0}-{1}-iTop_scratch".format(crate,slot) , 32 )
 		     ]
 	
 	for i in range( 20 ) :
