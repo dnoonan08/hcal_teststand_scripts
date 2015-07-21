@@ -132,13 +132,25 @@ class teststand:
 			uhtr_info = sorted(list(set([(qie["uhtr_slot"], qie["link"]) for qie in qie_map if qie["id"] == qie_id])))
 		else:
 			uhtr_info = sorted(list(set([(qie["uhtr_slot"], qie["link"]) for qie in qie_map])))
-		print uhtr_info
+#		print uhtr_info
 		for slot, link in uhtr_info:
 			if slot in result:
 				result[slot].append(link)
 			else:
 				result[slot] = [link]
 		return result
+	
+	def crate_slot_from_qie(self, qie_id="", f="", d="configuration/maps"):
+		qie_map = self.read_qie_map(f=f, d=d)
+		if qie_id:
+			info = sorted(list(set([(qie["crate"], qie["slot"]) for qie in qie_map if qie["id"] == qie_id])))
+		else:
+			info = sorted(list(set([(qie["crate"], qie["slot"]) for qie in qie_map])))
+		if len(info) == 1:
+			return info[0]
+		else:
+			print "WARNING (ts.crate_slot_from_qie): qie {0} maps to more than one crate, slot: {1}".format(qie_id, info)
+			return info[0]
 	
 	def get_qies(self, unique_id, f="", d="configuration/maps"):
 		return get_qies(self, unique_id, f=f, d=d)

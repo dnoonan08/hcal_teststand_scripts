@@ -76,7 +76,7 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	qie_half_labels = ['bottom', 'top']
 	
 	# CONSTRUCTION
-	def __init__(self, ts="unknown", uhtr_slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False):
+	def __init__(self, ts="unknown", uhtr_slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False, qies=[-1, -1, -1, -1]):
 		self.ts = ts
 		self.slot = uhtr_slot
 		self.n = link_number
@@ -85,6 +85,7 @@ class link:		# An object that represents a uHTR link. It contains information ab
 		self.qie_half_label = "unknown"
 		self.qie_fiber = qie_fiber
 		self.on = on
+		self.qies = qies		# The QIE numbers corresponding to the channel numbers of the link.
 		if self.qie_half in [0, 1]: 
 			self.qie_half_label = self.qie_half_labels[self.qie_half]
 		self.ip = ""
@@ -94,12 +95,18 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	
 	# METHODS
 	def get_data(self):
-		print self.ts
 		data = get_data_parsed(self.ts, self.slot , 300, self.n)
 		if data:
 			return data
 		else:
 			return False
+	
+	def get_data_spy(self):
+		return get_data_spy_parsed(self.ts, self.slot , 300, self.n)
+#		if data:
+#			return data
+#		else:
+#			return False
 	
 	def Print(self):
 		print "uHTR Info: Slot {0}, Link {1}".format(self.slot, self.n)
@@ -400,6 +407,35 @@ def get_links_all(ts):		# Calls "get_links" for all uHTRs in the system.
 		container[uhtr_slot] = get_links(ts, uhtr_slot)
 	return container
 
+def get_link_from_map(ts=False, uhtr_slot=-1, i_link=-1, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
+	if ts:
+		qie_map = ts.read_qie_map(f=f, d=d)
+#		uhtr_info = ts.uhtr_from_qie()
+		qies = []
+		for ch in range(4):
+			qies.append([i for i in qie_map if i["uhtr_slot"] == uhtr_slot and i["link"] == i_link and i["channel"] == ch])
+		if len(qies) == 4:
+			qie = qies[0]
+			return link(
+				ts=ts,
+				uhtr_slot=uhtr_slot,
+				link_number=i_link,
+				qie_unique_id=qie["id"],
+				qie_half=qie["half"],
+				qie_fiber=qie["fiber"],
+				on=True,
+				qies=[qie["qie"] for qie in qies]
+			)
+		elif len(qies) > 1:
+			print "ERROR (get_link_from_map): More than one QIE in the map matches your criterion of uhtr_slot = {0} and i_link = {1}.".format(uhter_slot, i_link)
+			return False
+		else:
+			print "ERROR (get_link_from_map): No QIE in the map matches your criterion of uhtr_slot = {0} and i_link = {1}.".format(uhter_slot, i_link)
+			return False
+	else:
+		print "ERROR (get_link_from_map): One of the arguments needs to be a teststand object."
+		return False
+
 def get_links_all_from_map(ts=False, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
 	links = []
 	if ts:
@@ -419,7 +455,7 @@ def get_links_all_from_map(ts=False, f="", d="configuration/maps"):		# Returns a
 			))
 		return links
 	else:
-		print "ERROR (get_links_from_map): One of the arguments needs to be a teststand object."
+		print "ERROR (get_links_all_from_map): One of the arguments needs to be a teststand object."
 		return links
 
 # calls the uHTRs histogramming functionality
@@ -588,13 +624,16 @@ def get_data_parsed(ts, uhtr_slot, n, ch):
 		print "ERROR: There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, ch)
 		return False
 
-def get_data_parsed_new(ts, uhtr_slot, n, i_link):		# Eventually, this should replace the normally named one ...
+def get_data_spy_parsed(ts, uhtr_slot, n, i_link):		# Eventually, this should replace the normally named one ...
 	result = parse_data(get_data(ts, uhtr_slot, n, i_link)["output"])
 	if result:
-		data = [[]]*4
+		data = [[] for i in range(4)]
+#		print data
 		n_bx = len(result["adc"])
+#		print n_bx
 		for i_bx in range(n_bx):
 			for ch in range(4):
+#				print result["adc"][i_bx][ch]
 				data[ch].append(qie.datum(
 					adc=result["adc"][i_bx][ch],
 					cid=result["cid"][i_bx][ch],
@@ -602,9 +641,11 @@ def get_data_parsed_new(ts, uhtr_slot, n, i_link):		# Eventually, this should re
 					tdc_te=result["tdc_te"][i_bx][ch],
 					raw=result["raw"][i_bx][ch],
 				))
+#				if i_bx < 5:
+#					print data
 		return data
 	else:
-		print "ERROR (uhtr.get_data_parsed): There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, ch)
+		print "ERROR (uhtr.get_data_spy_parsed): There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, i_link)
 		return False
 
 def get_dump(ts, uhtr_slot):
