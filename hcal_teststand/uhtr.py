@@ -94,19 +94,12 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	# /CONSTRUCTION
 	
 	# METHODS
-	def get_data(self):
-		data = get_data_parsed(self.ts, self.slot , 300, self.n)
+	def get_data_spy(self):
+		data = get_data_spy(self.ts, self.slot , 300, self.n)
 		if data:
 			return data
 		else:
 			return False
-	
-	def get_data_spy(self):
-		return get_data_spy_parsed(self.ts, self.slot , 300, self.n)
-#		if data:
-#			return data
-#		else:
-#			return False
 	
 	def Print(self):
 		print "uHTR Info: Slot {0}, Link {1}".format(self.slot, self.n)
@@ -139,7 +132,7 @@ def send_commands(ts, uhtr_slot, cmds):		# Sends commands to "uHTRtool.exe" and 
 		uhtr_cmd += " -o {0}".format(ts.control_hub)
 	raw_output = Popen(['printf "{0}" | {1}'.format(cmds_str, uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
 	log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
-
+	
 	return {
 		"output": raw_output[0] + raw_output[1],
 		"log": log,
@@ -162,11 +155,70 @@ def send_commands_script(ts, uhtr_slot, cmds):		# Sends commands to "uHTRtool.ex
 		out.write(cmds_str)
 	raw_output = Popen(['{0} < uhtr_script.cmd'.format(uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
 	log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
-
+	
 	return {
 		"output": raw_output[0] + raw_output[1],
 		"log": log,
 	}
+
+def setup(ts, uhtr_slot=False):
+	# Variables:
+	if uhtr_slot:
+		uhtr_slots = uhtr_slot
+	else:
+		uhtr_slots = self.uhtr_slots
+	
+	# Define setup commands:
+	cmds = [
+		"0",
+		"clock",
+		"setup",
+		"3",
+		"quit",
+		"link",
+		"init",
+		"1",		# Auto realign
+		"92",		# Orbit delay
+		"0",
+		"0",
+		"quit",
+		"exit",
+		"-1",
+	]
+	
+	# Run setup commands:
+	for uhtr_slot in uhtr_slots:
+		output = uhtr.send_commands(ts, uhtr_slot, cmds)["output"]
+	
+	return True
+
+def setup_links(ts, uhtr_slot=False):
+	# Variables:
+	if uhtr_slot:
+		uhtr_slots = uhtr_slot
+	else:
+		uhtr_slots = self.uhtr_slots
+	
+	# Define setup commands:
+	cmds = [
+		"0",
+		"link",
+		"init",
+		"1",		# Auto realign
+		"92",		# Orbit delay
+		"0",
+		"0",
+		"quit",
+		"exit",
+		"-1",
+	]
+	
+	# Run setup commands:
+	for uhtr_slot in uhtr_slots:
+		output = uhtr.send_commands(ts, uhtr_slot, cmds)["output"]
+	
+	return True
+
 
 def get_info_slot(ts, uhtr_slot):		# Returns a dictionary of information about the uHTR, such as the FW versions.
 	log = ""
@@ -245,7 +297,7 @@ def get_status(ts=None, slot=-1, ping=True):		# Perform basic checks with the uH
 			s.status.append(0)
 		
 		# Active links:
-		s.links = find_links(ts, slot)
+		s.links = list_active_links(ts, slot)
 #		if s.links:
 #				s.status.append(1)
 #		else:
@@ -266,28 +318,8 @@ def get_status_all(ts=None, ping=True):
 			ss.append(get_status(ts=ts, slot=slot, ping=ping))
 	return ss
 
-def parse_links(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you use the "find_links" function below, which uses this function.
-	log = ""
-	active = []
-	n_times = 0
-	for line in raw.split("\n"):
-#		print line
-		if search("^BadCounter(\s*(X|ON)){12}", line):
-#			print line
-			n_times += 1
-			statuses = line.split()[1:]
-			for i in range(len(statuses)):
-				if statuses[i].strip() == "ON":
-					active.append( 12 * ((n_times - 1) % 2) + i )
-	if n_times < 2:
-		log += ">> ERROR: No correct \"status\" was called on the link."
-	elif n_times > 2:
-		log += ">> ERROR: Hm, \"status\" was called on the link multiple times, so the active link list might be unreliable. (n_times = {0})".format(n_times)
-	if (n_times % 2 != 0):
-		log += ">> ERROR: Uh, there were an odd number of \"status\" lines, which is weird."
-	return list(set(active))
-
-def parse_link_status(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you use the "find_links" function below, which uses this function.
+## Parse raw uHTR output:
+def parse_link_status(raw):		# Parses the raw ouput of the uHTRTool.exe's "LINK" > "STATUS".	
 	# Variables:
 	log = ""
 	info = {}
@@ -323,51 +355,24 @@ def parse_link_status(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonl
 				info["orbit"][n_link] = float(orbit_raw)
 	return info
 
-def find_links(ts, uhtr_slot):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
-	log = ""
-	
-	# Identify active links:
-	commands = [
-		'0',
-		'link',
-		'status',
-		'quit',
-		'exit',
-		'exit',
-	]
-	uhtr_out = send_commands(ts, uhtr_slot, commands)
-	raw_output = uhtr_out["output"]
-	log += uhtr_out["log"]
-	active_links = parse_links(raw_output)		# A list of the indices of the active links.
-	return active_links
-
-def find_links_all(ts):
-	result = {}
-	for uhtr_slot in ts.uhtr_slots:
-		result[uhtr_slot] = find_links(ts, uhtr_slot)
-	return result
-
-def get_link_info(ts, uhtr_slot):		# Statuses links and then returns a list of link indicies, for a certain uHTR.
+## Get link information:
+def get_info_links(ts, uhtr_slot):		# Statuses links and then returns a list of link indicies, for a certain uHTR.
+	# Variables:
 	log = ""
 	
 	# Get raw link information (LINK > STATUS):
-	commands = [
-		'0',
-		'link',
-		'status',
-		'quit',
-		'exit',
-		'exit',
-	]
-	uhtr_out = send_commands(ts, uhtr_slot, commands)
-	raw_output = uhtr_out["output"]
-	log += uhtr_out["log"]
+	raw_output = get_raw_status(ts, uhtr_slot)
 	
 	# Parse the information:
 	link_info = parse_link_status(raw_output)
 	
 	return link_info
 
+def list_active_links(ts, uhtr_slot):		# Returns a list of the indices of the active links for a particular uHTR.
+	link_info = get_info_links(ts, uhtr_slot)
+	return [i_link for i_link, active in enumerate(link_info["active"]) if active]
+
+## Get link objects:
 def get_links(ts, uhtr_slot):		# Initializes and sets up links of a uHTR and then returns a list of links.
 	# Set up the QIE card unique IDs:
 	is_set = qie.set_unique_id_all(ts)
@@ -378,40 +383,50 @@ def get_links(ts, uhtr_slot):		# Initializes and sets up links of a uHTR and the
 	
 	# Get a list of the active links:
 	print "Fetching links from uHTR in slot {0}".format(uhtr_slot)
-	active_links = find_links(ts, uhtr_slot)
+	active_links = list_active_links(ts, uhtr_slot)
 #	print active_links
 	
 	# For each active link, read QIE unique ID and fiber number from SPY data:
 	# (self, uhtr_ip = "unknown", link_number = -1, qie_unique_id = "unknown", qie_half = -1, qie_fiber = -1, on = False)
-	hcal_teststand.set_mode_all(ts, 2)
-	links = []
-	for i in range(24):		# Every uHTR has 24 possible links labeled 0 to 23.
-		if i in active_links:
-			data = get_data_parsed(ts, uhtr_slot, 50, i)		# Reading fewer than 50 "samples" sometimes results in no data ...
-			if data:
-#				print data["raw"]
-				qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
-					data["raw"][0][2][1:5],
-					data["raw"][0][1][1:5],
-					data["raw"][0][4][1:5],
-					data["raw"][0][3][1:5]
-				)
-				qie_fiber = data["fiber"][0]
-				qie_half = data["half"][0]
-				links.append(link(ts=ts, uhtr_slot=uhtr_slot, link_number=i, qie_unique_id=qie_unique_id, qie_half=qie_half, qie_fiber=qie_fiber, on = True))
+	result = ts.set_mode(mode=2)		# Turn on test mode B.
+	if result:
+		links = []
+		for i in range(24):		# Every uHTR has 24 possible links labeled 0 to 23.
+			if i in active_links:
+				data = get_data_spy(ts, uhtr_slot, 50, i)		# Reading fewer than 50 "samples" sometimes results in no data ...
+				if data:
+	#				print data["raw"]
+					qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
+						data[0][0].raw[2][1:5],
+						data[0][0].raw[1][1:5],
+						data[0][0].raw[4][1:5],
+						data[0][0].raw[3][1:5]
+					)
+					qie_fiber = data[0][0].fiber
+					qie_half = data[0][0].half
+					links.append(link(
+						ts=ts,
+						uhtr_slot=uhtr_slot,
+						link_number=i,
+						qie_unique_id=qie_unique_id,
+						qie_half=qie_half,
+						qie_fiber=qie_fiber,
+						on = True
+					))
+				else:
+					links.append(link(
+						ts=ts,
+						on=True
+					))
 			else:
-				links.append(link(ts=ts, on=True))
-		else:
-			links.append(link(ts=ts, uhtr_slot=uhtr_slot, link_number=i, on=False))
-	hcal_teststand.set_mode_all(ts, 0)
+				links.append(link(
+					ts=ts,
+					uhtr_slot=uhtr_slot,
+					link_number=i,
+					on=False
+				))
+	result = ts.set_mode(mode=0)		# Return the teststand to normal mode operation.
 	return links
-
-def get_links_all(ts):		# Calls "get_links" for all uHTRs in the system.
-	container = {}
-	for uhtr_slot in ts.uhtr.keys():
-		print "uhtr 283: {0}".format(uhtr_slot)
-		container[uhtr_slot] = get_links(ts, uhtr_slot)
-	return container
 
 def get_link_from_map(ts=False, uhtr_slot=-1, i_link=-1, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
 	if ts:
@@ -489,7 +504,7 @@ def get_histo(ts=False, uhtr_slot=-1, n_orbits=1000, sepCapID=1, file_out=""):
 		'quit',
 		'quit',
 		'exit',
-		'exit'
+		'-1'
 	]
 	
 	result = send_commands_script(ts, uhtr_slot, cmds)
@@ -511,26 +526,45 @@ def read_histo(file_in=""):
 				result.append(info)
 	return result
 
-def get_data(ts, uhtr_slot, n, ch):
+# Perform basic uHTR commands:
+## Returning raw output:
+def get_raw_spy(ts, uhtr_slot, n, i_link):
 	log = ""
 	
 	commands = [
 		'0',
 		'link',
 		'spy',
-		'{0}'.format(ch),
+		'{0}'.format(i_link),
 		'0',
 		'0',
 		'{0}'.format(n),
 		'quit',
 		'exit',
-		'exit',
+		'-1',
 	]
 	
 	uhtr_out = send_commands(ts, uhtr_slot, commands)
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]
-	return uhtr_out
+	return raw_output
+
+def get_raw_status(ts, uhtr_slot):
+	log = ""
+	
+	commands = [
+		'0',
+		'link',
+		'status',
+		'quit',
+		'exit',
+		'-1',
+	]
+	
+	uhtr_out = send_commands(ts, uhtr_slot, commands)
+	raw_output = uhtr_out["output"]
+	log += uhtr_out["log"]
+	return raw_output
 
 ### get triggered data -
 def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
@@ -556,7 +590,7 @@ def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
 		'quit',
 		'quit',
 		'exit',
-		'exit',
+		'-1',
 	]
 
 	uhtr_out = send_commands(ts, uhtr_slot, commands)
@@ -564,14 +598,9 @@ def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
 	log += uhtr_out["log"]
 	#return uhtr_out
 
-# Parse uHTRTool.exe data
-def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc. organized into sublists per fiber.
-#	print raw
-	n = 0
-	raw_data = []
-	for line in raw.split("\n"):
-		if search("\s*\d+\s*[0-9A-F]{5}", line):
-			raw_data.append(line.strip())
+# Parse uHTRTool.exe SPY data:
+def parse_spy(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc. organized into sublists per fiber.
+	# Variables:
 	data = {
 		"cid": [],
 		"adc": [],
@@ -581,21 +610,30 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 		"half": [],
 		"raw": [],
 	}
+	
+	# Extract the raw data lines from the raw uhtr input:
+#	print raw
+	raw_data = []
+	for line in raw.split("\n"):
+		if search("\s*\d+\s*[0-9A-F]{5}", line):
+			raw_data.append(line.strip())
+	
+	# Put all the data in the data dictionary:
 	raw_temp = []
 	for line in raw_data:
 #		print line
 		cid_match = search("CAPIDS", line)
 		if cid_match:
-			data["cid"].append([int(i) for i in line.split()[-4:]])
+			data["cid"].append([int(i) for i in line.split()[-4:]][::-1])		# This has to be reversed because the SPY prints the links out in reverse order.
 		adc_match = search("ADCs", line)
 		if adc_match:
-			data["adc"].append([int(i) for i in line.split()[-4:]])
+			data["adc"].append([int(i) for i in line.split()[-4:]][::-1])
 		tdc_le_match = search("LE-TDC", line)
 		if tdc_le_match:
-			data["tdc_le"].append([int(i) for i in line.split()[-4:]])
+			data["tdc_le"].append([int(i) for i in line.split()[-4:]][::-1])
 		tdc_te_match = search("TE-TDC", line)
 		if tdc_te_match:
-			data["tdc_te"].append([int(i) for i in line.split()[-4:]])
+			data["tdc_te"].append([int(i) for i in line.split()[-4:]][::-1])
 		half_match = search("(TOP|BOTTOM)", line)
 		if half_match:
 			if half_match.group(1) == "BOTTOM":
@@ -613,45 +651,36 @@ def parse_data(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc
 			if not raw_thing:
 				data["raw"].append(raw_temp)
 				raw_temp = []
-	data["links"] = parse_links(raw)
+	
+	# Prepare the output:
 	if not data["raw"]:
-#		print raw
-#		print data
-#		print "ERROR: There was no SPY data for some reason."
 		return False
 	else:
-		return data
+		# Format the data dictionary into datum objects:
+#		print data
+		results = [[] for i in range(4)]		# Will return a list of datum objects for each channel.
+		for bx, adcs in enumerate(data["adc"]):
+			for ch, adc in enumerate(adcs):
+				results[ch].append(qie.datum(
+					adc=adc,
+					cid=data["cid"][bx][ch],
+					tdc_le=data["tdc_le"][bx][ch],
+					tdc_te=data["tdc_te"][bx][ch],
+					raw=data["raw"][bx],
+					raw_uhtr=reduce(lambda x, y: x + "\n" + y, raw_data[bx*6:(bx + 1)*6]),		# The data for the relevant BX ...
+					bx=bx,
+					ch=ch,
+					half=data["half"][bx],
+					fiber=data["fiber"][bx]
+				))
+		return results
 
-def get_data_parsed(ts, uhtr_slot, n, ch):
-	result = parse_data(get_data(ts, uhtr_slot, n, ch)["output"])
+def get_data_spy(ts, uhtr_slot, n, i_link):
+	result = parse_spy(get_raw_spy(ts, uhtr_slot, n, i_link))
 	if result:
 		return result
 	else:
-		print "ERROR: There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, ch)
-		return False
-
-def get_data_spy_parsed(ts, uhtr_slot, n, i_link):		# Eventually, this should replace the normally named one ...
-	result = parse_data(get_data(ts, uhtr_slot, n, i_link)["output"])
-	if result:
-		data = [[] for i in range(4)]
-#		print data
-		n_bx = len(result["adc"])
-#		print n_bx
-		for i_bx in range(n_bx):
-			for ch in range(4):
-#				print result["adc"][i_bx][ch]
-				data[ch].append(qie.datum(
-					adc=result["adc"][i_bx][ch],
-					cid=result["cid"][i_bx][ch],
-					tdc_le=result["tdc_le"][i_bx][ch],
-					tdc_te=result["tdc_te"][i_bx][ch],
-					raw=result["raw"][i_bx][ch],
-				))
-#				if i_bx < 5:
-#					print data
-		return data
-	else:
-		print "ERROR (uhtr.get_data_spy_parsed): There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, i_link)
+		print "ERROR (uhtr.get_data_spy): There was no SPY data in the raw uhtr output for uhtr slot {0} and link {1}".format(uhtr_slot, ch)
 		return False
 
 def get_dump(ts, uhtr_slot):

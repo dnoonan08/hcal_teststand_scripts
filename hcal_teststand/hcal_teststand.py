@@ -44,11 +44,55 @@ class teststand:
 	# /CONSTRUCTION
 	
 	# METHODS:
+	## uHTR:
+	def get_info_links(self, uhtr_slot=False):		# For each uHTR, returns a dictionary link status information.
+		if uhtr_slot:
+			uhtr_slots = uhtr_slot
+		else:
+			uhtr_slots = self.uhtr_slots
+		
+		result = {}
+		for uhtr_slot in uhtr_slots:
+			result[uhtr_slot] = uhtr.get_info_links(self, uhtr_slot)
+		return result
+	
+	def list_active_links(self, uhtr_slot=False):		# For each uHTR, returns a list of the indices of the active links.
+		if uhtr_slot:
+			uhtr_slots = uhtr_slot
+		else:
+			uhtr_slots = self.uhtr_slots
+		
+		result = {}
+		for uhtr_slot in uhtr_slots:
+			result[uhtr_slot] = uhtr.list_active_links(self, uhtr_slot)
+		return result
+	
 	def get_links(self, uhtr_slot=False):
 		if uhtr_slot:
-			return uhtr.get_links(self, ip)
+			uhtr_slots = uhtr_slot
 		else:
-			return uhtr.get_links_all(self)
+			uhtr_slots = self.uhtr_slots
+		
+		result = {}
+		for uhtr_slot in uhtr_slots:
+			result[uhtr_slot] = uhtr.get_links(self, uhtr_slot)
+		return result
+	
+	## QIE:
+	def set_ped(self, dac=None, dac_cid=None, i_qie=set(range(1, 25)), i_cid=set(range(4)), crate=False, slot=False):		# Set pedestal values.
+		return qie.set_ped(self, crate=crate, slot=slot, i_qie=i_qie, dac=dac, dac_cid=dac_cid, i_cid=i_cid)
+	
+	def set_fixed_range(self, enable=False, r=0, i_qie=False, crate=False, slot=False):		# Set fixed-range mode.
+		return qie.set_fixed_range(self, crate=crate, slot=slot, i_qie=i_qie, enable=enable, r=r)
+	
+	def set_cal_mode(self, enable=False):
+		for crate, slots in self.fe.iteritems():
+			for slot in slots:
+				qie.set_cal_mode_all(self, crate, slot, enable)
+	
+	## All:
+	def set_mode(self, crate=False, slot=False, mode=0):
+		return qie.set_mode(ts=self, crate=crate, slot=slot, mode=mode)
 	
 	def get_info(self):		# Returns a dictionary of component information, namely versions.
 		data = {}
@@ -74,19 +118,6 @@ class teststand:
 	
 	def get_status(self):		# Sets up and checks that the teststand is working.
 		return get_ts_status(self)
-	
-	def set_ped(self, crate=0, slot=0, i_qie=0, dac=6):
-		qie.set_ped(self, crate, slot, i_qie, dac)
-	
-	def set_ped_all(self, n):
-		for crate, slots in self.fe.iteritems():
-			for slot in slots:
-				qie.set_ped_all(self, crate, slot, n)
-	
-	def set_cal_mode_all(self, enable=False):
-		for crate, slots in self.fe.iteritems():
-			for slot in slots:
-				qie.set_cal_mode_all(self, crate, slot, enable)
 	
 	def get_qie_map(self):
 		qie_map = qie.get_map_slow(self)
@@ -320,51 +351,6 @@ def parse_ts_configuration(f="teststands.txt"):		# This function is used to pars
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							teststand_info[ts_name][variable] = value.strip()
 	return teststand_info
-
-def set_mode(ts, crate, slot, n):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
-	s = 0
-	if n == 0:
-		cmds = [
-			"put HF{0}-{1}-iTop_LinkTestMode 0x0".format(crate, slot, n),
-			"put HF{0}-{1}-iBot_LinkTestMode 0x0".format(crate, slot, n),
-			"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot, n),
-			"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot, n),
-		]
-		output = ngccm.send_commands_parsed(ts, cmds)["output"]
-#		print output
-		if "ERROR" not in output[0]["result"] and "ERROR" not in output[1]["result"]:
-			s = 1
-	elif n == 1:
-		cmds = [
-			"put HF{0}-{1}-iTop_LinkTestMode 0x1".format(crate, slot, n),
-			"put HF{0}-{1}-iBot_LinkTestMode 0x1".format(crate, slot, n),
-			"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot, n),
-			"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot, n),
-		]
-		output = ngccm.send_commands_parsed(ts, cmds)["output"]
-		if "ERROR" not in output[0]["result"] and "ERROR" not in output[1]["result"]:
-			s = 1
-	elif n == 2:
-		cmds = [
-			"put HF{0}-{1}-iTop_LinkTestMode 0x7".format(crate, slot, n),
-			"put HF{0}-{1}-iBot_LinkTestMode 0x7".format(crate, slot, n),
-			"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot, n),
-			"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot, n),
-		]
-		output = ngccm.send_commands_parsed(ts, cmds)["output"]
-#		print output
-		if "ERROR" not in output[0]["result"] and "ERROR" not in output[1]["result"]:
-			s = 1
-	return s
-
-def set_mode_all(ts=False, n=0):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
-	s = 1
-	for crate, slots in ts.fe.iteritems():
-		for slot in slots:
-			s_temp = set_mode(ts, crate, slot, n)
-			if s_temp != 1:
-				s = 0
-	return s
 # /FUNCTIONS
 
 # This is what gets exectuted when hcal_teststand.py is executed (not imported).

@@ -42,13 +42,19 @@ class qie:
 
 class datum:
 	# Construction:
-	def __init__(self, adc=-1, cid=-1, tdc_le=-1, tdc_te=-1, raw="", bx=-1):
+	def __init__(self, adc=-1, cid=-1, tdc_le=-1, tdc_te=-1, raw=[], raw_uhtr="", bx=-1, ch=-1, half=-1, fiber=-1):
 		self.adc = adc
 		self.cid = cid
 		self.tdc_le = tdc_le
 		self.tdc_te = tdc_te
+		if not raw:
+			raw = []
 		self.raw = raw
+		self.raw_uhtr = raw_uhtr
 		self.bx = bx
+		self.ch = ch
+		self.half = half
+		self.fiber = fiber
 	
 	# String behavior
 	def __str__(self):
@@ -186,16 +192,14 @@ def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and 
 		return []
 
 def get_map(ts, v=False):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
-	# THIS IS A WORK IN PROGRESS. User get_map_slow until this is fixed.
+	# THIS IS A WORK IN PROGRESS. Use get_map_slow until this is fixed.
 	print ">> Getting links ..."
 	links_by_slot = ts.get_links()
 	qie_map = []
 	
 	# Make sure the teststand is set up:
 	print "Disabling fixed-range mode ..."
-	for crate, slots in ts.fe.iteritems():
-		for slot in slots:
-			set_fix_range_all(ts, crate, slot, False)
+	ts.set_fixed_range(enable=False)
 	
 	# Do the mapping:
 	for crate, slots in ts.fe.iteritems():
@@ -204,7 +208,7 @@ def get_map(ts, v=False):		# Determines the QIE map of the teststand. A qie map 
 			for i in range(2):		# Do the following step twice (for QIEs 1-12, and for 13-24).
 				print ">> Doing the cycle {0} ...".format(i)
 				uhtr_data = []
-				set_fix_range_all(ts, crate, slot, False)
+				ts.set_fixed_range(enable=False, crate=crate, slot=slot)		# Disable fixed-range mode for the card.
 				for qie in range(i*12 + 1, i*12 + 13):
 					if (v): print "{0} -> {1}".format(qie, int((qie - i*12 - 1)/4) + 1)
 					set_fix_range(ts, crate, slot, qie, True, int((qie - i*12 - 1)/4) + 1)
@@ -246,25 +250,29 @@ def get_map(ts, v=False):		# Determines the QIE map of the teststand. A qie map 
 	return qie_map
 
 def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
-	print ">> Getting links ..."
-	links_by_ip = ts.get_links()
-#	print links_by_ip
+	print "> Getting links ..."
+	links_by_uhtr = ts.get_links()
 	qie_map = []
+	
+	# Make sure the teststand is set up:
+	print "> Disabling fixed-range mode ..."
+	ts.set_fixed_range(enable=False)
+	
+	# Do the mapping:
 	for crate, slots in ts.fe.iteritems():
 		for slot in slots:
-			set_fix_range_all(ts, crate, slot, False)
-			for qie in range(1, 25):
-				print ">> Finding crate {0}, slot {1}, QIE {2} ...".format(crate, slot, qie)
-				set_fix_range(ts, crate, slot, qie, True, 2)
+#			ts.set_fixed_range(crate=crate, slot=slot, enable=False)
+			for i_qie in range(1, 25):
+				print "> Finding crate {0}, slot {1}, QIE {2} ...".format(crate, slot, i_qie)
+				ts.set_fixed_range(crate=crate, slot=slot, i_qie=i_qie, enable=True, r=2)
 				channel_save = []
 				link_save = []
-				for ip, links in links_by_ip.iteritems():
+				for uhtr_slot, links in links_by_uhtr.iteritems():
 					for link in [l for l in links if l.on]:
-						data = link.get_data()
-#						print data
+						data = link.get_data_spy()
 						if data:
 							for channel in range(4):
-								adc_avg = mean([i_bx[channel] for i_bx in data["adc"]])
+								adc_avg = mean([d.adc for d in data[channel]])
 								print adc_avg
 								if adc_avg == 128:
 									channel_save.append(channel)
@@ -275,7 +283,7 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 					qie_map.append({
 						"crate": crate,
 						"slot": slot,
-						"qie": qie,
+						"qie": i_qie,
 						"id": link.qie_unique_id,
 						"link": link.n,
 						"channel": channel,
@@ -289,7 +297,7 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 					qie_map.append({
 						"crate": crate,
 						"slot": slot,
-						"qie": qie,
+						"qie": i_qie,
 						"id": [link.qie_unique_id for link in link_save],
 						"link": [link.n for link in link_save],
 						"channel": channel_save,
@@ -297,7 +305,7 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 						"fiber": [link.qie_fiber for link in link_save],
 						"uhtr_slot": [link.slot for link in link_save],
 					})
-				set_fix_range(ts, crate, slot, qie, False)
+				ts.set_fixed_range(crate=crate, slot=slot, i_qie=i_qie, enable=False)
 	return qie_map
 # /
 
@@ -482,86 +490,277 @@ def get_frequency_orbit(ts):
 	return data
 # /
 
+# Functions to set IGLOO settings:
+## Set IGLOO readout mode:
+def set_mode(ts=False, crate=False, slot=False, mode=0):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
+#	print ts, crate, slot, mode
+	if ts:
+		# Parse "mode":
+		if mode == 0:
+			n = 0
+		elif mode == 1:
+			n = 1
+		elif mode == 2:
+			n = 7
+		else:
+			print "ERROR (qie.set_mode): I don't understand mode = {0}.".format(mode)
+			return False
+		
+		# Build command list:
+		cmds = []
+		if crate and slot:
+			cmds.extend([
+				"put HF{0}-{1}-iTop_LinkTestMode 0x{2}".format(crate, slot, n),
+				"put HF{0}-{1}-iBot_LinkTestMode 0x{2}".format(crate, slot, n),
+				"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot),
+				"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot),
+			])
+		else:
+			for crate, slots in ts.fe.iteritems():
+				for slot in slots:
+					cmds.extend([
+						"put HF{0}-{1}-iTop_LinkTestMode 0x{2}".format(crate, slot, n),
+						"put HF{0}-{1}-iBot_LinkTestMode 0x{2}".format(crate, slot, n),
+						"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot),
+						"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot),
+					])
+		
+		# Send commands:
+		output = ngccm.send_commands_parsed(ts, cmds)["output"]
+		results = ["ERROR" not in j for j in [i["result"] for i in output]]
+		if sum(results) == len(results):
+			uhtr.setup_links(ts)		# This initializes all uHTRs' links. This is necessary after changing modes.
+			return True
+		else:
+			print "ERROR (qie.set_mode): Setting the mode resulted in the following:"
+			for thing in output:
+				print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+			return False
+	else:
+		print "ERROR (qie.set_mode): You need to include a teststand object as the \"ts\" argument."
+		return False
+
 # Functions to set QIE registers:
 ## Pedestals:
-def set_ped(ts, crate, slot, i, n):		# Set the pedestal of QIE i to DAC value n.
-	assert isinstance(n, int)
-	if abs(n) > 31:
-		print n
-		print ">> ERROR: You must enter a decimal integer between -31 and 31. The pedestals have not been changed."
-	else:
-		if n <= 0:
-			n = abs(n)
+def set_ped(ts=False, crate=False, slot=False, i_qie=set(range(1, 25)), dac=None, dac_cid=None, i_cid=set(range(4))):		# Set the pedestal of QIE "i_qie" to DAC value "dac" and CID DAC value of "dac_cid".
+	# Parse "crate" and "slot":
+	fe = {}
+	if not crate and not slot:
+		fe = ts.fe
+	elif crate and not slot:
+		if isinstance(crate, int):
+			crates = [crate]
+		elif isinstance(crate, list) or isinstance(crate, set):
+			crates = crate
+		for i in crates:
+			fe[i] = ts.fe[i]
+	elif not crate and slot:
+		print "ERROR (qie.set_ped): You entered \"slots\" {0}, but no crates. What did you expect to happen? No pedestals were changed.".format(slot)
+		return False
+	elif crate and slot:
+		if isinstance(crate, int):
+			crates = [crate]
+		elif isinstance(crate, list) or isinstance(crate, set):
+			crates = crate
+		if isinstance(slot, int):
+			slots = [slot]
+		elif isinstance(slot, list) or isinstance(slot, set):
+			slots = slot
+		
+		if len(crates) == 1:
+			if not isinstance(slots[0], list):
+				slots = [slots]
+			elif len(slots) > 1:
+				print "ERROR (qie.set_ped): The crate/slot configuration is confusing. No pedestals were changed."
+				return False
 		else:
-			n = n + 32
-		n_str = "{0:#04x}".format(n)		# The "#" prints the "0x". The number of digits to pad with 0s must include these "0x", hence "4" instead of "2".
-		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i, n_str)]
-		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
-		# Maybe I should include something here to make sure the command didn't return an error? Return 1 if not...
+			if not isinstance(slots[0], list):
+				print "ERROR (qie.set_ped): The crate/slot configuration is confusing. No pedestals were changed."
+				return False
+			else:
+				if len(crates) != len(slots):
+					print "ERROR (qie.set_ped): The crate/slot configuration is confusing. No pedestals were changed."
+					return False
+		for i, c in enumerate(crates):
+			fe[c] = slots[i]
+#	print fe
 
-def set_ped_all(ts, crate, slot, n):		# n is the decimal representation of the pedestal register.
-	# This function is faster than running "set_ped" 24 times.
-	assert isinstance(n, int)
-#	for i in range(1, 25):
-#		set_ped(ts, crate, slot, i, n)
-	if abs(n) > 31:
-		print ">> ERROR: You must enter a decimal integer between -31 and 31. The pedestals have not been changed."
-	else:
-		if n <= 0:
-			n = abs(n)
+	# Parse "i_qie":
+	i_qie_original = i_qie
+	if isinstance(i_qie, int):
+		i_qie = [i_qie]
+	elif not (isinstance(i_qie, list) or isinstance(i_qie, set)):
+		print "ERROR (qie.set_ped): You must enter an integer or a list of integers for \"i_qie\". The pedestals have not be changed."
+		return False
+	i_qie = set(i_qie)
+	if not i_qie.issubset(set(range(1, 25))):
+		print "ERROR (qie.set_ped): \"i_qie\" can only contain elements of [1, 2, ..., 24], but you tried to set it to {0}. The pedestals have not be changed.".format(i_qie_original)
+		return False
+	
+	# Parse "i_cid":
+	i_cid_original = i_cid
+	if isinstance(i_cid, int):
+		i_cid = [i_cid]
+	elif not (isinstance(i_cid, list) or isinstance(i_cid, set)):
+		print "ERROR (qie.set_ped): You must enter an integer or a list of integers for \"i_cid\". The pedestals have not be changed."
+		return False
+	i_cid = set(i_cid)
+	if not i_cid.issubset(set(range(4))):
+		print "ERROR (qie.set_ped): \"i_cid\" can only contain elements of [0, 1, 2, 3], but you tried to set it to {0}. The pedestals have not be changed.".format(i_cid_original)
+		return False
+	
+	# Parse "dac" and "dac_cid":
+	if dac == None and dac_cid == None:
+		print "WARNING (qie.set_ped): You didn't supply a \"dac\" or \"dac_cid\", so \"dac\" will be set to 6, the default, and \"dac_cid\" will be set to 0, the default, for all \"i_cid\" in {0} and all \"i_qie\" in {1}.".format(i_cid, i_qie)
+		dac = 6
+		dac_cid = 0
+	
+	## Parse "dac":
+	if dac != None:
+		if abs(dac) > 31:
+			print "ERROR (qie.set_ped): You must enter a decimal integer for \"dac\" between -31 and 31. You tried to set it to {0}. The pedestals have not been changed.".format(dac)
+			return False
 		else:
-			n = n + 32
-		n_str = "{0:#04x}".format(n)		# The "#" prints the "0x". The number of digits to pad with 0s must include these "0x", hence "4" instead of "2".
-		commands = ["put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i, n_str) for i in range(1, 25)]
-#		print commands
-		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
-#		print raw_output
-		# I should include something here to make sure the command didn't return an error? Return 1 if not...
+			if dac <= 0:
+				dac = abs(dac)
+			else:
+				dac = dac + 32
+			dac_str = "{0:#04x}".format(dac)		# The "#" prints the "0x". The number of digits to pad with 0s must include these "0x", hence "4" instead of "2".
+	else:
+		dac_str = False
+	
+	## Parse "dac_cid":
+	if dac_cid != None:
+		if abs(dac_cid) > 7:
+			print "ERROR (qie.set_ped): You must enter a decimal integer for \"dac_cid\" between -7 and 7. You tried to set it to {0}. The pedestals have not been changed.".format(dac_cid)
+			return False
+		else:
+			if dac_cid <= 0:
+				dac_cid = abs(dac_cid)
+			else:
+				dac_cid = dac_cid + 8
+			dac_cid_str = "{0:#04x}".format(dac_cid)		# The "#" prints the "0x". The number of digits to pad with 0s must include these "0x", hence "4" instead of "2".
+	else:
+		dac_cid_str = False
+	
+	# See where things stand:
+	if not dac_str and not dac_cid_str:
+		print "ERROR (qie.set_ped): You intended to set pedestals, but it turns out none will be changed."
+		return False
+	if not fe:
+		print "ERROR (qie.set_ped): The crate/slot configuration is all jacked up."
+		return False
+	
+	# Build command list:
+	cmds = []
+	for crate, slots in fe.iteritems():
+		for slot in slots:
+			for i in i_qie:
+				if dac_str:
+					cmds.extend([
+						"put HF{0}-{1}-QIE{2}_PedestalDAC {3}".format(crate, slot, i, dac_str),
+						"get HF{0}-{1}-QIE{2}_PedestalDAC".format(crate, slot, i),
+					])
+				if dac_cid_str:
+					for j in i_cid:
+						cmds.extend([
+							"put HF{0}-{1}-QIE{2}_CapID{3}pedestal {4}".format(crate, slot, i, j, dac_cid_str),
+							"get HF{0}-{1}-QIE{2}_CapID{3}pedestal".format(crate, slot, i, j),
+						])
+	
+	# Send commands:
+	output = ngccm.send_commands_parsed(ts, cmds)["output"]
+	results = ["ERROR" not in j for j in [i["result"] for i in output]]
+	if sum(results) == len(results):
+#		for thing in output:
+#			print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+		return True
+	else:
+		print "ERROR (qie.set_ped): Setting pedestals resulted in the following:"
+		for thing in output:
+			print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+		return False
 ## /
 
 ## Fixed Range Mode:
-def set_fix_range(ts, crate, slot, qie, enable=False, rangeSet=0):		# Turn fixed range mode on or off for a given QIE.
-	assert isinstance(rangeSet, int)
-	if rangeSet < 0 or rangeSet > 3 : 
-		print ">> ERROR: the range you select with \"RangeSet\" must be an element of {0, 1, 2, 3}."
-	else:
-		if enable:
-			commands = [
-				"put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, qie),
-				"put HF{0}-{1}-QIE{2}_RangeSet {3}".format(crate, slot, qie, rangeSet)
-			]
-		else :
-			commands = ["put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, qie)]
-		
-		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
-#		raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
-		return raw_output
-
-def set_fix_range_all(ts, crate, slot, enable=False, rangeSet=0):		# Turn fixed range mode on or off for all QIEs on a given board.
-	assert isinstance(rangeSet, int)
-	if rangeSet < 0 or rangeSet > 3: 
-		print ">> ERROR: the range you select with \"RangeSet\" must be an element of {0, 1, 2, 3}."
-	else:
-		commands = []
-		if enable:
-			for i_qie in range(1, 25):
-				commands.append("put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, i_qie))
-				commands.append("put HF{0}-{1}-QIE{2}_RangeSet {3}".format(crate, slot, i_qie, rangeSet))
+def set_fixed_range(ts=False, crate=False, slot=False, i_qie=False, enable=False, r=0):		# Turn fixed range mode on or off for a given QIE.
+	if ts and isinstance(r, int):
+		if r < 0 or r > 3 : 
+			print "ERROR (qie.set_fixed_range): The range you select with \"r\" must be an element of {0, 1, 2, 3}."
+			return False
 		else:
-			for i_qie in range(1, 25):
-				commands.append("put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, i_qie))
-				commands.append("put HF{0}-{1}-QIE{2}_RangeSet 0".format(crate, slot, i_qie))
-		
-		# This should work, but I've had trouble with these "mass settings" before:
-#		if enable:
-#			commands.append("put HF{0}-{1}-QIE[1-24]_FixRange 24*1".format(crate, slot))
-#			commands.append("put HF{0}-{1}-QIE[1-24]_RangeSet 24*{2}".format(crate, slot, rangeSet))
-#		else:
-#			commands.append("put HF{0}-{1}-QIE[1-24]_FixRange 24*0".format(crate, slot))
-#			commands.append("put HF{0}-{1}-QIE[1-24]_RangeSet 24*0".format(crate, slot))		# Not necessary, but I think it's probably good form.
-		raw_output = ngccm.send_commands_fast(ts, commands)["output"]
-#		raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
-		return raw_output
+			# Build list of commands:
+			cmds = []
+			if i_qie:
+				if crate and slot:
+					if enable:
+						cmds.extend([
+							"put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, i_qie),
+							"put HF{0}-{1}-QIE{2}_RangeSet {3}".format(crate, slot, i_qie, r),
+							"get HF{0}-{1}-QIE{2}_FixRange".format(crate, slot, i_qie),
+							"get HF{0}-{1}-QIE{2}_RangeSet".format(crate, slot, i_qie),
+						])
+					else :
+						cmds.extend([
+							"put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, i_qie),
+							"put HF{0}-{1}-QIE{2}_RangeSet 0".format(crate, slot, i_qie),
+							"get HF{0}-{1}-QIE{2}_FixRange".format(crate, slot, i_qie),
+							"get HF{0}-{1}-QIE{2}_RangeSet".format(crate, slot, i_qie),
+						])
+				else:
+					print "ERROR (qie.set_fixed_range): It's not clear which i_qie = {0} to set, since crate = {1} and slot = {2}.".format(i_qie, crate, slot)
+					return False
+			else:
+				if crate and slot:
+					for i_qie in range(1, 25):
+						if enable:
+							cmds.extend([
+								"put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, i_qie),
+								"put HF{0}-{1}-QIE{2}_RangeSet {3}".format(crate, slot, i_qie, r),
+								"get HF{0}-{1}-QIE{2}_FixRange".format(crate, slot, i_qie),
+								"get HF{0}-{1}-QIE{2}_RangeSet".format(crate, slot, i_qie),
+							])
+						else :
+							cmds.extend([
+								"put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, i_qie),
+								"put HF{0}-{1}-QIE{2}_RangeSet 0".format(crate, slot, i_qie),
+								"get HF{0}-{1}-QIE{2}_FixRange".format(crate, slot, i_qie),
+								"get HF{0}-{1}-QIE{2}_RangeSet".format(crate, slot, i_qie),
+							])
+				else:
+					for crate, slots in ts.fe.iteritems():
+						for slot in slots:
+							for i_qie in range(1, 25):
+								if enable:
+									cmds.extend([
+										"put HF{0}-{1}-QIE{2}_FixRange 1".format(crate, slot, i_qie),
+										"put HF{0}-{1}-QIE{2}_RangeSet {3}".format(crate, slot, i_qie, r),
+										"get HF{0}-{1}-QIE{2}_FixRange".format(crate, slot, i_qie),
+										"get HF{0}-{1}-QIE{2}_RangeSet".format(crate, slot, i_qie),
+									])
+								else :
+									cmds.extend([
+										"put HF{0}-{1}-QIE{2}_FixRange 0".format(crate, slot, i_qie),
+										"put HF{0}-{1}-QIE{2}_RangeSet 0".format(crate, slot, i_qie),
+										"get HF{0}-{1}-QIE{2}_FixRange".format(crate, slot, i_qie),
+										"get HF{0}-{1}-QIE{2}_RangeSet".format(crate, slot, i_qie),
+									])
+			
+			# Send commands:
+			output = ngccm.send_commands_parsed(ts, cmds)["output"]
+			results = ["ERROR" not in j for j in [i["result"] for i in output]]
+			if sum(results) == len(results):
+#				for thing in output:
+#					print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+				return True
+			else:
+				print "ERROR (qie.set_fixed_range): Setting fixed-range mode resulted in the following:"
+				for thing in output:
+					print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+				return False
+	else:
+		print "ERROR (qie.set_fixed_range): You need to make sure to input an integer value for \"r\" and a teststand object in \"ts\"."
+		return False
 ## /
 
 ## Cal Mode:

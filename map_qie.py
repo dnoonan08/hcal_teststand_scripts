@@ -3,7 +3,7 @@
 #                                                                  #
 # Description: This script can read and save QIE maps, maps        #
 # between link, channel and crate, slot, qie number. Run           #
-#      python uhtr_map.py -h                                       #
+#      python map_qie.py -h                                        #
 # for more documentation.                                          #
 ####################################################################
 
@@ -40,6 +40,8 @@ if __name__ == "__main__":
 	if not options.out:
 		f_name = "{0}_qie_map.json".format(name)
 	else:
+		if options.out[-5:] != ".json":
+			options.out += ".json"
 		f_name = options.out
 	
 	# Construct the teststand object:
@@ -50,7 +52,7 @@ if __name__ == "__main__":
 		if exists("{0}/{1}".format(directory, f_name)):
 			print ">> WARNING: There's already a map for this teststand in {0} called {1}.".format(directory, f_name)
 			do = raw_input(">> Do you want to overwrite it with a new one? (y/n)\n")
-			if do == "y" or do.lower() == "yes":
+			if do.lower() == "y" or do.lower() == "yes":
 				ts.save_qie_map(f=f_name, d=directory)
 			else:
 				print ">> Okay, I didn't do anything."
