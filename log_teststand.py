@@ -14,7 +14,7 @@ import os
 from optparse import OptionParser
 from time import sleep, time
 import numpy
-
+from commands import getoutput
 # CLASSES:
 # /CLASSES
 
@@ -35,12 +35,12 @@ def log_temp(ts):
 		"get HF1-1wA_f",
 		"get HF1-1wB_f",
 	]
-	output = ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+	output = ngccm.send_commands_parsed(ts, cmds)["output"]
 	for result in output:
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 	return log
 
-def log_power(ts):
+'''def log_power(ts):
 	log = ""
 	t0 = time_string()		# Get the time before. I get the time again after everything.
 	power_fe = ts_157.get_power(ts)
@@ -53,22 +53,18 @@ def log_power(ts):
 	for result in power_ngccm:
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 	return log
-
+'''
 def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers, 1 is full.
 	log = ""
 	log += "%% REGISTERS\n"
 	if scale == 0:
+		nslot=ts.qie_slots[0]
 		cmds = [
 			"get fec1-LHC_clk_freq",		# Check that this is > 400776 and < 400788.
 			"get HF1-mezz_ONES",		# Check that this is all 1s.
 			"get HF1-mezz_ZEROES",		# Check that is is all 0s.
 			"get HF1-bkp_pwr_bad",
 			"get fec1-qie_reset_cnt",
-			"get HF1-2-B_RESQIECOUNTER",
-			"get HF1-2-iTop_RST_QIE_count",
-			"get HF1-2-iBot_RST_QIE_count",
-#			"get HF1-qiereset",
-#			"get HF1-bkpregs_ngccm_bkp_reset_qie_out",
 			"get HF1-mezz_TMR_ERROR_COUNT",
 			"get HF1-mezz_FPGA_MAJOR_VERSION",
 			"get HF1-mezz_FPGA_MINOR_VERSION",
@@ -78,18 +74,23 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 			"get fec1-sfp1_status.RxLOS",
 			"get HF1-ngccm_rev_ids",
 		]
+		for i in nslot:
+			cmds.append("get HF1-{0}-B_RESQIECOUNTER".format(i))
+			cmds.append("get HF1-{0}-iTop_RST_QIE_count".format(i))
+			cmds.append("get HF1-{0}-iBot_RST_QIE_count".format(i))
 	elif scale == 1:
 		cmds = ngccm.cmds_HF1_2
 	else:
 		cmds = []
-	output = ngccm.send_commands_parsed(ts.ngccm_port, cmds)["output"]
+	output = ngccm.send_commands_parsed(ts, cmds)["output"]
 	for result in output:
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 	return log
 
 def log_links(ts, scale=0):
 	log = ""
-	link_results = uhtr.find_links_full(ts.uhtr_ips[0])
+	link_results = uhtr.find_links_full(ts,ts.uhtr_slots[0])
+	print link_results
 	active_links = link_results["active"]
 	log += "%% LINKS\n{0}\n".format(active_links)
 	orbits = []
@@ -118,11 +119,11 @@ def record(ts=False, path="data/unsorted", scale=0):
 	t0 = time_string()
 
 	# Log basics:
-	log += log_power(ts)		# Power
-	log += "\n"
+#	log += log_power(ts)		# Power
+#	log += "\n"
 	log += log_temp(ts)		# Temperature
 	log += "\n"
-	
+	log += getoutput('w')
 	# Log registers:
 	log += log_registers(ts=ts, scale=scale)
 	log += "\n"
@@ -158,13 +159,13 @@ if __name__ == "__main__":
 	# Script arguments:
 	parser = OptionParser()
 	parser.add_option("-t", "--teststand", dest="ts",
-		default="157",
-		help="The name of the teststand you want to use (default is \"157\"). Unless you specify the path, the directory will be put in \"data\".",
+		default="904",
+		help="The name of the teststand you want to use (default is \"904\"). Unless you specify the path, the directory will be put in \"data\".",
 		metavar="STR"
 	)
 	parser.add_option("-o", "--fileName", dest="out",
 		default="",
-		help="The name of the directory you want to output the logs to (default is \"ts_157\").",
+		help="The name of the directory you want to output the logs to (default is \"ts_904\").",
 		metavar="STR"
 	)
 	parser.add_option("-T", "--period", dest="T",
