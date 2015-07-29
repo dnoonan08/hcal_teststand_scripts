@@ -57,29 +57,32 @@ def log_temp(ts):
 def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers, 1 is full.
 	log = ""
 	log += "%% REGISTERS\n"
+	nslot=ts.qie_slots[0]
+	crate=ts.fe_crates[0]
 	if scale == 0:
-		nslot=ts.qie_slots[0]
 		cmds = [
 			"get fec1-LHC_clk_freq",		# Check that this is > 400776 and < 400788.
-			"get HF1-mezz_ONES",		# Check that this is all 1s.
-			"get HF1-mezz_ZEROES",		# Check that is is all 0s.
-			"get HF1-bkp_pwr_bad",
+			"get HF{0}-mezz_ONES".format(crate),		# Check that this is all 1s.
+			"get HF{0}-mezz_ZEROES".format(crate),		# Check that is is all 0s.
+			"get HF{0}-bkp_pwr_bad".format(crate),
 			"get fec1-qie_reset_cnt",
-			"get HF1-mezz_TMR_ERROR_COUNT",
-			"get HF1-mezz_FPGA_MAJOR_VERSION",
-			"get HF1-mezz_FPGA_MINOR_VERSION",
+			"get HF{0}-mezz_TMR_ERROR_COUNT".format(crate),
+			"get HF{0}-mezz_FPGA_MAJOR_VERSION".format(crate),
+			"get HF{0}-mezz_FPGA_MINOR_VERSION".format(crate),
 			"get fec1-firmware_dd",
 			"get fec1-firmware_mm",
 			"get fec1-firmware_yy",
 			"get fec1-sfp1_status.RxLOS",
-			"get HF1-ngccm_rev_ids",
+			"get HF{0}-ngccm_rev_ids".format(crate),
 		]
 		for i in nslot:
-			cmds.append("get HF1-{0}-B_RESQIECOUNTER".format(i))
-			cmds.append("get HF1-{0}-iTop_RST_QIE_count".format(i))
-			cmds.append("get HF1-{0}-iBot_RST_QIE_count".format(i))
+			cmds.append("get HF{0}-{1}-B_RESQIECOUNTER".format(crate,i))
+			cmds.append("get HF{0}-{1}-iTop_RST_QIE_count".format(crate,i))
+			cmds.append("get HF{0}-{1}-iBot_RST_QIE_count".format(crate,i))
 	elif scale == 1:
-		cmds = ngccm.cmds_HF1_2
+		cmds=[]
+		for i in nslot:
+			cmds.extend(ngccm.get_commands(crate,i))
 	else:
 		cmds = []
 	output = ngccm.send_commands_parsed(ts, cmds)["output"]
@@ -89,9 +92,8 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 
 def log_links(ts, scale=0):
 	log = ""
-	link_results = uhtr.find_links_full(ts,ts.uhtr_slots[0])
-	print link_results
-	active_links = link_results["active"]
+	link_results = uhtr.get_link_info(ts,ts.uhtr_slots[0])
+	active_links = [i for i, active in enumerate(link_results["active"]) if active]
 	log += "%% LINKS\n{0}\n".format(active_links)
 	orbits = []
 	for link in active_links:
@@ -101,7 +103,7 @@ def log_links(ts, scale=0):
 	data_full = ""
 	for i in active_links:
 		adc_avg_link = []
-		uhtr_read = uhtr.get_data(ts.uhtr_ips[0], 300, i)["output"]
+		uhtr_read = uhtr.get_data(ts,ts.uhtr_slots[0], 50, i)["output"]
 		if scale == 1:
 			data_full += uhtr_read
 		data = uhtr.parse_data(uhtr_read)["adc"]
@@ -123,7 +125,10 @@ def record(ts=False, path="data/unsorted", scale=0):
 #	log += "\n"
 	log += log_temp(ts)		# Temperature
 	log += "\n"
+	log += '%% USERS\n'
 	log += getoutput('w')
+	log += "\n"
+	log += "\n"
 	# Log registers:
 	log += log_registers(ts=ts, scale=scale)
 	log += "\n"
@@ -168,21 +173,26 @@ if __name__ == "__main__":
 		help="The name of the directory you want to output the logs to (default is \"ts_904\").",
 		metavar="STR"
 	)
-	parser.add_option("-T", "--period", dest="T",
+	parser.add_option("-s", "--sparse", dest="spar",
 		default=1,
-		help="The logging period in minutes (default is 1).",
+		help="The sparse logging period in minutes (default is 1).",
+		metavar="FLOAT"
+	)
+	parser.add_option("-f", "--full", dest="full",
+		default=0,
+		help="The full logging period in minutes (default is 1).",
 		metavar="FLOAT"
 	)
 	(options, args) = parser.parse_args()
 	name = options.ts
-	period = float(options.T)
+	period = float(options.spar)
 	if not options.out:
 		path = "data/ts_{0}".format(name)
 	elif "/" in options.out:
 		path = options.out
 	else:
 		path = "data/" + options.out
-	period_long = 15
+	period_long = float(options.full)
 	
 	# Set up teststand:
 	ts = teststand(name)
@@ -199,10 +209,10 @@ if __name__ == "__main__":
 	while z == True:
 		dt = time() - t0
 		dt_long = time() - t0_long
-		if (dt_long > period_long*60):
+		if (period_long!=0) and (dt_long > period_long*60):
 			t0_long = time()
 			record(ts=ts, path=path, scale=1)
-		if (dt > period*60):
+		if (period!=0) and (dt > period*60):
 			t0 = time()
 			record(ts=ts, path=path, scale=0)
 		else:

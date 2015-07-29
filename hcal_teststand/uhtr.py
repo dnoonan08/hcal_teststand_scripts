@@ -524,7 +524,7 @@ def get_data(ts, uhtr_slot, n, ch):
 		'{0}'.format(n),
 		'quit',
 		'exit',
-		'exit',
+		'-1',
 	]
 	
 	uhtr_out = send_commands(ts, uhtr_slot, commands)
