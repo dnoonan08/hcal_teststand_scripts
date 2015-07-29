@@ -26,8 +26,6 @@ def create_plots(qie_id):
 		histogram.GetXaxis().SetTitle("Clock Phase Setting (~1.6 ns)")
 		histogram.GetYaxis().CenterTitle(1)
 		histogram.GetYaxis().SetTitle("CID Error Rate")
-		histogram.SetMaximum(1)
-		histogram.SetMinimum(0)
 		histogram.SetLineColor(kRed)
 		histogram.SetFillColor(kRed)
 		th1.append(histogram)
@@ -95,7 +93,7 @@ if __name__ == "__main__":
 	print "\n> Running acceptance test CID ..."
 	
 	# Set up basic variables for the test:
-	n_reads = 2
+	n_reads = 5
 	t_string = time_string()[:-4]
 	crate, slot = ts.crate_slot_from_qie(qie_id=options.qie)
 	link_dict = ts.uhtr_from_qie(qie_id=options.qie)
@@ -146,6 +144,8 @@ if __name__ == "__main__":
 		print i
 		tc.cd(i + 1)
 		histogram.Draw()
+		histogram.SetMaximum(1.0)
+		histogram.SetMinimum(0.0)
 	tc.SaveAs("{0}/{1}_cid.pdf".format(path, t_string))
 	tc.SaveAs("{0}/{1}_cid.svg".format(path, t_string))
 #	with open("{0}/at_cid.txt".format(path), "w") as out:

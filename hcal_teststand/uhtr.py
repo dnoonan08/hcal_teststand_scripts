@@ -287,37 +287,41 @@ def parse_links(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you
 		log += ">> ERROR: Uh, there were an odd number of \"status\" lines, which is weird."
 	return list(set(active))
 
-def parse_links_full(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you use the "find_links" function below, which uses this function.
+def parse_link_status(raw):		# Parses the raw ouput of the uHTRTool.exe. Commonly, you use the "find_links" function below, which uses this function.
+	# Variables:
 	log = ""
-	active = []
+	info = {}
+	info["active"] = [0 for i in range(24)]		# There are 24 links per uHTR.
+	info["orbit"] = [-1 for i in range(24)]		# There are 24 links per uHTR.
+	
+	# Parse active:
 	n_times = 0
 	for line in raw.split("\n"):
 		if search("^BadCounter(\s*(X|ON)){12}", line):
-#			print line
 			n_times += 1
-			statuses = line.split()[1:]
-			for i in range(len(statuses)):
-				if statuses[i].strip() == "ON":
-					active.append( 12 * ((n_times - 1) % 2) + i )
+			statuses_raw = line.replace("BadCounter", "").split()
+			for i, status_raw in enumerate(statuses_raw):
+				n_link = 12 * ((n_times - 1) % 2) + i
+				if status_raw.strip() == "ON":
+					info["active"][n_link] = 1
 	if n_times < 2:
 		log += ">> ERROR: No correct \"status\" was called on the link."
 	elif n_times > 2:
 		log += ">> ERROR: Hm, \"status\" was called on the link multiple times, so the active link list might be unreliable. (n_times = {0})".format(n_times)
 	if (n_times % 2 != 0):
 		log += ">> ERROR: Uh, there were an odd number of \"status\" lines, which is weird."
+	
+	# Parse orbit:
 	n_times = 0
-	orbit = []
 	for line in raw.split("\n"):
 		if search("^OrbitRate\(kHz\)", line):
 #			print line
 			n_times += 1
-			orbits = line.split()[1:]
-			for i in range(len(orbits)):
-				orbit.append( float(orbits[i]) )
-	return {
-		"active": list(set(active)),
-		"orbit": orbit,
-	}
+			orbits_raw = line.replace("OrbitRate(kHz)", "").split()
+			for i, orbit_raw in enumerate(orbits_raw):
+				n_link = 12 * ((n_times - 1) % 2) + i
+				info["orbit"][n_link] = float(orbit_raw)
+	return info
 
 def find_links(ts, uhtr_slot):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
 	log = ""
@@ -343,10 +347,10 @@ def find_links_all(ts):
 		result[uhtr_slot] = find_links(ts, uhtr_slot)
 	return result
 
-def find_links_full(ts, uhtr_slot):		# Initializes links and then returns a list of link indicies, for a certain uHTR.
+def get_link_info(ts, uhtr_slot):		# Statuses links and then returns a list of link indicies, for a certain uHTR.
 	log = ""
 	
-	# Identify active links:
+	# Get raw link information (LINK > STATUS):
 	commands = [
 		'0',
 		'link',
@@ -357,10 +361,12 @@ def find_links_full(ts, uhtr_slot):		# Initializes links and then returns a list
 	]
 	uhtr_out = send_commands(ts, uhtr_slot, commands)
 	raw_output = uhtr_out["output"]
-#	print raw_output
 	log += uhtr_out["log"]
-	link_results = parse_links_full(raw_output)		# A list of the indices of the active links.
-	return link_results
+	
+	# Parse the information:
+	link_info = parse_link_status(raw_output)
+	
+	return link_info
 
 def get_links(ts, uhtr_slot):		# Initializes and sets up links of a uHTR and then returns a list of links.
 	# Set up the QIE card unique IDs:
