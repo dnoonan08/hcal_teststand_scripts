@@ -12,7 +12,7 @@ from hcal_teststand.utilities import *
 import sys
 import os
 from optparse import OptionParser
-from time import sleep, time
+from time import sleep, time,strftime
 import numpy
 from commands import getoutput
 # CLASSES:
@@ -40,11 +40,11 @@ def log_temp(ts):
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 	return log
 
-'''def log_power(ts):
+def log_power(ts):
 	log = ""
 	t0 = time_string()		# Get the time before. I get the time again after everything.
-	power_fe = ts_157.get_power(ts)
-	log += "%% POWER\n{0:.2f} V\n{1:.2f} A\n".format(power_fe["V"], power_fe["I"])
+#	power_fe = ts_157.get_power(ts)
+#	log += "%% POWER\n{0:.2f} V\n{1:.2f} A\n".format(power_fe["V"], power_fe["I"])
 	try:
 		power_ngccm = ngccm.get_power(ts)[1]		# Take only the crate 1 results (there's only one crate, anyway).
 	except Exception as ex:
@@ -53,7 +53,7 @@ def log_temp(ts):
 	for result in power_ngccm:
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 	return log
-'''
+
 def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers, 1 is full.
 	log = ""
 	log += "%% REGISTERS\n"
@@ -78,6 +78,8 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 		for i in nslot:
 			cmds.append("get HF{0}-{1}-B_RESQIECOUNTER".format(crate,i))
 			cmds.append("get HF{0}-{1}-iTop_RST_QIE_count".format(crate,i))
+			cmds.append("get HF{0}-{1}-iTop_RST_QIE_count".format(crate,i))
+			cmds.append("get HF{0}-{1}-iBot_RST_QIE_count".format(crate,i))
 			cmds.append("get HF{0}-{1}-iBot_RST_QIE_count".format(crate,i))
 	elif scale == 1:
 		cmds=[]
@@ -90,6 +92,9 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 	return log
 
+def list2f(List):
+	return ["{0:.2f}".format(i) for i in List]
+	
 def log_links(ts, scale=0):
 	log = ""
 	link_results = uhtr.get_link_info(ts,ts.uhtr_slots[0])
@@ -98,7 +103,7 @@ def log_links(ts, scale=0):
 	orbits = []
 	for link in active_links:
 		orbits.append(link_results["orbit"][link])
-	log += "{0}\n".format(orbits)
+	log += "{0}\n".format(list2f(orbits))
 	adc_avg = []
 	data_full = ""
 	for i in active_links:
@@ -109,7 +114,7 @@ def log_links(ts, scale=0):
 		data = uhtr.parse_data(uhtr_read)["adc"]
 		for j in range(4):
 			adc_avg_link.append(numpy.mean([i_bx[j] for i_bx in data]))
-		adc_avg.append(adc_avg_link)
+		adc_avg.append(list2f(adc_avg_link))
 	log += "{0}\n".format(adc_avg)
 	if scale == 1:
 		log += data_full
@@ -121,8 +126,8 @@ def record(ts=False, path="data/unsorted", scale=0):
 	t0 = time_string()
 
 	# Log basics:
-#	log += log_power(ts)		# Power
-#	log += "\n"
+	log += log_power(ts)		# Power
+	log += "\n"
 	log += log_temp(ts)		# Temperature
 	log += "\n"
 	log += '%% USERS\n'
@@ -180,9 +185,15 @@ if __name__ == "__main__":
 	)
 	parser.add_option("-f", "--full", dest="full",
 		default=0,
-		help="The full logging period in minutes (default is 1).",
+		help="The full logging period in minutes (default is 0).",
 		metavar="FLOAT"
 	)
+	parser.add_option("-T", "--time", dest="ptime",
+		default='',
+		help="The full logging time in a day (default is empty).",
+		metavar="STR"
+	)
+
 	(options, args) = parser.parse_args()
 	name = options.ts
 	period = float(options.spar)
@@ -215,6 +226,8 @@ if __name__ == "__main__":
 		if (period!=0) and (dt > period*60):
 			t0 = time()
 			record(ts=ts, path=path, scale=0)
+		if strftime("%H:%M") == options.ptime:
+			record(ts=ts, path=path, scale=1)
 		else:
 			sleep(1)
 #		z = False
