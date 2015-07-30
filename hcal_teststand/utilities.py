@@ -13,3 +13,16 @@ def string_to_time(string):
 	time_object = datetime(int(pieces[0][:2]), int(pieces[0][2:4]), int(pieces[0][4:6]), int(pieces[1][:2]), int(pieces[1][2:4]), float(pieces[1][4:]))
 	delta = time_object - datetime.utcfromtimestamp(0)
 	return delta.total_seconds()
+
+def list_to_string(l=None):
+	if l != None:
+		if not isinstance(l, list):
+			l = [l]
+		try:
+			l_str = ["{0:.2f}".format(i) for i in l]
+			return "[" + reduce(lambda x, y: x + ", " + y, l_str) + "]"
+		except Exception as ex:
+			print ex
+			return ""
+	else:
+		return ""

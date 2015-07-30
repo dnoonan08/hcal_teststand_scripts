@@ -5,6 +5,7 @@ from subprocess import Popen, PIPE
 import hcal_teststand
 import qie
 from ROOT import *
+from time import sleep
 
 # CLASSES:
 
@@ -192,32 +193,42 @@ def setup(ts, uhtr_slot=False):
 	
 	return True
 
-def setup_links(ts, uhtr_slot=False):
-	# Variables:
-	if uhtr_slot:
-		uhtr_slots = uhtr_slot
+def setup_links(ts=None, uhtr_slot=None):
+	if ts:
+		# Parse "uhtr_slot":
+		if uhtr_slot != None:
+			if isinstance(uhtr_slot, int):
+				uhtr_slots = [int(uhtr_slot)]
+			elif isinstance(uhtr_slot, list):
+				uhtr_slots = uhtr_slot
+			else:
+				print "ERROR (uhtr.setup_links): The \"uhtr_slot\" argument needs to be an integer or a list of integers."
+				return False
+		else:
+			uhtr_slots = ts.uhtr_slots
+		
+		# Define setup commands:
+		cmds = [
+			"0",
+			"link",
+			"init",
+			"1",		# Auto realign
+			"92",		# Orbit delay
+			"0",
+			"0",
+			"quit",
+			"exit",
+			"-1",
+		]
+		
+		# Run setup commands:
+		for uhtr_slot in uhtr_slots:
+			output = send_commands(ts, uhtr_slot, cmds)["output"]
+		sleep(1)		# Wait to give the links time to initialize.
+		return True
 	else:
-		uhtr_slots = self.uhtr_slots
-	
-	# Define setup commands:
-	cmds = [
-		"0",
-		"link",
-		"init",
-		"1",		# Auto realign
-		"92",		# Orbit delay
-		"0",
-		"0",
-		"quit",
-		"exit",
-		"-1",
-	]
-	
-	# Run setup commands:
-	for uhtr_slot in uhtr_slots:
-		output = uhtr.send_commands(ts, uhtr_slot, cmds)["output"]
-	
-	return True
+		print "ERROR (uhtr.setup_links): You must supply a teststand argument!"
+		return False
 
 
 def get_info_slot(ts, uhtr_slot):		# Returns a dictionary of information about the uHTR, such as the FW versions.

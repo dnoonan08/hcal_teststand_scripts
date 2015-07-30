@@ -79,11 +79,14 @@ class teststand:
 		return result
 	
 	## QIE:
-	def set_ped(self, dac=None, dac_cid=None, i_qie=set(range(1, 25)), i_cid=set(range(4)), crate=False, slot=False):		# Set pedestal values.
-		return qie.set_ped(self, crate=crate, slot=slot, i_qie=i_qie, dac=dac, dac_cid=dac_cid, i_cid=i_cid)
+	def set_ped(self, dac=None, dac_cid=None, i_qie=None, i_cid=set(range(4)), crate=None, slot=None):		# Set pedestal values.
+		return qie.set_ped(ts=self, crate=crate, slot=slot, i_qie=i_qie, dac=dac, dac_cid=dac_cid, i_cid=i_cid)
 	
-	def set_fixed_range(self, enable=False, r=0, i_qie=False, crate=False, slot=False):		# Set fixed-range mode.
-		return qie.set_fixed_range(self, crate=crate, slot=slot, i_qie=i_qie, enable=enable, r=r)
+	def set_fixed_range(self, enable=None, r=None, i_qie=None, crate=None, slot=None):		# Set fixed-range mode.
+		return qie.set_fixed_range(ts=self, crate=crate, slot=slot, i_qie=i_qie, enable=enable, r=r)
+	
+	def set_clk_phase(self, crate=None, slot=None, i_qie=None, phase=0):		# Set fixed-range mode.
+		return qie.set_clk_phase(ts=self, crate=crate, slot=slot, i_qie=i_qie, phase=phase)
 	
 	def set_cal_mode(self, enable=False):
 		for crate, slots in self.fe.iteritems():
@@ -91,7 +94,7 @@ class teststand:
 				qie.set_cal_mode_all(self, crate, slot, enable)
 	
 	## All:
-	def set_mode(self, crate=False, slot=False, mode=0):
+	def set_mode(self, crate=None, slot=None, mode=0):
 		return qie.set_mode(ts=self, crate=crate, slot=slot, mode=mode)
 	
 	def get_info(self):		# Returns a dictionary of component information, namely versions.

@@ -1,8 +1,8 @@
 ####################################################################
 # Type: SCRIPT (acceptance test)                                   #
 #                                                                  #
-# Description: This test checks to make the capacitor IDs (CIDs)   #
-# are rotating correctly on each QIE, for each phase shift         #
+# Description: This test checks to make sure the capacitor IDs     #
+# (CIDs) are rotating correctly on each QIE, for each phase shift  #
 # setting.                                                         #
 ####################################################################
 
@@ -76,6 +76,11 @@ if __name__ == "__main__":
 		help="The name of the directory you want to output plots to (default is \"data/ts_904/at_results\").",
 		metavar="STR"
 	)
+	parser.add_option("-n", "--nReads", dest="n",
+		default=10,
+		help="The number of groups of 100 BXs you want to read per link per phase setting (defualt is 10).",
+		metavar="INT"
+	)
 	(options, args) = parser.parse_args()
 	name = options.ts
 	v = options.verbose
@@ -85,16 +90,15 @@ if __name__ == "__main__":
 		path = options.out
 	else:
 		path = "data/ts_{0}/".format(name) + options.out
+	n_reads = int(options.n)
 	
 	# Set up teststand and print basic info about the test:
 	ts = teststand(name)
 	log = ""
 	t_string = time_string()[:-4]
-	print "\n> Running acceptance test CID ..."
+	print "\n> Running the CAPID error rate acceptance test ..."
 	
 	# Set up basic variables for the test:
-	n_reads = 5
-	t_string = time_string()[:-4]
 	crate, slot = ts.crate_slot_from_qie(qie_id=options.qie)
 	link_dict = ts.uhtr_from_qie(qie_id=options.qie)
 	links = []
@@ -106,23 +110,42 @@ if __name__ == "__main__":
 	print "\tQIE card: {0} (crate {1}, slot {2})".format(options.qie, crate, slot)
 	
 	# Run the test:
+	error_record = {"bxs": n_reads*100}
 	for phase in range(16):		# Loop over possible phase shifts.
 		print "> Checking phase {0} ...".format(phase)
-		qie.set_clk_phase_all(ts, crate, slot, phase)
+		ts.set_clk_phase(crate=crate, slot=slot, phase=phase)
 		for link in links:
+			result_total = [0 for i in range(4)]
 			for i in range(n_reads):
 				data = link.get_data_spy()
 				result = check_cid_rotating(data)
 				for ch, errors in enumerate(result):
 #					print "fill {0}: {1} {2}".format(link.qies[ch]-1, phase, errors)
 					th1[link.qies[ch]-1].Fill(phase, errors)
-				print "\t{0} - Link {1}: {2}".format(i, link.n, result)
+				result_total = [sum(x) for x in zip(result_total, result)]
+				if (v): print "\t{0} - Link {1}: {2}".format(i, link.n, result)
+#			print result_total
+			
+			# Record errors:
+			if sum(result_total) != 0:
+				if link.n not in error_record:
+					error_record[link.n] = {}
+				for ch, count in enumerate(result_total):
+					if count != 0:
+						if ch not in error_record[link.n]:
+							error_record[link.n][ch] = [0 for i in range(16)]
+						error_record[link.n][ch][phase] = count
+	
+	# Normalize histograms:
 	for histogram in th1:
 		histogram.Scale(1/(100*float(n_reads)))
-	qie.set_clk_phase_all(ts, crate, slot, 0)
+	
+	# Reset the teststand:
+		ts.set_clk_phase(crate=crate, slot=slot, phase=0)
 	
 	# Write output:
 	## Write the output ROOT file:
+	path += "/" + t_string
 	file_name = "{0}/{1}_cid.root".format(path, t_string)
 	print "> Saving histograms to {0} ...".format(file_name)
 	if not os.path.exists(path):
@@ -140,14 +163,39 @@ if __name__ == "__main__":
 	tc = TCanvas("tc", "tc", 2000, 3000)
 	tc.SetCanvasSize(2000, 3000)
 	tc.Divide(4, 6)
+	tc_small = TCanvas("tc_small", "tc_small", 2000, 500)
+	tc_small.Divide(4, 1)
 	for i, histogram in enumerate(th1):
-		print i
+#		print i
 		tc.cd(i + 1)
 		histogram.Draw()
 		histogram.SetMaximum(1.0)
 		histogram.SetMinimum(0.0)
+		
+		# Deal with small canvas:
+		tc_small.cd(i%4 + 1)
+		histogram.Draw()
+		if (i + 1)%4 == 0:
+			n = (i + 1)/4
+			tc_small.SaveAs("{0}/{1}_{2}_cid.pdf".format(path, t_string, n))
+			tc_small.SaveAs("{0}/{1}_{2}_cid.svg".format(path, t_string, n))
 	tc.SaveAs("{0}/{1}_cid.pdf".format(path, t_string))
 	tc.SaveAs("{0}/{1}_cid.svg".format(path, t_string))
 #	with open("{0}/at_cid.txt".format(path), "w") as out:
 #		out.write(log.strip())
+	
+	# Print a summary:
+	print "\n====== SUMMARY ============================"
+	print "Teststand: {0}".format(ts.name)
+	print "QIE card: {0} (crate {1}, slot {2})".format(options.qie, crate, slot)
+	print "BXs/phase setting: {0}".format(100*n_reads)
+	if error_record.keys() > 1:
+#		print error_record
+		print "[!!] Errors: (indexed by phase setting)"
+		for i_link in [i for i in error_record.keys() if isinstance(i, int)]:
+			for i_ch, counts in error_record[i_link].iteritems():
+				print "\t* Link {0}, Channel {1}: error rates = {2}".format(i_link, i_ch, [i/float(error_record["bxs"]) for i in counts])
+	else:
+		print "[OK] There were no errors!"
+	print "==========================================="
 # /MAIN
