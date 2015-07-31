@@ -189,7 +189,7 @@ if __name__ == "__main__":
 	print "Teststand: {0}".format(ts.name)
 	print "QIE card: {0} (crate {1}, slot {2})".format(options.qie, crate, slot)
 	print "BXs/phase setting: {0}".format(100*n_reads)
-	if error_record.keys() > 1:
+	if len(error_record.keys()) > 1:
 #		print error_record
 		print "[!!] Errors: (indexed by phase setting)"
 		for i_link in [i for i in error_record.keys() if isinstance(i, int)]:

@@ -14,12 +14,12 @@ def string_to_time(string):
 	delta = time_object - datetime.utcfromtimestamp(0)
 	return delta.total_seconds()
 
-def list_to_string(l=None):
+def list_to_string(l=None, n=2):
 	if l != None:
 		if not isinstance(l, list):
 			l = [l]
 		try:
-			l_str = ["{0:.2f}".format(i) for i in l]
+			l_str = ["{0:.{1}f}".format(i, n) for i in l]
 			return "[" + reduce(lambda x, y: x + ", " + y, l_str) + "]"
 		except Exception as ex:
 			print ex

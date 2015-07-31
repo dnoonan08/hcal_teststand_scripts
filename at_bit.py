@@ -14,18 +14,17 @@ from optparse import OptionParser
 from ROOT import *
 
 # FUNCTIONS:
-#def create_plots(qie_id):
-#	th1 = []
-#	for i in range(24):
-#		histogram = TH1F("qie{0}".format(i+1), "{0}: QIE {1}".format(qie_id, i+1), 16, -0.5, 15.5)
-#		histogram.GetXaxis().CenterTitle(1)
-#		histogram.GetXaxis().SetTitle("Clock Phase Setting (~1.6 ns)")
-#		histogram.GetYaxis().CenterTitle(1)
-#		histogram.GetYaxis().SetTitle("CID Error Rate")
-#		histogram.SetLineColor(kRed)
-#		histogram.SetFillColor(kRed)
-#		th1.append(histogram)
-#	return th1
+def create_plots(qie_id):
+	th1s = {}
+	histogram = TH1F("link_pattern", "{0}: Link Pattern Errors".format(qie_id), 24, -0.5, 23.5)
+	histogram.GetXaxis().CenterTitle(1)
+	histogram.GetXaxis().SetTitle("Channel")
+	histogram.GetYaxis().CenterTitle(1)
+	histogram.GetYaxis().SetTitle("Link Pattern Error Rate")
+	histogram.SetLineColor(kRed)
+	histogram.SetFillColor(kRed)
+	th1s["link_pattern"] = histogram
+	return th1s
 
 def check_pattern_raw(raw, link_pattern="feed beef"):		# Check the link pattern test data for a single BX of data in a channel.
 	if len(raw) == 6:
@@ -115,7 +114,7 @@ if __name__ == "__main__":
 	for uhtr_slot, i_links in link_dict.iteritems():
 		for i_link in i_links:
 			links.append(uhtr.get_link_from_map(ts=ts, uhtr_slot=uhtr_slot, i_link=i_link))
-#	th1 = create_plots(options.qie)
+	th1s = create_plots(options.qie)
 	print "\tTeststand: {0}".format(ts.name)
 	print "\tQIE card: {0} (crate {1}, slot {2})".format(options.qie, crate, slot)
 	
@@ -123,11 +122,63 @@ if __name__ == "__main__":
 	ts.set_mode(crate=crate, slot=slot, mode=1)		# Turn on link pattern test mode.
 	
 	# Read data out and check for errors:
+	error_record = {}
 	for n_read in range(n_reads):
-		for link in links:
+		print "> Reading data ... ({0}/{1})".format(n_read + 1, n_reads)
+		for l, link in enumerate(links):
+#			print l, link.n
 			data = link.get_data_spy()
-			print data[0][0].raw
-			print check_pattern(data)
-		
+#			print data[0][0].raw
+			errors = check_pattern(data)
+#			print errors
+			if sum(errors) != 0:
+				if link.n not in error_record:
+					error_record[link.n] = [0 for i in range(4)]
+				error_record[link.n] = [sum(x) for x in zip(error_record[link.n], errors)]
+			for ch in range(4):
+#				print l*4 + ch, errors[ch]
+				th1s["link_pattern"].Fill(l*4 + ch, errors[ch])
+	
 	# Return the teststand to normal:
 	ts.set_mode(crate=crate, slot=slot, mode=0)		# Turn off link pattern test mode.
+	
+	# Normalize histograms:
+	th1s["link_pattern"].Scale(1/(100*float(n_reads)))
+	
+	# Write output:
+	## Write the output ROOT file:
+	path += "/" + t_string
+	file_name = "{0}/{1}_bit.root".format(path, t_string)
+	print "> Saving histograms to {0} ...".format(file_name)
+	if not os.path.exists(path):
+		os.makedirs(path)
+	if os.path.exists(file_name):
+		tf = TFile(file_name, "RECREATE")
+	else:
+		tf = TFile(file_name, "NEW")
+	for key, histogram in th1s.iteritems():
+		histogram.Write()
+	tf.Close()
+	
+	## Save the plots in a PDF (and SVG):
+	gROOT.SetBatch()
+	tc = TCanvas("tc", "tc", 500, 500)
+	th1s["link_pattern"].Draw()
+	th1s["link_pattern"].SetMaximum(1.0)
+	th1s["link_pattern"].SetMinimum(0.0)
+	tc.SaveAs("{0}/{1}_bit.pdf".format(path, t_string))
+	tc.SaveAs("{0}/{1}_bit.svg".format(path, t_string))
+	
+	# Print a summary:
+	print "\n====== SUMMARY ============================"
+	print "Teststand: {0}".format(ts.name)
+	print "QIE card: {0} (crate {1}, slot {2})".format(options.qie, crate, slot)
+	print "BXs read out: {0}".format(100*n_reads)
+	if len(error_record.keys()) > 0:
+#		print error_record
+		print "[!!] Errors: (indexed by channel)"
+		for i_link, errors in error_record.iteritems():
+			print "\t* Link {0}: error rates = {1}".format(i_link, list_to_string([i/float(100*n_reads) for i in errors]))
+	else:
+		print "[OK] There were no errors!"
+	print "==========================================="
