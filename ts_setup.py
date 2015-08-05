@@ -115,7 +115,7 @@ if __name__ == "__main__":
 				"0",
 				"quit",
 				"exit",
-				"exit",
+				"-1",
 			]
 			output = uhtr.send_commands(ts, uhtr_slot, cmds)["output"]
 			if output:

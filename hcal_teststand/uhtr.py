@@ -711,7 +711,7 @@ def get_dump(ts, uhtr_slot):
 		"STATUS",
 		"QUIT",
 		"EXIT",
-		"EXIT",
+		"-1",
 	]
 	
 	uhtr_out = send_commands(ts, uhtr_slot, commands)

@@ -27,5 +27,6 @@ if __name__ == "__main__":
 	print "\nYou've just run a script that's a skeleton for making your own script."
 	# Print out some information about the teststand:
 	print ">> The teststand you're using is named {0}.".format(ts.name)
-	print ">> The crate and QIE card organization for the teststand is below:\n{0}".format(ts.fe)
+	print ">> The BE crate and uHTR organization for the teststand is below:\n{0}".format(ts.be)
+	print ">> The FE crate and QIE card organization for the teststand is below:\n{0}".format(ts.fe)
 # /MAIN

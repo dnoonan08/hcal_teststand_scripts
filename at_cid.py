@@ -26,6 +26,7 @@ def create_plots(qie_id):
 		histogram.GetXaxis().SetTitle("Clock Phase Setting (~1.6 ns)")
 		histogram.GetYaxis().CenterTitle(1)
 		histogram.GetYaxis().SetTitle("CID Error Rate")
+		histogram.GetYaxis().SetTitleOffset(1.3)
 		histogram.SetLineColor(kRed)
 		histogram.SetFillColor(kRed)
 		th1.append(histogram)
@@ -85,11 +86,11 @@ if __name__ == "__main__":
 	name = options.ts
 	v = options.verbose
 	if not options.out:
-		path = "data/ts_{0}/at_results/at_cid".format(name)
+		path = "data/at_results/{1}/at_cid".format(name, options.qie.replace(" ", "_"))
 	elif "/" in options.out:
 		path = options.out
 	else:
-		path = "data/ts_{0}/".format(name) + options.out
+		path = "data/".format(name) + options.out
 	n_reads = int(options.n)
 	
 	# Set up teststand and print basic info about the test:
@@ -111,7 +112,7 @@ if __name__ == "__main__":
 	
 	# Run the test:
 	error_record = {"bxs": n_reads*100}
-	for phase in range(16):		# Loop over possible phase shifts.
+	for phase in range(1):		# Loop over possible phase shifts.
 		print "> Checking phase {0} ...".format(phase)
 		ts.set_clk_phase(crate=crate, slot=slot, phase=phase)
 		for link in links:
@@ -141,7 +142,7 @@ if __name__ == "__main__":
 		histogram.Scale(1/(100*float(n_reads)))
 	
 	# Reset the teststand:
-		ts.set_clk_phase(crate=crate, slot=slot, phase=0)
+	ts.set_clk_phase(crate=crate, slot=slot, phase=0)
 	
 	# Write output:
 	## Write the output ROOT file:
@@ -159,7 +160,11 @@ if __name__ == "__main__":
 	tf.Close()
 	
 	## Save the plots in a PDF (and SVG):
+	gROOT.SetStyle("Plain")
 	gROOT.SetBatch()
+	gStyle.SetOptStat(0)
+	gStyle.SetTitleBorderSize(0)
+#	gStyle.SetTitleAlign(21)
 	tc = TCanvas("tc", "tc", 2000, 3000)
 	tc.SetCanvasSize(2000, 3000)
 	tc.Divide(4, 6)
@@ -194,7 +199,7 @@ if __name__ == "__main__":
 		print "[!!] Errors: (indexed by phase setting)"
 		for i_link in [i for i in error_record.keys() if isinstance(i, int)]:
 			for i_ch, counts in error_record[i_link].iteritems():
-				print "\t* Link {0}, Channel {1}: error rates = {2}".format(i_link, i_ch, [i/float(error_record["bxs"]) for i in counts])
+				print "\t* Link {0}, Channel {1}: error rates = {2}".format(i_link, i_ch, list_to_string([i/float(error_record["bxs"]) for i in counts]))
 	else:
 		print "[OK] There were no errors!"
 	print "==========================================="

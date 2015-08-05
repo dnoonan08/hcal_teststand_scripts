@@ -24,13 +24,24 @@ class teststand:
 #				print ts_info
 				for key, value in ts_info.iteritems():
 					setattr(self, key, value)
+				
 				# Assign a few other calculable attributes:
+				self.be = {}
+				if len(self.be_crates) <= len(self.uhtr_slots):
+					for i, be_crate in enumerate(self.be_crates):
+						self.be[be_crate] = []
+						uhtr_slots = self.uhtr_slots[i]
+						for uhtr_slot in uhtr_slots:
+							self.be[be_crate].append([uhtr_slot, "192.168.{0}.{1}".format(be_crate, 4*uhtr_slot)])
+				
+				# The following is a temporary kludge:
 				self.uhtr_ips = []
 				self.uhtr = {}
-				for slot in self.uhtr_slots:
-					ip = "{0}.{1}".format(self.uhtr_ip_base, slot*4)
+				for slot in self.uhtr_slots[0]:
+					ip = "192.168.{0}.{1}".format(self.be_crates[0], slot*4)
 					self.uhtr_ips.append(ip)
 					self.uhtr[slot] = ip
+				
 				self.glib_ip = "192.168.1.{0}".format(160 + self.glib_slot)
 				self.fe = {}
 				if len(self.fe_crates) <= len(self.qie_slots):
@@ -296,7 +307,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 
 def parse_ts_configuration(f="teststands.txt"):		# This function is used to parse the "teststands.txt" configuration file. It is run by the "teststand" class; usually you want to use that instead of running this yourself.
 	# WHEN YOU EDIT THIS SCRIPT, MAKE SURE TO UPDATE install.py!
-	variables = ["name", "fe_crates", "ngccm_port", "uhtr_ip_base", "uhtr_slots", "uhtr_settings", "glib_slot", "mch_ip", "amc13_ips", "qie_slots", "control_hub"]
+	variables = ["name", "fe_crates", "be_crates", "ngccm_port", "uhtr_slots", "uhtr_settings", "glib_slot", "mch_ips", "amc13_ips", "qie_slots", "control_hub"]
 	teststand_info = {}
 	raw = ""
 	if ("/" in f):
@@ -317,27 +328,48 @@ def parse_ts_configuration(f="teststands.txt"):		# This function is used to pars
 						elif (variable == "fe_crates"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
+						elif (variable == "be_crates"):
+							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
 						elif (variable == "ngccm_port"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							teststand_info[ts_name][variable] = int(value)
-						elif (variable == "uhtr_ip_base"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+#						elif (variable == "uhtr_ip_base"):
+#							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							teststand_info[ts_name][variable] = value.strip()
 						elif (variable == "uhtr_slots"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
-							teststand_info[ts_name][variable] = sorted([int(i) for i in value.split(",")])
+							crate_lists = value.split(";")
+							teststand_info[ts_name][variable] = []
+							for crate_list in crate_lists:
+								if crate_list:
+									teststand_info[ts_name][variable].append([int(i) for i in crate_list.split(",")])
+								else:
+									teststand_info[ts_name][variable].append([])
+							# Let a semicolon be at the end of the last list without adding an empty list:
+							if not teststand_info[ts_name][variable][-1]:
+								del teststand_info[ts_name][variable][-1]
 						elif (variable == "uhtr_settings"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							teststand_info[ts_name][variable] = [i for i in value.split(",")]
 						elif (variable == "glib_slot"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							teststand_info[ts_name][variable] = int(value)
-						elif (variable == "mch_ip"):
+						elif (variable == "mch_ips"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
-							teststand_info[ts_name][variable] = value.strip()
+							teststand_info[ts_name][variable] = [i.strip() for i in value.split(";")]
 						elif (variable == "amc13_ips"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
-							teststand_info[ts_name][variable] = [i.strip() for i in value.split(",")]
+							crate_lists = value.split(";")
+							teststand_info[ts_name][variable] = []
+							for crate_list in crate_lists:
+								if crate_list:
+									teststand_info[ts_name][variable].append([i.strip() for i in crate_list.split(",")])
+								else:
+									teststand_info[ts_name][variable].append([])
+							# Let a semicolon be at the end of the last list without adding an empty list:
+							if not teststand_info[ts_name][variable][-1]:
+								del teststand_info[ts_name][variable][-1]
 						elif (variable == "qie_slots"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							crate_lists = value.split(";")
