@@ -110,12 +110,12 @@ if __name__ == "__main__":
 				"link",
 				"init",
 				"1",		# Auto realign
-				"92",		# Orbit delay
+				"55",		# Orbit delay
 				"0",
 				"0",
 				"quit",
 				"exit",
-				"exit",
+				"-1",
 			]
 			output = uhtr.send_commands(ts, uhtr_slot, cmds)["output"]
 			if output:

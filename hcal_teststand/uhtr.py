@@ -678,6 +678,27 @@ def get_dump(ts, uhtr_slot):
 	raw_output = uhtr_out["output"]
 	log += uhtr_out["log"]
 	return raw_output
+
+def get_linkdtc(ts, uhtr_slot):
+	log = ""
+	
+	commands = [
+		"0",
+		"LINK",
+		"STATUS",
+		"QUIT",
+		"DTC",
+		"STATUS",
+		"QUIT",
+		"EXIT",
+		"-1"
+	]
+	
+	uhtr_out = send_commands(ts, uhtr_slot, commands)
+	raw_output = uhtr_out["output"]
+	log += uhtr_out["log"]
+	return raw_output
+
 # /FUNCTIONS
 
 if __name__ == "__main__":

@@ -104,13 +104,16 @@ def log_links(ts, scale=0):
 	for link in active_links:
 		orbits.append(link_results["orbit"][link])
 	log += "{0}\n".format(list2f(orbits))
+
 	adc_avg = []
 	data_full = ""
 	for i in active_links:
 		adc_avg_link = []
+		
 		uhtr_read = uhtr.get_data(ts,ts.uhtr_slots[0], 50, i)["output"]
 		if scale == 1:
 			data_full += uhtr_read
+	
 		data = uhtr.parse_data(uhtr_read)["adc"]
 		for j in range(4):
 			adc_avg_link.append(numpy.mean([i_bx[j] for i_bx in data]))
@@ -118,6 +121,7 @@ def log_links(ts, scale=0):
 	log += "{0}\n".format(adc_avg)
 	if scale == 1:
 		log += data_full
+		log += uhtr.get_linkdtc(ts,ts.uhtr_slots[0])
 	return log
 
 def record(ts=False, path="data/unsorted", scale=0):
