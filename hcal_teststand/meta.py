@@ -2,7 +2,13 @@
 
 # Parse common teststand arguments:
 ## Parse crate, slot arguments to construct something in the form of ts.fe:
-def parse_args_crate_slot(ts=None, crate=None, slot=None):
+def parse_args_crate_slot(ts=None, crate=None, slot=None, crate_type="fe"):
+	if crate_type == "utca":
+		crate_type = "be"
+	if not (crate_type == "fe" or crate_type == "be"):
+		print "ERROR (meta.parse_crate_slot_args): The \"crate_type\" of {0} wasn't recognized. It should be \"fe\" for front-end or \"be\" for back-end.".format(crate_type)
+		return False
+	
 	if ts:
 		assessment = sum([
 			(isinstance(crate, int) or isinstance(crate, list)) and crate != None,
@@ -40,10 +46,10 @@ def parse_args_crate_slot(ts=None, crate=None, slot=None):
 						return False
 			
 			# Finally, return the crate, slot configuration:
-			fe = {}
+			crate_info = {}
 			for i, c in enumerate(crates):
-				fe[c] = slots[i]
-			return fe
+				crate_info[c] = slots[i]
+			return crate_info
 		
 		# If either crate or slot is defined correctly:
 		elif assessment == 1:
@@ -55,13 +61,13 @@ def parse_args_crate_slot(ts=None, crate=None, slot=None):
 					crates = crate
 				
 				# Asign the default slots from the teststand object:
-				fe = {}
+				crate_info = {}
 				for i in crates:
-					if i in ts.fe:
-						fe[i] = ts.fe[i]
+					if i in getattr(ts, crate_type):
+						crate_info[i] = getattr(ts, crate_type)[i]
 					else:
-						fe[i] = []
-				return fe
+						crate_info[i] = []
+				return crate_info
 			else:
 				print "ERROR (meta.parse_crate_slot_args): You entered slot = {0}, but crate = {1}. What did you expect to happen?".format(slot, crate)
 				return False
@@ -69,7 +75,7 @@ def parse_args_crate_slot(ts=None, crate=None, slot=None):
 		# If neither crate nor slot is defined correctly:
 		elif assessment == 0:
 			if crate == None and slot == None:
-				return ts.fe
+				return getattr(ts, crate_type)
 			else:
 				print "ERROR (meta.parse_crate_slot_args): The crate and slot arguments must either be integers or lists. You entered the following:"
 				print "\tcrate = {0}\n\tslot={1}".format(crate, slot)

@@ -82,7 +82,7 @@ if __name__ == "__main__":
 	)
 	parser.add_option("-o", "--fileName", dest="out",
 		default="",
-		help="The name of the directory you want to output plots to (default is \"data/ts_904/at_results\").",
+		help="The name of the directory you want to output plots to (default is \"data/at_results/[QIE_CARD_ID]\").",
 		metavar="STR"
 	)
 	parser.add_option("-n", "--nReads", dest="n",
@@ -94,11 +94,11 @@ if __name__ == "__main__":
 	name = options.ts
 	v = options.verbose
 	if not options.out:
-		path = "data/ts_{0}/at_results/at_bit".format(name)
+		path = "data/at_results/{1}/at_bit".format(name, options.qie.replace(" ", "_"))
 	elif "/" in options.out:
 		path = options.out
 	else:
-		path = "data/ts_{0}/".format(name) + options.out
+		path = "data/".format(name) + options.out
 	n_reads = int(options.n)
 	
 	# Set up teststand and print basic info about the test:

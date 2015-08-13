@@ -74,7 +74,7 @@ if __name__ == "__main__":
 	)
 	parser.add_option("-o", "--fileName", dest="out",
 		default="",
-		help="The name of the directory you want to output plots to (default is \"data/ts_904/at_results\").",
+		help="The name of the directory you want to output plots to (default is \"data/at_results/[QIE_CARD_ID]\").",
 		metavar="STR"
 	)
 	parser.add_option("-n", "--nReads", dest="n",
@@ -112,7 +112,7 @@ if __name__ == "__main__":
 	
 	# Run the test:
 	error_record = {"bxs": n_reads*100}
-	for phase in range(1):		# Loop over possible phase shifts.
+	for phase in range(16):		# Loop over possible phase shifts.
 		print "> Checking phase {0} ...".format(phase)
 		ts.set_clk_phase(crate=crate, slot=slot, phase=phase)
 		for link in links:

@@ -32,14 +32,18 @@ class teststand:
 						self.be[be_crate] = []
 						uhtr_slots = self.uhtr_slots[i]
 						for uhtr_slot in uhtr_slots:
-							self.be[be_crate].append([uhtr_slot, "192.168.{0}.{1}".format(be_crate, 4*uhtr_slot)])
+							self.be[be_crate].append(uhtr_slot)
+				self.uhtr_ips = {}
+				for be_crate, be_slots in self.be.iteritems():
+					for be_slot in be_slots:
+						self.uhtr_ips[(be_crate, be_slot)] = "192.168.{0}.{1}".format(be_crate, 4*be_slot)
 				
 				# The following is a temporary kludge:
-				self.uhtr_ips = []
+#				self.uhtr_ips = []
 				self.uhtr = {}
 				for slot in self.uhtr_slots[0]:
 					ip = "192.168.{0}.{1}".format(self.be_crates[0], slot*4)
-					self.uhtr_ips.append(ip)
+#					self.uhtr_ips.append(ip)
 					self.uhtr[slot] = ip
 				
 				self.glib_ip = "192.168.1.{0}".format(160 + self.glib_slot)
@@ -56,6 +60,9 @@ class teststand:
 	
 	# METHODS:
 	## uHTR:
+	def uhtr_ip(self, be_crate=None, be_slot=None):
+		return self.uhtr_ips[(be_crate, be_slot)]
+	
 	def get_info_links(self, uhtr_slot=False):		# For each uHTR, returns a dictionary link status information.
 		if uhtr_slot:
 			uhtr_slots = uhtr_slot
@@ -78,16 +85,8 @@ class teststand:
 			result[uhtr_slot] = uhtr.list_active_links(self, uhtr_slot)
 		return result
 	
-	def get_links(self, uhtr_slot=False):
-		if uhtr_slot:
-			uhtr_slots = uhtr_slot
-		else:
-			uhtr_slots = self.uhtr_slots
-		
-		result = {}
-		for uhtr_slot in uhtr_slots:
-			result[uhtr_slot] = uhtr.get_links(self, uhtr_slot)
-		return result
+	def get_links(self, be_crate=None, be_slot=None):
+		return uhtr.get_links(ts=self, be_crate=be_crate, be_slot=be_slot)
 	
 	## QIE:
 	def set_ped(self, dac=None, dac_cid=None, i_qie=None, i_cid=set(range(4)), crate=None, slot=None):		# Set pedestal values.
@@ -147,9 +146,9 @@ class teststand:
 			os.makedirs(d)
 		qie_map = self.get_qie_map()		# A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
 		
-		qie_map_out = {}
-		for qie in qie_map:
-			qie_map_out["{0:02d}{1:02d}{2:02d}".format(qie["crate"], qie["slot"], qie["qie"])] = qie
+#		qie_map_out = {}
+#		for qie in qie_map:
+#			qie_map_out["{0:02d}{1:02d}{2:02d}".format(qie["crate"], qie["slot"], qie["qie"])] = qie
 		with open("{0}/{1}".format(d, f), "w") as out:
 #			json.dump(qie_map_out, out)
 			json.dump(qie_map, out)

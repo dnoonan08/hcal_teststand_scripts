@@ -252,7 +252,7 @@ def get_map(ts, v=False):		# Determines the QIE map of the teststand. A qie map 
 
 def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
 	print "> Getting links ..."
-	links_by_uhtr = ts.get_links()
+	link_dict = ts.get_links()
 	qie_map = []
 	
 	# Make sure the teststand is set up:
@@ -260,15 +260,16 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 	ts.set_fixed_range(enable=False)
 	
 	# Do the mapping:
-	for crate, slots in ts.fe.iteritems():
-		for slot in slots:
+	for fe_crate, fe_slots in ts.fe.iteritems():
+		for fe_slot in fe_slots:
 #			ts.set_fixed_range(crate=crate, slot=slot, enable=False)
 			for i_qie in range(1, 25):
-				print "> Finding crate {0}, slot {1}, QIE {2} ...".format(crate, slot, i_qie)
-				ts.set_fixed_range(crate=crate, slot=slot, i_qie=i_qie, enable=True, r=2)
+				print "> Finding FE crate {0}, FE slot {1}, QIE {2} ...".format(fe_crate, fe_slot, i_qie)
+				ts.set_fixed_range(crate=fe_crate, slot=fe_slot, i_qie=i_qie, enable=True, r=2)
 				channel_save = []
 				link_save = []
-				for uhtr_slot, links in links_by_uhtr.iteritems():
+				for crate_slot, links in link_dict.iteritems():
+					be_crate, be_slot = crate_slot
 					for link in [l for l in links if l.on]:
 						data = link.get_data_spy()
 						if data:
@@ -278,26 +279,31 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 								if adc_avg == 128:
 									channel_save.append(channel)
 									link_save.append(link)
+						else:
+							print "ERROR (qie.get_map_slow): Data couldn't be read from the link."
 				if len(channel_save) == 1 and len(link_save):
 					channel = channel_save[0]
 					link = link_save[0]
 					qie_map.append({
-						"crate": crate,
-						"slot": slot,
+						"be_crate": be_crate,
+						"be_slot": be_slot,
+						"fe_crate": fe_crate,
+						"fe_slot": fe_slot,
 						"qie": i_qie,
 						"id": link.qie_unique_id,
 						"link": link.n,
 						"channel": channel,
 						"half": link.qie_half,
 						"fiber": link.qie_fiber,
-						"uhtr_slot": link.slot,
 					})
 				else:
 					if len(channel_save) > 1:
 						print "ERROR: Mapping is weird."
 					qie_map.append({
-						"crate": crate,
-						"slot": slot,
+						"be_crate": be_crate,
+						"be_slot": be_slot,
+						"fe_crate": fe_crate,
+						"fe_slot": fe_slot,
 						"qie": i_qie,
 						"id": [link.qie_unique_id for link in link_save],
 						"link": [link.n for link in link_save],
@@ -306,7 +312,7 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 						"fiber": [link.qie_fiber for link in link_save],
 						"uhtr_slot": [link.slot for link in link_save],
 					})
-				ts.set_fixed_range(crate=crate, slot=slot, i_qie=i_qie, enable=False)
+				ts.set_fixed_range(crate=fe_crate, slot=fe_slot, i_qie=i_qie, enable=False)
 	return qie_map
 # /
 
@@ -513,10 +519,10 @@ def set_mode(ts=None, crate=None, slot=None, mode=0):		# 0: normal mode, 1: link
 		for crate, slots in fe.iteritems():
 			for slot in slots:
 				cmds.extend([
-					"put HF{0}-{1}-iTop_LinkTestMode 0x{2}".format(crate, slot, n),
-					"put HF{0}-{1}-iBot_LinkTestMode 0x{2}".format(crate, slot, n),
-					"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot),
-					"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot),
+					"put HF{0}-{1}-iTop_LinkTestMode_Enable 0x{2}".format(crate, slot, n),
+					"put HF{0}-{1}-iBot_LinkTestMode_Enable 0x{2}".format(crate, slot, n),
+					"get HF{0}-{1}-iTop_LinkTestMode_Enable".format(crate, slot),
+					"get HF{0}-{1}-iBot_LinkTestMode_Enable".format(crate, slot),
 				])
 		
 		# Send commands:

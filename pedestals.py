@@ -20,17 +20,17 @@ if __name__ == "__main__":
 		name = "904"
 	ts = teststand(name)
 
-	ts.set_ped_all(6)
-	qie.set_fix_range_all(ts, 1, 2, False)
-	for uhtr_slot in ts.uhtr_slots:
+#	ts.set_ped()
+#	ts.set_fixed_range()
+	for uhtr_slot in ts.uhtr_slots[0]:
 		print "\nResults for the uHTR in slot {0}:".format(uhtr_slot)
-		active_links = uhtr.find_links(ts, uhtr_slot)
+		active_links = uhtr.list_active_links(ts, uhtr_slot)
+		links = uhtr.get_links_all_from_map(ts)
 		print "The activated links are {0}.".format(active_links)
-		for link_i in active_links:
-			print "==== Link {0} ====".format(link_i)
-			uhtr_read = uhtr.get_data(ts, uhtr_slot, 300, link_i)
-			data = uhtr.parse_data(uhtr_read["output"])
-	#		print data["adc"]
-			print "Read in {0} bunch crossings.".format(len(data["adc"]))
-			for i in range(4):
-				print "Channel {0}: ADC_avg = {1:.2f} (sigma = {2:.2f})".format(i, numpy.mean([i_bx[i] for i_bx in data["adc"]]), numpy.std([i_bx[i] for i_bx in data["adc"]]))
+		for link in links:
+			print "==== Link {0} ====".format(link.n)
+			data = link.get_data_spy()
+			print "Read in {0} bunch crossings.".format(len(data[0]))
+			for ch in range(4):
+				adcs = [d.adc for d in data[ch]]
+				print "Channel {0}: ADC_avg = {1:.2f} (sigma = {2:.2f})".format(ch, numpy.mean(adcs), numpy.std(adcs))
