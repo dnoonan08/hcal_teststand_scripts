@@ -190,7 +190,7 @@ def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and 
 	if "ERROR" not in result: 
 		return result.split()[1:3]		# Get the result of the command, and turn the result into a list (ignoring the first element).
 	else:
-		return []
+		return False
 
 def get_map(ts, v=False):		# Determines the QIE map of the teststand. A qie map is from QIE crate, slot, qie number to link number, IP, unique_id, etc. It's a list of dictionaries with 3tuples as the keys: (crate, slot, qie)
 	# THIS IS A WORK IN PROGRESS. Use get_map_slow until this is fixed.
@@ -300,8 +300,8 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 					if len(channel_save) > 1:
 						print "ERROR: Mapping is weird."
 					qie_map.append({
-						"be_crate": be_crate,
-						"be_slot": be_slot,
+						"be_crate": [link.crate for link in link_save],
+						"be_slot": [link.slot for link in link_save],
 						"fe_crate": fe_crate,
 						"fe_slot": fe_slot,
 						"qie": i_qie,
@@ -310,7 +310,6 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 						"channel": channel_save,
 						"half": [link.qie_half for link in link_save],
 						"fiber": [link.qie_fiber for link in link_save],
-						"uhtr_slot": [link.slot for link in link_save],
 					})
 				ts.set_fixed_range(crate=fe_crate, slot=fe_slot, i_qie=i_qie, enable=False)
 	return qie_map
@@ -324,9 +323,9 @@ def set_unique_id(ts, crate, slot):		# Saves the unique ID of a crate slot to th
 			"put HF{0}-{1}-iTop_UniqueID {2} {3}".format(crate, slot, unique_id[0], unique_id[1]),
 			"put HF{0}-{1}-iBot_UniqueID {2} {3}".format(crate, slot, unique_id[0], unique_id[1])
 		])
-		return 1
+		return True
 	else:
-		return 0
+		return False
 
 def set_unique_id_all(ts):		# Repeats the "set_unique_id" function from above for all slots in the teststand.
 	is_set = []
@@ -519,10 +518,10 @@ def set_mode(ts=None, crate=None, slot=None, mode=0):		# 0: normal mode, 1: link
 		for crate, slots in fe.iteritems():
 			for slot in slots:
 				cmds.extend([
-					"put HF{0}-{1}-iTop_LinkTestMode_Enable 0x{2}".format(crate, slot, n),
-					"put HF{0}-{1}-iBot_LinkTestMode_Enable 0x{2}".format(crate, slot, n),
-					"get HF{0}-{1}-iTop_LinkTestMode_Enable".format(crate, slot),
-					"get HF{0}-{1}-iBot_LinkTestMode_Enable".format(crate, slot),
+					"put HF{0}-{1}-iTop_LinkTestMode 0x{2}".format(crate, slot, n),
+					"put HF{0}-{1}-iBot_LinkTestMode 0x{2}".format(crate, slot, n),
+					"get HF{0}-{1}-iTop_LinkTestMode".format(crate, slot),
+					"get HF{0}-{1}-iBot_LinkTestMode".format(crate, slot),
 				])
 		
 		# Send commands:

@@ -6,6 +6,7 @@ import glib
 import uhtr
 import ngccm
 import qie
+import bkp
 import json
 import os
 
@@ -24,6 +25,10 @@ class teststand:
 #				print ts_info
 				for key, value in ts_info.iteritems():
 					setattr(self, key, value)
+				if hasattr(self, "control_hub"):
+					control_hub = self.control_hub
+				else:
+					control_hub = None
 				
 				# Assign a few other calculable attributes:
 				self.be = {}
@@ -37,6 +42,35 @@ class teststand:
 				for be_crate, be_slots in self.be.iteritems():
 					for be_slot in be_slots:
 						self.uhtr_ips[(be_crate, be_slot)] = "192.168.{0}.{1}".format(be_crate, 4*be_slot)
+				
+				# AMC13:
+				self.amc13s = {}		# AMC13 objects indexed by the BE crate number.
+				for i, crate in enumerate(self.be_crates):
+					self.amc13s[crate] = amc13.amc13(
+						ip_t1=self.amc13_ips[i][0],
+						ip_t2=self.amc13_ips[i][1],
+						crate=crate,
+						config="amc13_904_config.xml",
+						i_sn = i
+					)
+				
+				# BKP:
+				self.bkps = {}		# Backplane objects indexed by the FE crate number.
+				for i, crate in enumerate(self.fe_crates):
+					self.bkps[crate] = bkp.bkp(
+						crate=crate,
+					)
+				
+				# uHTRs:
+				self.uhtrs = {}
+				for be_crate, be_slots in self.be.iteritems():
+					for be_slot in be_slots:
+						self.uhtrs[(be_crate, be_slot)] = uhtr.uhtr(
+							crate=be_crate,
+							slot=be_slot,
+							ip="192.168.{0}.{1}".format(be_crate, 4*be_slot),
+							control_hub=control_hub,
+						)
 				
 				# The following is a temporary kludge:
 #				self.uhtr_ips = []
@@ -59,6 +93,11 @@ class teststand:
 	# /CONSTRUCTION
 	
 	# METHODS:
+	## General:
+	def update(self):
+		for be_crate, amc13 in self.amc13s.iteritems():
+			amc13.update()
+	
 	## uHTR:
 	def uhtr_ip(self, be_crate=None, be_slot=None):
 		return self.uhtr_ips[(be_crate, be_slot)]

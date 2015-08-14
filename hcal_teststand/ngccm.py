@@ -181,38 +181,38 @@ def get_info(ts, crate):		# Returns a dictionary of information about the ngCCM,
 		"log":			log.strip(),
 	}
 
-def setup(ts):
-	log = []
-	output = []
-	
-	if ts:
-		for crate in ts.fe_crates:
-			result = True
-			cmds = [
-				"put HF{0}-bkp_pwr_enable 0".format(crate),
-				"put HF{0}-bkp_pwr_enable 1".format(crate),
-				"put HF{0}-bkp_reset 1".format(crate),
-				"put HF{0}-bkp_reset 0".format(crate),
-				"get HF{0}-bkp_pwr_bad".format(crate),
-			]
-			results = send_commands_parsed(ts, cmds)["output"]
-			for cmd in results:
-				log.append(cmd)
-			for cmd in results[:-1]:
-				if "OK" not in cmd["result"]:
-					result = False
-			if results[-1]["result"] == "1":
-				result = False
-			output.append(result)
-		return {
-			"result": output,		# A list of booleans, one for each crate.
-			"log": log,		# A list of all ngccm commands sent.
-		}
-	else:
-		return {
-			"result": output,
-			"log": log,
-		}
+#def setup(ts):
+#	log = []
+#	output = []
+#	
+#	if ts:
+#		for crate in ts.fe_crates:
+#			result = True
+#			cmds = [
+#				"put HF{0}-bkp_pwr_enable 0".format(crate),
+#				"put HF{0}-bkp_pwr_enable 1".format(crate),
+#				"put HF{0}-bkp_reset 1".format(crate),
+#				"put HF{0}-bkp_reset 0".format(crate),
+#				"get HF{0}-bkp_pwr_bad".format(crate),
+#			]
+#			results = send_commands_parsed(ts, cmds)["output"]
+#			for cmd in results:
+#				log.append(cmd)
+#			for cmd in results[:-1]:
+#				if "OK" not in cmd["result"]:
+#					result = False
+#			if results[-1]["result"] == "1":
+#				result = False
+#			output.append(result)
+#		return {
+#			"result": output,		# A list of booleans, one for each crate.
+#			"log": log,		# A list of all ngccm commands sent.
+#		}
+#	else:
+#		return {
+#			"result": output,
+#			"log": log,
+#		}
 
 def get_status(ts=None, crate=-1):		# Perform basic checks of the ngCCMs:
 	log = ""

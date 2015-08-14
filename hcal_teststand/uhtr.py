@@ -9,6 +9,26 @@ from ROOT import *
 from time import sleep
 
 # CLASSES:
+class uhtr:
+	# Construction:
+	def __init__(self, crate=None, slot=None, ip=None, control_hub=None):
+		self.crate = crate
+		self.slot = slot
+		self.ip = ip
+		self.control_hub=control_hub
+	
+	# String behavior
+	def __str__(self):
+		try:
+			return "<uHTR in BE Crate {0}, BE Slot {1} with IP = {2}>".format(self.crate, self.slot, self.ip)
+		except Exception as ex:
+#			print ex
+			return "<empty uhtr object>"
+	
+	# Methods:
+	def send_commands(self, cmds=["0", "exit", "-1"]):
+		return send_commands(control_hub=self.control_hub, ip=self.ip, cmds=cmds)
+	# /Methods
 
 class status:
 	# Construction:
@@ -83,17 +103,18 @@ class link:		# An object that represents a uHTR link. It contains information ab
 		self.crate = be_crate
 		self.slot = be_slot
 		self.n = link_number
-		self.qie_unique_id = qie_unique_id
-		self.qie_half = qie_half
-		self.qie_half_label = "unknown"
+		self.qie_unique_id = self.id = qie_unique_id
+		self.qie_half = self.half = qie_half
+		self.qie_half_label = self.half_label = "unknown"
 		self.qie_fiber = qie_fiber
 		self.on = on
 		self.qies = qies		# The QIE numbers corresponding to the channel numbers of the link.
 		if self.qie_half in [0, 1]: 
-			self.qie_half_label = self.qie_half_labels[self.qie_half]
-		self.ip = ""
-		if hasattr(ts, "uhtr_ip_base"):
-			self.ip = ts.uhtr_ip_base + ".{0}".format(self.slot * 4)
+			self.qie_half_label = self.half_label = self.qie_half_labels[self.qie_half]
+		try:
+			self.uhtr_ip = self.ip = ts.uhtr_ip(be_crate, be_slot)
+		except Exception as ex:
+			self.uhtr_ip = self.ip = ""
 	# /CONSTRUCTION
 	
 	# METHODS
@@ -105,7 +126,7 @@ class link:		# An object that represents a uHTR link. It contains information ab
 			return False
 	
 	def Print(self):
-		print "uHTR Info: Slot {0}, Link {1}".format(self.slot, self.n)
+		print "uHTR Info: BE Crate {0}, BE Slot {1}, Link {2}".format(self.crate, self.slot, self.n)
 		print "QIE card ID:", self.qie_unique_id
 		print "QIE card half:", self.qie_half_label
 		print "Fiber:", self.qie_fiber
@@ -120,42 +141,55 @@ class link:		# An object that represents a uHTR link. It contains information ab
 # /CLASSES
 
 # FUNCTIONS:
-def send_commands(ts=None, be_crate=None, be_slot=None, cmds=None):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
-	# Parse crate, slot info:
-	be = meta.parse_args_crate_slot(ts=ts, crate=be_crate, slot=be_slot, crate_type="be")
+def send_commands(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, cmds=None):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
+	# Arguments and variables:
+	log = ""
+	raw = ""
 	
-	if be:
-		# Set up other variables:
-		log = ""
-		raw = ""
-		if isinstance(cmds, str):
-			print 'WARNING (uhtr.send_commands): You probably didn\'t intend to run "uHTRtool.exe" with only one command: {0}'.format(cmds)
-			cmds = [cmds]
-		cmds_str = ""
-		for c in cmds:
-			cmds_str += "{0}\n".format(c)
-		
-		# Send the commands:
-		for be_crate, be_slots in be.iteritems():
-			for be_slot in be_slots:
-				# Prepare uHTRtool.exe arguments:
-				uhtr_ip = ts.uhtr_ip(be_crate, be_slot)
-				uhtr_cmd = "uHTRtool.exe {0}".format(uhtr_ip)
-				if hasattr(ts, "control_hub"):
-					uhtr_cmd += " -o {0}".format(ts.control_hub)
-				
-				# Send commands and organize results:
-				raw_output = Popen(['printf "{0}" | {1}'.format(cmds_str, uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
-				log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
-				raw += raw_output[0] + raw_output[1]
-		
-		return {
-			"output": raw,
-			"log": log,
-		}
+	## Parse ip argument:
+	ips = []
+	if ip != None:
+		ips.append(ip)
 	else:
-		print "ERROR (uhtr.send_commands): The following crate, slot arguments were not good:\ncrate={0}\nslot={1}".format(be_crate, be_slot)
-		return False
+		# Parse crate, slot info:
+		be = meta.parse_args_crate_slot(ts=ts, crate=be_crate, slot=be_slot, crate_type="be")
+		if be:
+			for be_crate, be_slots in be.iteritems():
+				for be_slot in be_slots:
+					ips.append(ts.uhtr_ip(be_crate, be_slot))
+		else:
+			print "ERROR (uhtr.send_commands): The following crate, slot arguments were not good:\ncrate={0}\nslot={1}".format(be_crate, be_slot)
+			return False
+	
+	## Parse control_hub argument:
+	if ts != None:
+		if hasattr(ts, "control_hub"):
+			control_hub = ts.control_hub
+	
+	## Parse cmds:
+	if isinstance(cmds, str):
+		print 'WARNING (uhtr.send_commands): You probably didn\'t intend to run "uHTRtool.exe" with only one command: {0}'.format(cmds)
+		cmds = [cmds]
+	cmds_str = ""
+	for c in cmds:
+		cmds_str += "{0}\n".format(c)
+	
+	# Send the commands:
+	for uhtr_ip in ips:
+		# Prepare the uHTRtool arguments:
+		uhtr_cmd = "uHTRtool.exe {0}".format(uhtr_ip)
+		if control_hub:
+			uhtr_cmd += " -o {0}".format(control_hub)
+		
+		# Send commands and organize results:
+		raw_output = Popen(['printf "{0}" | {1}'.format(cmds_str, uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
+		log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
+		raw += raw_output[0] + raw_output[1]
+	
+	return {
+		"output": raw,
+		"log": log,
+	}
 
 def send_commands_script(ts, uhtr_slot, cmds):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
 	log = ""
@@ -404,7 +438,7 @@ def get_links(ts=None, be_crate=None, be_slot=None):		# Initializes and sets up 
 		for be_crate, be_slots in be.iteritems():
 			for be_slot in be_slots:
 				# Get a list of the active links:
-				print "Fetching links from the uHTR BE crate {0}, BE slot {1}".format(be_crate, be_slot)
+				print "Fetching links from the uHTR in BE Crate {0}, BE Slot {1} ...".format(be_crate, be_slot)
 				active_links = list_active_links(ts=ts, be_crate=be_crate, be_slot=be_slot)
 #				print active_links
 	

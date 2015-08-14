@@ -6,8 +6,43 @@
 ####################################################################
 
 import ngccm
+import meta
 
 # CLASSES:
+class bkp:
+	# Construction:
+	def __init__(self, crate=None):
+		self.crate = crate
+	
+	# String behavior
+	def __str__(self):
+		try:
+			return "<Backplane in FE Crate {0}>".format(self.crate)
+		except Exception as ex:
+#			print ex
+			return "<empty bkp object>"
+	
+	# Methods:
+	def setup(self, ts=None):
+		if ts:
+			cmds = [
+				"put HF{0}-bkp_pwr_enable 0".format(self.crate),
+				"put HF{0}-bkp_pwr_enable 1".format(self.crate),
+				"put HF{0}-bkp_reset 1".format(self.crate),
+				"put HF{0}-bkp_reset 0".format(self.crate),
+				"get HF{0}-bkp_pwr_bad".format(self.crate),
+			]
+			ngfec_output = ngccm.send_commands_parsed(ts, cmds)["output"]
+			for cmd in ngfec_output[:-1]:
+				if "OK" not in cmd["result"]:
+					return False
+			if ngfec_output[-1]["result"] == "1":
+				return False
+			return True
+		else:
+			return False
+	# /Methods
+
 class status:
 	# Construction:
 	def __init__(self, ts=None, status=[], crate=-1, pwr=-1):
@@ -50,61 +85,65 @@ class status:
 # /CLASSES
 
 # FUNCTIONS:
-def setup(ts):
-	log = []
-	output = []
-	
-	if ts:
-		for crate in ts.fe_crates:
-			result = True
-			cmds = [
-				"put HF{0}-bkp_pwr_enable 0".format(crate),
-				"put HF{0}-bkp_pwr_enable 1".format(crate),
-				"put HF{0}-bkp_reset 1".format(crate),
-				"put HF{0}-bkp_reset 0".format(crate),
-				"get HF{0}-bkp_pwr_bad".format(crate),
-			]
-			results = send_commands_parsed(ts, cmds)["output"]
-			for cmd in results:
-				log.append(cmd)
-			for cmd in results[:-1]:
-				if "OK" not in cmd["result"]:
-					result = False
-			if results[-1]["result"] == "1":
-				result = False
-			output.append(result)
-		return {
-			"result": output,		# A list of booleans, one for each crate.
-			"log": log,		# A list of all ngccm commands sent.
-		}
-	else:
-		return {
-			"result": output,
-			"log": log,
-		}
+#def setup(ts=None, crate=None):
+#	# Arguments:
+#	log = []
+#	crates = meta.parse_args_crate(ts=ts, crate=crate)
+#	
+#	if ts:
+#		for crate in crates:
+#			cmds = [
+#				"put HF{0}-bkp_pwr_enable 0".format(crate),
+#				"put HF{0}-bkp_pwr_enable 1".format(crate),
+#				"put HF{0}-bkp_reset 1".format(crate),
+#				"put HF{0}-bkp_reset 0".format(crate),
+#				"get HF{0}-bkp_pwr_bad".format(crate),
+#			]
+#			ngfec_output = ngccm.send_commands_parsed(ts, cmds)["output"]
+##			for cmd in ngfec_output:
+##				log.append(cmd)
+#			for cmd in ngfec_output[:-1]:
+#				if "OK" not in cmd["result"]:
+#					return False
+#			if ngfec_output[-1]["result"] == "1":
+#				return False
+#		return True
+#	else:
+#		return False
 
-def get_status(ts=None, crate=-1):		# Perform basic checks of the FE crate backplanes:
+def get_status(ts=None, crate=None):		# Perform basic checks of the FE crate backplanes:
+	# Arguments:
 	log = ""
-	s = status(ts=ts, crate=crate)
+	crates = meta.parse_args_crate(ts=ts, crate=crate)
+	statuses = []
 	
 	if ts:
-		# Enable, reset, and check the BKP power:
-		if crate in ts.fe_crates:
-			ngfec_output = ngccm.send_commands_parsed(ts, "get HF{0}-bkp_pwr_bad".format(crate))["output"]
-			if "ERROR" not in ngfec_output[0]["result"]:
-				try:
-					good = not int(ngfec_output[0]["result"])
-					s.pwr = int(good)
-					s.status.append(int(good))
-				except Exception as ex:
-					print ex
+		# Status each crate:
+		for crate in crates:
+			# Initialize status object
+			s = status(ts=ts, crate=crate)
+	
+			# Enable, reset, and check the BKP power:
+			if crate in ts.fe_crates:
+				ngfec_output = ngccm.send_commands_parsed(ts, "get HF{0}-bkp_pwr_bad".format(crate))["output"]
+				if "ERROR" not in ngfec_output[0]["result"]:
+					try:
+						good = not int(ngfec_output[0]["result"])
+						s.pwr = int(good)
+						s.status.append(int(good))
+					except Exception as ex:
+						print ex
+						s.status.append(0)
+				else:
 					s.status.append(0)
 			else:
-				s.status.append(0)
-		else:
-			print "ERROR (bkp.get_status): The crate you want ({0}) is not in the teststand object you supplied.".format(crate)
-		s.update()
-	return s
+				print "ERROR (bkp.get_status): The crate you want ({0}) is not in the teststand object you supplied. It has the following crates:\n\t{1}".format(crate, ts.fe_crates)
+				return False
+			s.update()
+			statuses.append(s)
+		return statuses
+	else:
+		return False
 
 def get_status_all(ts=None):
 	log = ""

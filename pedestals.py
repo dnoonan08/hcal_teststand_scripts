@@ -22,12 +22,13 @@ if __name__ == "__main__":
 
 #	ts.set_ped()
 #	ts.set_fixed_range()
-	for uhtr_slot in ts.uhtr_slots[0]:
-		print "\nResults for the uHTR in slot {0}:".format(uhtr_slot)
-		active_links = uhtr.list_active_links(ts, uhtr_slot)
-		links = uhtr.get_links_all_from_map(ts)
-		print "The activated links are {0}.".format(active_links)
-		for link in links:
+	link_dict = ts.get_links()
+	for crate_slot, links in link_dict.iteritems():
+		crate, slot = crate_slot
+		active_links = [l for l in links if l.on]
+		print "\nResults for the uHTR in BE Crate {0}, BE Slot {1}:".format(crate, slot)
+		print "The activated links are {0}.".format([l.n for l in active_links])
+		for link in active_links:
 			print "==== Link {0} ====".format(link.n)
 			data = link.get_data_spy()
 			print "Read in {0} bunch crossings.".format(len(data[0]))
