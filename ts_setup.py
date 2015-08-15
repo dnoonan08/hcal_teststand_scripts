@@ -61,6 +61,31 @@ def check_status_bkp(ts=None, v=False):
 	else:
 		"\t[!!] Couldn't fetch the Backplane status."
 		return False
+
+def check_status_uhtr(ts=None, v=False):
+	# Get AMC13 statuses:
+	statuses = uhtr.get_status(ts=ts)
+	
+	# Check the AMC13 statuses:
+	for crate_slot, s in statuses.iteritems():
+		crate, slot = crate_slot
+		result = s.status
+		if result:
+			if result[0]:
+				if v: print "\tCan ping the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
+			else:
+				print "\t[!!] Can't ping the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
+				return False
+			if result[1]:
+				if v: print "\tCan fetch FW versions of the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
+			else:
+				print "\t[!!] Can't fetch FW versions of the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
+				return False
+		else:
+			"\t[!!] Couldn't fetch the status of the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
+			return False
+	print "\t[OK] All of the uHTRs appear to be functioning."
+	return True
 # /FUNCTIONS
 
 # MAIN:
@@ -120,35 +145,21 @@ if __name__ == "__main__":
 	print "\t[OK] Setting up the backplanes succeeded."
 	
 	# Set up the uHTRs:
-#	if status:
-##		if True:
-#		print "> Setting up the uHTRs ..."
-#		for uhtr_slot in ts.uhtr:
-#			print "> Setting up uHTR in slot {0} ...".format(uhtr_slot)
-#			cmds = [
-#				"0",
-#				"clock",
-#				"setup",
-#				"3",
-#				"quit",
-#				"link",
-#				"init",
-#				"1",		# Auto realign
-#				"92",		# Orbit delay
-#				"0",
-#				"0",
-#				"quit",
-#				"exit",
-#				"-1",
-#			]
-#			output = uhtr.send_commands(ts, uhtr_slot, cmds)["output"]
-#			if output:
-#				print "> uHTR set up."
-#			else:
-#				print "> [!!] uHTR failed to set up."
-#				status = False
-#	if status:
-#		print "> [OK] Teststand set up correctly."
-#	else:
-#		print "> [!!] Set up aborted."
+	print "(3) Setting up the uHTRs ..."
+	setup_results = uhtr.setup(ts=ts)
+	for crate_slot, setup_result in setup_results.iteritems():
+		be_crate, be_slot = crate_slot
+		if not setup_result:
+			print "\t[!!] Configuration of the uHTR in BE Crate {0}, BE Slot {1} failed.".format(be_crate, be_slot)
+			print "Aborting setup ..."
+			sys.exit()
+		else:
+			if v: print "\tuHTR in BE Crate {0}, BE Slot {1} set up.".format(be_crate, be_slot)
+	print "\t[OK] Setting up the uHTRs succeeded."
+	if not check_status_uhtr(ts=ts, v=v):
+		print "\t[!!] Statusing the uHTRs failed."
+		print "Aborting setup ..."
+		sys.exit()
+	
+	# Set up the QIEs:
 # /MAIN

@@ -122,6 +122,45 @@ def parse_args_crate_slot(ts=None, crate=None, slot=None, crate_type="fe"):
 			return False
 ## /
 
+## Parse ip:
+def parse_args_ip(ts=None, be_crate=None, be_slot=None, ip=None):
+	# Arguments and variables:
+	results = {}
+	good_args = [
+		(isinstance(ip, str) or isinstance(ip, list)) and ip != None,
+		ts != None,
+	]
+	
+	# If neither IP or TS are correct:
+	if sum(good_args) == 0:
+		print "ERROR (meta.parse_args_ip): You need to specify an \"ip\" and/or a teststand object (\"ts\")."
+		return False
+	
+	# If IP is correct and TS isn't:
+	elif good_args[0] and not good_args[1] == 1:
+		if not isinstance(ip, list):
+			ip = [ip]
+		for i in ip:
+			results[i] = False
+		return results
+	
+	# TS is correct (ignore "ip"):
+	elif good_args[1]:
+		# Parse crate, slot info:
+		be = parse_args_crate_slot(ts=ts, crate=be_crate, slot=be_slot, crate_type="be")
+		if be:
+			for be_crate, be_slots in be.iteritems():
+				for be_slot in be_slots:
+					ip = ts.uhtr_ip(be_crate, be_slot)
+					results[ip] = (be_crate, be_slot)
+			return results
+		else:
+			print "ERROR (meta.parse_args_ip): The following crate, slot arguments were not good:\ncrate={0}\nslot={1}".format(be_crate, be_slot)
+			return False
+	else:
+		print "ERROR (meta.parse_args_ip): This point shouldn't have been reached."
+		return False
+
 ## Parse i_qie:
 def parse_args_qie(i_qie=None):
 	if i_qie != None:

@@ -1,4 +1,9 @@
-# This module contains classes and functions for talking to the uHTR.
+####################################################################
+# Type: MODULE                                                     #
+#                                                                  #
+# Description: This module contains functions for talking to the   #
+# uHTRs.                                                           #
+####################################################################
 
 from re import search
 from subprocess import Popen, PIPE
@@ -7,6 +12,10 @@ import qie
 import meta
 from ROOT import *
 from time import sleep
+
+# VARIABLES:
+cmds_default = ["0", "exit", "-1"]
+# /VARIABLES
 
 # CLASSES:
 class uhtr:
@@ -26,31 +35,47 @@ class uhtr:
 			return "<empty uhtr object>"
 	
 	# Methods:
-	def send_commands(self, cmds=["0", "exit", "-1"]):
-		return send_commands(control_hub=self.control_hub, ip=self.ip, cmds=cmds)
+	def update(self):
+		try:
+			info = get_info(ip=self.ip, control_hub=self.control_hub)[self.ip]
+#			print info
+			self.fw_type_front = info["fw_type_front"]
+			self.fw_front = info["fw_front"]
+			self.fw_type_back = info["fw_type_back"]
+			self.fw_back = info["fw_back"]
+			self.fws = ["fws"]
+			return True
+		except Exception as ex:
+			print ex
+			return False
+	
+	def Print(self):
+		print self
+	
+	def send_commands(self, cmds=cmds_default, script=False):
+		return send_commands(control_hub=self.control_hub, ip=self.ip, cmds=cmds, script=script)
+	
+	def setup(self):
+		return setup(ip=self.ip, control_hub=self.control_hub)
 	# /Methods
 
 class status:
 	# Construction:
-	def __init__(self, ts=None, status=[], slot=-1, ips={}, fw_front=[], fw_type_front="", fw_back=[], fw_type_back="", links=[], dump=""):
+	def __init__(self, ts=None, status=[], be_crate=None, be_slot=None, ip={}, fws=[], links=[], dump=""):
 		if not ts:
 			ts = None
 		self.ts = ts
 		if not status:
 			status = []
 		self.status = status
-		self.slot = slot
-		if not ips:
-			ips = {}
-		self.ips = ips
-		if not fw_front:
-			fw_front = []
-		self.fw_front = fw_front
-		self.fw_type_front = fw_type_front
-		if not fw_back:
-			fw_back = []
-		self.fw_back = fw_back
-		self.fw_type_back = fw_type_back
+		self.crate = be_crate
+		self.slot = be_slot
+		if not ip:
+			ip = {}
+		self.ip = ip
+		if not fws:
+			fws = []
+		self.fws = fws
 		if not links:
 			links = []
 		self.links = links
@@ -69,19 +94,15 @@ class status:
 	
 	def Print(self, verbose=True):
 		if verbose:
-			print "[{0}] uHTR in slot {1} status: {2} <- {3}".format(("!!", "OK")[self.good], self.slot, ("BAD", "GOOD")[self.good], self.status)
-			if self.good:
-				print "\tFW front type: {0}".format(self.fw_type_front)
-				print "\tFW front: {0}".format(self.fw_front)
-				print "\tFW back type: {0}".format(self.fw_type_back)
-				print "\tFW back: {0}".format(self.fw_back)
-				print "\tLinks: {0}".format(self.links)
-				print "\tIPs: {0}".format(self.ips)
+			print "[{0}] uHTR in BE Crate {1}, BE Slot {2} status: {3} <- {4}".format(("!!", "OK")[self.good], self.crate, self.slot, ("BAD", "GOOD")[self.good], self.status)
+			print "\tFWs: {0}".format(self.fws)
+			print "\tLinks: {0}".format(self.links)
+			print "\tIP: {0}".format(self.ip)
 		else:
-			print "[{0}] uHTR in slot {1} status: {2}".format(("!!", "OK")[self.good], self.slot, ("BAD", "GOOD")[self.good])
+			print "[{0}] uHTR in BE Crate {1}, BE Slot {2} status: {3}".format(("!!", "OK")[self.good], self.crate, self.slot, ("BAD", "GOOD")[self.good])
 	
 	def log(self):
-		output = "%% uHTR {0}\n".format(self.slot)
+		output = "%% uHTR {0}, {1}\n".format(self.crate, self.slot)
 		output += "{0}\n".format(int(self.good))
 		output += "{0}\n".format(self.status)
 		output += "{0}\n".format(self.fw_type_front)
@@ -89,7 +110,7 @@ class status:
 		output += "{0}\n".format(self.fw_type_back)
 		output += "{0}\n".format(self.fw_back)
 		output += "{0}\n".format(self.links)
-		output += "{0}\n".format(self.ips)
+		output += "{0}\n".format(self.ip)
 		output += "{0}\n".format(self.dump)
 		return output.strip()
 	# /Methods
@@ -141,105 +162,91 @@ class link:		# An object that represents a uHTR link. It contains information ab
 # /CLASSES
 
 # FUNCTIONS:
-def send_commands(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, cmds=None):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
+def send_commands(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, cmds=cmds_default, script=False):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
 	# Arguments and variables:
 	log = ""
 	raw = ""
+	results = {}		# Results will be indexed by uHTR IP unless a "ts" has been specified, in which case they'll be indexed by (crate, slot).
 	
 	## Parse ip argument:
-	ips = []
-	if ip != None:
-		ips.append(ip)
-	else:
-		# Parse crate, slot info:
-		be = meta.parse_args_crate_slot(ts=ts, crate=be_crate, slot=be_slot, crate_type="be")
-		if be:
-			for be_crate, be_slots in be.iteritems():
-				for be_slot in be_slots:
-					ips.append(ts.uhtr_ip(be_crate, be_slot))
-		else:
-			print "ERROR (uhtr.send_commands): The following crate, slot arguments were not good:\ncrate={0}\nslot={1}".format(be_crate, be_slot)
-			return False
+	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	if ips:
+		## Parse control_hub argument:
+		if ts != None:
+			if hasattr(ts, "control_hub"):
+				control_hub = ts.control_hub
 	
-	## Parse control_hub argument:
-	if ts != None:
-		if hasattr(ts, "control_hub"):
-			control_hub = ts.control_hub
+		## Parse cmds:
+		if isinstance(cmds, str):
+			print 'WARNING (uhtr.send_commands): You probably didn\'t intend to run "uHTRtool.exe" with only one command: {0}'.format(cmds)
+			cmds = [cmds]
+		cmds_str = ""
+		for c in cmds:
+			cmds_str += "{0}\n".format(c)
 	
-	## Parse cmds:
-	if isinstance(cmds, str):
-		print 'WARNING (uhtr.send_commands): You probably didn\'t intend to run "uHTRtool.exe" with only one command: {0}'.format(cmds)
-		cmds = [cmds]
-	cmds_str = ""
-	for c in cmds:
-		cmds_str += "{0}\n".format(c)
-	
-	# Send the commands:
-	for uhtr_ip in ips:
-		# Prepare the uHTRtool arguments:
-		uhtr_cmd = "uHTRtool.exe {0}".format(uhtr_ip)
-		if control_hub:
-			uhtr_cmd += " -o {0}".format(control_hub)
+		# Send the commands:
+		for uhtr_ip, crate_slot in ips.iteritems():
+			# Prepare the uHTRtool arguments:
+			uhtr_cmd = "uHTRtool.exe {0}".format(uhtr_ip)
+			if control_hub:
+				uhtr_cmd += " -o {0}".format(control_hub)
 		
-		# Send commands and organize results:
-		raw_output = Popen(['printf "{0}" | {1}'.format(cmds_str, uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
-		log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
-		raw += raw_output[0] + raw_output[1]
-	
-	return {
-		"output": raw,
-		"log": log,
-	}
+			# Send commands and organize results:
+			if script:
+				with open("uhtr_script.cmd", "w") as out:
+					out.write(cmds_str)
+				raw_output = Popen(['{0} < uhtr_script.cmd'.format(uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()
+			else:
+				raw_output = Popen(['printf "{0}" | {1}'.format(cmds_str, uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
+			log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
+			raw += raw_output[0] + raw_output[1]
+			if crate_slot:
+				results[crate_slot] = {
+					"output": raw,
+					"log": log,
+				}
+			else:
+				results[uhtr_ip] = {
+					"output": raw,
+					"log": log,
+				}
+		return results
+	else:
+		return False
 
-def send_commands_script(ts, uhtr_slot, cmds):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
-	log = ""
-	raw_output = ""
-	if isinstance(cmds, str):
-		print 'WARNING: You probably didn\'t intend to run "uHTRtool.exe" with only one command: {0}'.format(cmds)
-		print 'INFO: The "uhtr.send_commands" function takes a list of commands as an argument.'
-		cmds = [cmds]
-	cmds_str = ""
-	for c in cmds:
-		cmds_str += "{0}\n".format(c)
-	uhtr_cmd = "uHTRtool.exe {0}".format(ts.uhtr[uhtr_slot])
-	if hasattr(ts, "control_hub"):
-		uhtr_cmd += " -o {0}".format(ts.control_hub)
-	with open("uhtr_script.cmd", "w") as out:
-		out.write(cmds_str)
-	raw_output = Popen(['{0} < uhtr_script.cmd'.format(uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
-	log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
-	
-	return {
-		"output": raw_output[0] + raw_output[1],
-		"log": log,
-	}
-
-def setup(ts=None, be_crate=None, be_slot=None):
-	# Variables:
-#	be = meta.parse_args_crate_slot(ts=ts, crate=be_crate, slot=be_slot, crate_type="be")
-	
-	# Define setup commands:
-	cmds = [
-		"0",
-		"clock",
-		"setup",
-		"3",
-		"quit",
-		"link",
-		"init",
-		"1",		# Auto realign
-		"55",		# Orbit delay
-		"0",
-		"0",
-		"quit",
-		"exit",
-		"-1",
-	]
-	
-	# Run setup commands:
-	output = uhtr.send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot, cmds=cmds)["output"]
-	
-	return True
+def setup(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=55):
+# Set up any number of uHTRs. Specify a group of uHTRs by the crates and slots or by the IPs. If you specify the ts and nothing else it will set up all of them.
+	# Arguments:
+	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	if not ips:
+		return False
+	else:
+		# Define setup commands:
+		cmds = [
+			"0",
+			"clock",
+			"setup",
+			"3",
+			"quit",
+			"link",
+			"init",
+			"{0}".format(auto_realign),
+			"{0}".format(orbit_delay),
+			"0",
+			"0",
+			"0",
+			"quit",
+			"exit",
+			"-1",
+		]
+		
+		# Run setup commands:
+		cs_exists = [bool(crate_slot) for ip, crate_slot in ips.iteritems()]
+		if sum(cs_exists) == len(cs_exists):
+			uhtr_out = send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot, cmds=cmds)
+		else:
+			uhtr_out = send_commands(ip=ips.keys(), cmds=cmds, control_hub=control_hub)
+		return uhtr_out
 
 def setup_links(ts=None, be_crate=None, be_slot=None):
 	if ts:
@@ -253,6 +260,7 @@ def setup_links(ts=None, be_crate=None, be_slot=None):
 				"init",
 				"1",		# Auto realign
 				"55",		# Orbit delay
+				"0",
 				"0",
 				"0",
 				"quit",
@@ -273,95 +281,104 @@ def setup_links(ts=None, be_crate=None, be_slot=None):
 		print "ERROR (uhtr.setup_links): You must supply a teststand argument!"
 		return False
 
-
-def get_info_slot(ts, uhtr_slot):		# Returns a dictionary of information about the uHTR, such as the FW versions.
-	log = ""
-	data = {	# "HF-4800 (41) 00.0f.00" => FW = [00, 0f, 00], FW_type = [HF-4800, 41] (repeat for "back")
-		"version_fw_front": [0, 0, 0],
-		"version_fw_type_front": [0, 0],
-		"version_fw_back": [0, 0, 0],
-		"version_fw_type_back": [0, 0],
-	}
-	raw_output = send_commands(ts, uhtr_slot, ["0", "exit", "exit"])["output"]
-#	log += raw_output
-	match = search("Front Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
-	if match:
-		data["version_fw_type_front"][0] = match.group(1)
-		data["version_fw_type_front"][1] = int(match.group(2))
-		data["version_fw_front"][0] = int(match.group(3), 16)
-		data["version_fw_front"][1] = int(match.group(4), 16)
-		data["version_fw_front"][2] = int(match.group(5), 16)
+def get_info(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None):		# Returns dictionaries of information about the uHTRs, such as the FW versions.
+	# Arguments and variables:
+	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	if not ips:
+		return False
 	else:
-#		print "Match failed: front version."
-		log += '>> ERROR: Failed to find the front FW info.'
-	match = search("Back Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
-	if match:
-		data["version_fw_type_back"][0] = match.group(1)
-		data["version_fw_type_back"][1] = int(match.group(2))
-		data["version_fw_back"][0] = int(match.group(3), 16)
-		data["version_fw_back"][1] = int(match.group(4), 16)
-		data["version_fw_back"][2] = int(match.group(5), 16)
+		data = {}
+		
+		# Get version info:
+		## Run basic commands, which have version info in the output:
+		cs_exists = [bool(crate_slot) for ip, crate_slot in ips.iteritems()]
+		if sum(cs_exists) == len(cs_exists):
+			uhtr_out = send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot)
+		else:
+			uhtr_out = send_commands(ip=ips.keys(), control_hub=control_hub)
+		for key, results  in uhtr_out.iteritems():
+			raw_output = results["output"]
+			
+			## Find the version info from the raw output:
+			## "HF-4800 (41) 00.0f.00" => FW = [00, 0f, 00], FW_type = [HF-4800, 41] (repeat for "back")
+			match_front = search("Front Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
+			match_back = search("Back Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
+			if match_front and match_back:
+				data[key] = {
+					"fw_type_front": [match_front.group(1), int(match_front.group(2))],
+					"fw_front": [int(match_front.group(3), 16), int(match_front.group(4), 16), int(match_front.group(5), 16)],
+					"fw_type_back": [match_back.group(1), int(match_back.group(2))],
+					"fw_back": [int(match_back.group(3), 16), int(match_back.group(4), 16), int(match_back.group(5), 16)],
+				}
+				data[key].update({
+					"fws": [
+						(
+							"{0}.{1}".format(data[key]["fw_type_front"][0], data[key]["fw_type_front"][1]),
+							"{0:03d}.{1:03d}.{2:03d}".format(data[key]["fw_front"][0], data[key]["fw_front"][1], data[key]["fw_front"][2])
+						),
+						(
+							"{0}.{1}".format(data[key]["fw_type_back"][0], data[key]["fw_type_back"][1]),
+							"{0:03d}.{1:03d}.{2:03d}".format(data[key]["fw_back"][0], data[key]["fw_back"][1], data[key]["fw_back"][2])
+						),
+					]
+				})
+			else:
+				print "ERROR (uhtr.get_info): Failed to find all the FW versions in the raw data, which follows:\n{0}".format(raw_output)
+				return False
+		return data
+
+def get_status(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, ping=True):		# Perform basic checks with the uHTRTool.exe:
+	# Arguments and variables:
+	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	if not ips:
+		return False
 	else:
-#		print "Match failed: front version."
-		log += '>> ERROR: Failed to find the back FW info.'
-	return {
-		"version_fw_front": data["version_fw_front"],
-		"version_fw_type_front": data["version_fw_type_front"],
-		"version_fw_back": data["version_fw_back"],
-		"version_fw_type_back": data["version_fw_type_back"],
-		"version_fw_front_str": "{0:03d}.{1:03d}.{2:03d}".format(data["version_fw_front"][0], data["version_fw_front"][1], data["version_fw_front"][2]),
-		"version_fw_back_str": "{0:03d}.{1:03d}.{2:03d}".format(data["version_fw_back"][0], data["version_fw_back"][1], data["version_fw_back"][2]),
-		"slot": uhtr_slot,
-		"log": log.strip(),
-	}
-
-def get_info(ts):		# A get_info function that accepts either an IP address or a teststand object.
-	info = []
-	for uhtr_slot in ts.uhtr_slots:
-		info.append(get_info_slot(ts, uhtr_slot))
-	return info
-
-def get_status(ts=None, slot=-1, ping=True):		# Perform basic checks with the uHTRTool.exe:
-	log = ""
-	s = status(ts=ts, slot=slot)
-	
-	if ts:
-		# Ping uHTR IPs:
-		ip = ts.uhtr[slot]
-		if ping:
-			s.ips[ip] = 0
-			ping_result = Popen(["ping -c 1 {0}".format(ip)], shell = True, stdout = PIPE, stderr = PIPE).stdout.read()
-			if ping_result:
-				s.ips[ip] = 1
+		statuses = {}
+		for ip, crate_slot in ips.iteritems():
+			s = status(ts=ts)
+			if crate_slot:
+				s.crate, s.slot = crate_slot
+			
+			# Ping uHTR IP:
+			if ping:
+				ping_result = Popen(["ping -c 1 {0}".format(ip)], shell = True, stdout = PIPE, stderr = PIPE).stdout.read()
+				if ping_result:
+					s.ip[ip] = 1
+					s.status.append(1)
+				else:
+					s.ip[ip] = 0
+					s.status.append(0)
+			else:
+				s.ip[ip] = -1
+				s.status.append(-1)
+			
+			# Make sure the versions are accessible:
+			if crate_slot:
+				be_crate, be_slot = crate_slot
+				uhtr_info = get_info(ts=ts, be_crate=be_crate, be_slot=be_slot)[crate_slot]
+			else:
+				uhtr_info = get_info(ip=ip, control_hub=control_hub)[ip]
+			if uhtr_info:
+				s.fws = uhtr_info["fws"]
 				s.status.append(1)
 			else:
 				s.status.append(0)
-		else:
-			s.ips[ip] = -1
-		
-		# Make sure the versions are accessible:
-		uhtr_info = get_info_slot(ts, slot)
-		s.fw_type_front = uhtr_info["version_fw_type_front"]
-		s.fw_front = uhtr_info["version_fw_front"]
-		s.fw_type_back = uhtr_info["version_fw_type_back"]
-		s.fw_back = uhtr_info["version_fw_back"]
-		if s.fw_type_front[1] != 0:
-			s.status.append(1)
-		else:
-			s.status.append(0)
-		
-		# Active links:
-		s.links = list_active_links(ts, slot)
-#		if s.links:
-#				s.status.append(1)
-#		else:
-#				s.status.append(0)
-		
-		# Additional info:
-		s.dump = get_dump(ts, slot)
-		
-		s.update()
-	return s
+			
+			# Additional info:
+			if crate_slot:
+				be_crate, be_slot = crate_slot
+				dump = get_dump(ts=ts, be_crate=be_crate, be_slot=be_slot)[crate_slot]
+			else:
+				dump = get_dump(ip=ip, control_hub=control_hub)[ip]
+			s.dump = dump
+			
+			# Prepare what's returned:
+			s.update()
+			if crate_slot:
+				statuses[crate_slot] = s
+			else:
+				statuses[ip] = s
+		return statuses
 
 def get_status_all(ts=None, ping=True):
 	log = ""
@@ -747,30 +764,38 @@ def get_data_spy(ts=None, be_crate=None, be_slot=None, n_bx=50, i_link=0):
 		print "ERROR (uhtr.get_data_spy): There was no SPY data in the raw uhtr output for link {0}".format(i_link)
 		return False
 
-def get_dump(ts, uhtr_slot):
-	log = ""
-	
-	commands = [
-		"0",
-		"LINK",
-		"STATUS",
-		"QUIT",
-		"DTC",
-		"STATUS",
-		"QUIT",
-		"LUMI",
-		"QUIT",
-		"DAQ",
-		"STATUS",
-		"QUIT",
-		"EXIT",
-		"-1",
-	]
-	
-	uhtr_out = send_commands(ts, uhtr_slot, commands)
-	raw_output = uhtr_out["output"]
-	log += uhtr_out["log"]
-	return raw_output
+def get_dump(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None):
+# Set up any number of uHTRs. Specify a group of uHTRs by the crates and slots or by the IPs. If you specify the ts and nothing else it will set up all of them.
+	# Arguments:
+	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	if not ips:
+		return False
+	else:
+		# Define setup commands:
+		cmds = [
+			"0",
+			"LINK",
+			"STATUS",
+			"QUIT",
+			"DTC",
+			"STATUS",
+			"QUIT",
+			"LUMI",
+			"QUIT",
+			"DAQ",
+			"STATUS",
+			"QUIT",
+			"EXIT",
+			"-1",
+		]
+		
+		# Run setup commands:
+		cs_exists = [bool(crate_slot) for ip, crate_slot in ips.iteritems()]
+		if sum(cs_exists) == len(cs_exists):
+			uhtr_out = send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot, cmds=cmds)
+		else:
+			uhtr_out = send_commands(ip=ips.keys(), cmds=cmds, control_hub=control_hub)
+		return uhtr_out
 # /FUNCTIONS
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 # Type: MODULE                                                     #
 #                                                                  #
 # Description: This module contains functions for talking to the   #
-# AMC13.                                                           #
+# AMC13s.                                                          #
 ####################################################################
 
 from re import search
@@ -44,6 +44,9 @@ class amc13:
 		except Exception as ex:
 			print ex
 			return False
+	
+	def Print(self):
+		print self
 	
 	def send_commands(self, cmds=None):
 		return send_commands(cmds=cmds, config=self.config)

@@ -23,11 +23,16 @@ if __name__ == "__main__":
 		name = sys.argv[1]
 	else:
 		name = "904"
-	ts = teststand(name)		# Initialize a teststand object. This object stores the teststand configuration and has a number of useful methods.
-	print "\nYou've just run a script that's a skeleton for making your own script."
+	
+	print "\nYou've just run a script that's a skeleton for making your own script.\n"
+	
+	# Initialize a teststand object:
+	ts = teststand(name)		# This object stores the teststand configuration and has a number of useful methods.
+	ts.update()		# Set version info in each component.
+	
 	# Print out some information about the teststand:
-	print ">> The teststand you're using is named {0}.".format(ts.name)
-	print ">> The BE crate and uHTR organization for the teststand is below:\n{0}".format(ts.be)
-	print ">> The FE crate and QIE card organization for the teststand is below:\n{0}".format(ts.fe)
-	print ts.uhtr
+	ts.Print()
+#	print ">> The teststand you're using is named {0}.".format(ts.name)
+#	print ">> The BE crate and uHTR organization for the teststand is below:\n{0}".format(ts.be)
+#	print ">> The FE crate and QIE card organization for the teststand is below:\n{0}".format(ts.fe)
 # /MAIN

@@ -97,6 +97,17 @@ class teststand:
 	def update(self):
 		for be_crate, amc13 in self.amc13s.iteritems():
 			amc13.update()
+		for crate_slot, uhtr in self.uhtrs.iteritems():
+			uhtr.update()
+	
+	def Print(self):
+		print "TESTSTAND {0}".format(self.name)
+		print "== AMC13s =="
+		for crate, amc13 in self.amc13s.iteritems():
+			amc13.Print()
+		print "== uHTRs =="
+		for crate_slot, uhtr in self.uhtrs.iteritems():
+			uhtr.Print()
 	
 	## uHTR:
 	def uhtr_ip(self, be_crate=None, be_slot=None):
@@ -234,6 +245,17 @@ class teststand:
 		else:
 			print "WARNING (ts.crate_slot_from_qie): qie {0} maps to more than one crate, slot: {1}".format(qie_id, info)
 			return info[0]
+	
+	def crate_slot_from_ip(self, ip=None):		# Useless ...
+		if ip:
+			for crate_slot, uhtr in self.uhtrs.iteritems():
+				if uhtr.ip == ip:
+					return crate_slot
+			print "ERROR (hcal_teststand.crate_slot_from_ip): No BE crate and BE slot matched the IP address of {0}.".format(ip)
+			return False
+		else:
+			print "ERROR (hcal_teststand.crate_slot_from_ip): You need to specify a uHTR IP address you want to map."
+			return False
 	
 	def get_qies(self, unique_id, f="", d="configuration/maps"):
 		return get_qies(self, unique_id, f=f, d=d)
