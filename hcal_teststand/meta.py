@@ -180,6 +180,37 @@ def parse_args_qie(i_qie=None):
 	else:
 		return range(1, 25)
 ## /
+
+## Parse port:
+def parse_args_hub(ts=None, control_hub=None):
+	if ts == None:
+		if control_hub == None:
+			return None		# You might not need a control hub ...
+		else:
+			return control_hub
+	else:
+		if hasattr(ts, "control_hub"):
+			return ts.control_hub
+		else:
+			print "ERROR (meta.parse_args_port): The \"ts\" you specified doesn't have a \"control_hub\" attribute."
+			return False
+## /
+
+## Parse port:
+def parse_args_port(ts=None, port=None):
+	if ts == None:
+		if port == None:
+			print "ERROR (meta.parse_args_port): You need to specify either a \"ts\" or \"port\" argument."
+			return False
+		else:
+			return port
+	else:
+		if hasattr(ts, "ngfec_port"):
+			return ts.ngfec_port
+		else:
+			print "ERROR (meta.parse_args_port): The \"ts\" you specified doesn't have a \"ngfec_port\" attribute."
+			return False
+## /
 # /
 
 # /FUNCTIONS

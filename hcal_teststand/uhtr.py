@@ -172,9 +172,7 @@ def send_commands(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=Non
 	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
 	if ips:
 		## Parse control_hub argument:
-		if ts != None:
-			if hasattr(ts, "control_hub"):
-				control_hub = ts.control_hub
+		control_hub = meta.parse_args_hub(ts=ts, control_hub=control_hub)
 	
 		## Parse cmds:
 		if isinstance(cmds, str):

@@ -12,7 +12,7 @@ from re import search, split
 # FUNCTIONS:
 def parse_ts_configuration(f="teststands.txt"):		# This function is a clone of the function of the same name in hcal_teststand but modified to be compatible with Python 2.4.
 	# WHEN YOU EDIT THIS SCRIPT, MAKE SURE TO UPDATE hcal_teststand.py IF YOU NEED TO!
-	variables = ["name", "fe_crates", "be_crates", "ngccm_port", "uhtr_slots", "uhtr_settings", "glib_slot", "mch_ips", "amc13_ips", "qie_slots", "control_hub"]
+	variables = ["name", "fe_crates", "be_crates", "ngfec_port", "uhtr_slots", "uhtr_settings", "glib_slot", "mch_ips", "amc13_ips", "qie_slots", "control_hub"]
 	teststand_info = {}
 	raw = ""
 	if ("/" in f):
@@ -36,7 +36,7 @@ def parse_ts_configuration(f="teststands.txt"):		# This function is a clone of t
 						elif (variable == "be_crates"):
 							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
-						elif (variable == "ngccm_port"):
+						elif (variable == "ngfec_port"):
 							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name][variable] = int(value)
 						elif (variable == "uhtr_slots"):

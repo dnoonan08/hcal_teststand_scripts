@@ -31,6 +31,10 @@ class teststand:
 					control_hub = None
 				
 				# Assign a few other calculable attributes:
+				self.fe = {}
+				if len(self.fe_crates) <= len(self.qie_slots):
+					for i in range(len(self.fe_crates)):
+						self.fe[self.fe_crates[i]] = self.qie_slots[i]
 				self.be = {}
 				if len(self.be_crates) <= len(self.uhtr_slots):
 					for i, be_crate in enumerate(self.be_crates):
@@ -72,6 +76,16 @@ class teststand:
 							control_hub=control_hub,
 						)
 				
+				# QIEs:
+				self.qies = {}
+				for fe_crate, fe_slots in self.fe.iteritems():
+					for fe_slot in fe_slots:
+						self.qies[(fe_crate, fe_slot)] = qie.qie(
+							crate=fe_crate,
+							slot=fe_slot,
+							control_hub=control_hub,
+						)
+				
 				# The following is a temporary kludge:
 #				self.uhtr_ips = []
 				self.uhtr = {}
@@ -81,10 +95,6 @@ class teststand:
 					self.uhtr[slot] = ip
 				
 				self.glib_ip = "192.168.1.{0}".format(160 + self.glib_slot)
-				self.fe = {}
-				if len(self.fe_crates) <= len(self.qie_slots):
-					for i in range(len(self.fe_crates)):
-						self.fe[self.fe_crates[i]] = self.qie_slots[i]
 			except Exception as ex:		# The above will fail if the teststand names doesn't appear in the configuration file.
 				print "ERROR: Could not read the teststand information for {0} from the configuration file: {1}".format(self.name, f)
 				print ">> {0}".format(ex)
@@ -99,6 +109,8 @@ class teststand:
 			amc13.update()
 		for crate_slot, uhtr in self.uhtrs.iteritems():
 			uhtr.update()
+		for crate_slot, qie in self.qies.iteritems():
+			qie.update()
 	
 	def Print(self):
 		print "TESTSTAND {0}".format(self.name)
@@ -108,6 +120,9 @@ class teststand:
 		print "== uHTRs =="
 		for crate_slot, uhtr in self.uhtrs.iteritems():
 			uhtr.Print()
+		print "== QIEs =="
+		for crate_slot, qie in self.qies.iteritems():
+			qie.Print()
 	
 	## uHTR:
 	def uhtr_ip(self, be_crate=None, be_slot=None):
@@ -367,7 +382,7 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 
 def parse_ts_configuration(f="teststands.txt"):		# This function is used to parse the "teststands.txt" configuration file. It is run by the "teststand" class; usually you want to use that instead of running this yourself.
 	# WHEN YOU EDIT THIS SCRIPT, MAKE SURE TO UPDATE install.py!
-	variables = ["name", "fe_crates", "be_crates", "ngccm_port", "uhtr_slots", "uhtr_settings", "glib_slot", "mch_ips", "amc13_ips", "qie_slots", "control_hub"]
+	variables = ["name", "fe_crates", "be_crates", "ngfec_port", "uhtr_slots", "uhtr_settings", "glib_slot", "mch_ips", "amc13_ips", "qie_slots", "control_hub"]
 	teststand_info = {}
 	raw = ""
 	if ("/" in f):
@@ -391,7 +406,7 @@ def parse_ts_configuration(f="teststands.txt"):		# This function is used to pars
 						elif (variable == "be_crates"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
-						elif (variable == "ngccm_port"):
+						elif (variable == "ngfec_port"):
 							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
 							teststand_info[ts_name][variable] = int(value)
 #						elif (variable == "uhtr_ip_base"):

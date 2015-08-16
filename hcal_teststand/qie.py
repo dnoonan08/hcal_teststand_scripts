@@ -2,7 +2,7 @@
 
 from re import search
 from subprocess import Popen, PIPE
-import ngccm
+import ngfec
 from time import time, sleep
 from numpy import mean, std
 import uhtr
@@ -11,34 +11,46 @@ import meta
 # CLASSES:
 class qie:
 	# Construction:
-	def __init__(self, ts=None, unique_id="", crate=-1, slot=-1, n=-1, uhtr_slot=-1, fiber=-1, half=-1, link=-1, channel=-1):
-		if not ts:
-			ts = None
-		self.ts = ts
+	def __init__(self, crate=None, slot=None, control_hub=None, unique_id=None, fiber=-1, links=-1):
 		self.id = unique_id
 		self.crate = crate
 		self.slot = slot
-		self.n = n
-		self.uhtr_slot = uhtr_slot
+		self.control_hub = control_hub
+		self.crate_slot = (crate, slot)
 		self.fiber = fiber
-		self.half = half
-		self.link = link
-		self.channel = channel
+		self.links = links
 	
 	# String behavior
 	def __str__(self):
-		if self.ts:
-			return "<qie.qie object: {0}, {1}>".format(self.id, self.n)
-		else:
-			return "<empty qie.qie object>"
+		try:
+			return "<QIE card in FE Crate {0}, FE Slot {1}>".format(self.crate, self.slot)
+		except Exception as ex:
+#			print ex
+			return "<empty qie object>"
 	
 	# Methods:
-	def get_data(self, method=0):		# Method 0 is for uHTR SPY. Nothing else is implemented, yet.
-		if method == 0:
-			return uhtr.get_data_parsed_new(self.ts, self.uhtr_slot, 300, self.link)[channel]
-		else:
-			print "ERROR (qie object {0}): Could not get data because method value {1} wasn't recognized.".format(self.id, method)
+	def update(self):
+		try:
+			info = get_info(fe_crate=self.crate, fe_slot=self.slot, control_hub=self.control_hub)[(self.crate_slot)]
+#			print info
+			self.fw_igloo_top = info["fws"][0]
+			self.fw_igloo_bot = info["fws"][1]
+			self.fw_bridge = info["fws"][2]
+			self.fws = info["fws"]
+			return True
+		except Exception as ex:
+			print ex
 			return False
+	
+	def Print(self):
+		print self
+	
+#	def get_data(self, method=0):		# Method 0 is for uHTR SPY. Nothing else is implemented, yet.
+#		if method == 0:
+#			return uhtr.get_data_parsed_new(self.ts, self.uhtr_slot, 300, self.link)[channel]
+#		else:
+#			print "ERROR (qie object {0}): Could not get data because method value {1} wasn't recognized.".format(self.id, method)
+#			return False
 	# /Methods
 
 class datum:
@@ -122,6 +134,75 @@ class status:
 
 # FUNCTIONS:
 # Functions to fetch component information:
+def get_info(ts=None, fe_crate=None, fe_slot=None, control_hub=None, port=ngfec.port_default):
+	# Arguments and variables
+	output = []
+	raw_output = ""
+	## Parse crate, slot:
+	fe = meta.parse_args_crate_slot(ts=ts, crate=fe_crate, slot=fe_slot, crate_type="fe")
+	if fe:
+		# Prepare:
+		data = {}
+		results = {}
+		for crate, slots in fe.iteritems():
+			for slot in slots:
+				data[(crate, slot)] = []
+				## Prepare bridge info:
+				data[(crate, slot)].append([
+					"fw_bridge_major",
+					'get HF{0}-{1}-B_FIRMVERSION_MAJOR'.format(crate, slot),
+				])
+				data[(crate, slot)].append([
+					"fw_bridge_minor",
+					'get HF{0}-{1}-B_FIRMVERSION_MINOR'.format(crate, slot),
+				])
+				data[(crate, slot)].append([
+					"fw_bridge_svn",
+					'get HF{0}-{1}-B_FIRMVERSION_SVN'.format(crate, slot),
+				])
+				## Prepare IGLOO info:
+				data[(crate, slot)].append([
+					"fw_igloo_top_major",
+					'get HF{0}-{1}-iTop_FPGA_MAJOR_VERSION'.format(crate, slot),
+				])
+				data[(crate, slot)].append([
+					"fw_igloo_top_minor",
+					'get HF{0}-{1}-iTop_FPGA_MINOR_VERSION'.format(crate, slot),
+				])
+				data[(crate, slot)].append([
+					"fw_igloo_bot_major",
+					'get HF{0}-{1}-iBot_FPGA_MAJOR_VERSION'.format(crate, slot),
+				])
+				data[(crate, slot)].append([
+					"fw_igloo_bot_minor",
+					'get HF{0}-{1}-iBot_FPGA_MINOR_VERSION'.format(crate, slot),
+				])
+		# Compile list of commands to send:
+		cmds = [d[1] for crate_slot, ds in data.iteritems() for d in ds]
+#		print cmds
+		# Send commands:
+		ngfec_out = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
+		# Understand results:
+		for crate_slot, ds in data.iteritems():
+			results[crate_slot] = {}
+			for i, d in enumerate(ds):
+				key = d[0]
+				cmd = d[1]
+				for result in ngfec_out:
+					if result["cmd"] == cmd:
+						results[crate_slot].update({
+							key: int(result["result"], 16)
+						})
+			results[crate_slot]["fws"] = [
+				"{0:02d}.{1:02d}".format(results[crate_slot]["fw_igloo_top_major"], results[crate_slot]["fw_igloo_top_minor"]),
+				"{0:02d}.{1:02d}".format(results[crate_slot]["fw_igloo_bot_major"], results[crate_slot]["fw_igloo_bot_minor"]),
+				"{0:02d}.{1:02d}.{2:04d}".format(results[crate_slot]["fw_bridge_major"], results[crate_slot]["fw_bridge_minor"], results[crate_slot]["fw_bridge_svn"]),
+			]
+		# Return results:
+		return results
+	else:
+		return False
+
 def get_bridge_info(ts, crate, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
 	data = [
 		["version_fw_major", 'get HF{0}-{1}-B_FIRMVERSION_MAJOR'.format(crate, slot), 0],
@@ -176,12 +257,6 @@ def get_igloo_info(ts, crate, slot):		# Returns a dictionary of information abou
 		"version_fw_minor_bot":	data[3][2],
 		"version_fw_bot":	version_fw_bot,
 		"log":			log.strip(),
-	}
-
-def get_info(ts, crate, slot):
-	return{
-		"bridge": get_bridge_info(ts, crate, slot),
-		"igloo": get_igloo_info(ts, crate, slot),
 	}
 
 def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and slot and returns it as a list.

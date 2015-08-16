@@ -162,4 +162,5 @@ if __name__ == "__main__":
 		sys.exit()
 	
 	# Set up the QIEs:
+	print "(4) Setting up the QIE cards ..."
 # /MAIN
