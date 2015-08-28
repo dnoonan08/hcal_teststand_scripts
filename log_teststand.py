@@ -41,7 +41,7 @@ def log_temp(ts):
 	return log
 
 def log_power(ts):
-	log = ""
+	log = "%% POWER\n"
 	t0 = time_string()		# Get the time before. I get the time again after everything.
 #	power_fe = ts_157.get_power(ts)
 #	log += "%% POWER\n{0:.2f} V\n{1:.2f} A\n".format(power_fe["V"], power_fe["I"])
@@ -76,6 +76,7 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 			"get HF{0}-ngccm_rev_ids".format(crate),
 		]
 		for i in nslot:
+			cmds.append("get HF{0}-{1}-B_RESQIECOUNTER".format(crate,i))
 			cmds.append("get HF{0}-{1}-B_RESQIECOUNTER".format(crate,i))
 			cmds.append("get HF{0}-{1}-iTop_RST_QIE_count".format(crate,i))
 			cmds.append("get HF{0}-{1}-iTop_RST_QIE_count".format(crate,i))
