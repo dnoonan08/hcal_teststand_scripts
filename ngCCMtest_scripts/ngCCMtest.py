@@ -34,6 +34,7 @@ stdo_def = sys.stdout
 
 # MAIN:
 
+start_dir = os.getcwd()
 os.chdir('..')
 
 if __name__ == "__main__":
@@ -66,6 +67,8 @@ if log == 1:
 	SN = get_SN()
 	sys.stdout = Logger()
 	print "ngCCM SN: " + SN
+
+os.chdir(start_dir)
 
 m_r = 0
 m_r = mezz_read(verbose,ts)
