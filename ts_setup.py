@@ -16,26 +16,27 @@ from optparse import OptionParser
 # /CLASSES
 
 # FUNCTIONS:
-def check_status_amc13(ts=None, v=False):
+def check_status_amc13(ts=None, v=False, fast=False):
 	# Get AMC13 statuses:
-	statuses = amc13.get_statuses(ts=ts)
+	statuses = amc13.get_statuses(ts=ts, ping=not fast)
 	
 	# Check the AMC13 statuses:
 	for be_crate, s in statuses.iteritems():
 		result = s.status
 		if result:
-			if result[0]:
-				if v: print "\tCan ping T1 of the AMC13 in BE Crate {0}.".format(be_crate)
+#			print result, fast
+			if result[0] == 1:
+				if v: print "\tPinged T1 of the AMC13 in BE Crate {0}.".format(be_crate)
 			else:
 				print "\t[!!] Can't ping T1 of the AMC13 in BE Crate {0}.".format(be_crate)
 				return False
-			if result[1]:
-				if v: print "\tCan ping T2 of the AMC13 in BE Crate {0}.".format(be_crate)
+			if result[1] == 1:
+				if v: print "\tPinged T2 of the AMC13 in BE Crate {0}.".format(be_crate)
 			else:
 				print "\t[!!] Can't ping T1 of the AMC13 in BE Crate {0}.".format(be_crate)
 				return False
 			if result[2]:
-				if v: print "\tCan fetch FW versions of the AMC13 in BE Crate {0}.".format(be_crate)
+				if v: print "\tFetched FW versions of the AMC13 in BE Crate {0}.".format(be_crate)
 			else:
 				print "\t[!!] Can't fetch FW versions of the AMC13 in BE Crate {0}.".format(be_crate)
 				return False
@@ -62,22 +63,22 @@ def check_status_bkp(ts=None, v=False):
 		"\t[!!] Couldn't fetch the Backplane status."
 		return False
 
-def check_status_uhtr(ts=None, v=False):
-	# Get AMC13 statuses:
-	statuses = uhtr.get_status(ts=ts)
+def check_status_uhtr(ts=None, v=False, fast=False):
+	# Get uHTR statuses:
+	statuses = uhtr.get_status(ts=ts, ping=not fast)
 	
-	# Check the AMC13 statuses:
+	# Check the uHTR statuses:
 	for crate_slot, s in statuses.iteritems():
 		crate, slot = crate_slot
 		result = s.status
 		if result:
-			if result[0]:
-				if v: print "\tCan ping the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
+			if result[0] == 1:
+				if v: print "\tPinged the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
 			else:
 				print "\t[!!] Can't ping the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
 				return False
 			if result[1]:
-				if v: print "\tCan fetch FW versions of the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
+				if v: print "\tFetched FW versions of the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
 			else:
 				print "\t[!!] Can't fetch FW versions of the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
 				return False
@@ -85,6 +86,35 @@ def check_status_uhtr(ts=None, v=False):
 			"\t[!!] Couldn't fetch the status of the uHTR in BE Crate {0}, BE Slot {1}.".format(crate, slot)
 			return False
 	print "\t[OK] All of the uHTRs appear to be functioning."
+	return True
+
+def check_status_qie(ts=None, v=False):
+	# Get QIE statuses:
+	statuses = qie.get_status(ts=ts)
+	
+	# Check the QIE statuses:
+	for crate_slot, s in statuses.iteritems():
+		crate, slot = crate_slot
+		result = s.status
+		if result:
+			if result[0] == 1:
+				if v: print "\tFetched information for the top IGLOO of the QIE card in FE Crate {0}, FE Slot {1}.".format(crate, slot)
+			else:
+				print "\t[!!] Can't fetch information for the top IGLOO of the QIE card in FE Crate {0}, FE Slot {1}.".format(crate, slot)
+				return False
+			if result[1] == 1:
+				if v: print "\tFetched information for the bottom IGLOO of the QIE card in FE Crate {0}, FE Slot {1}.".format(crate, slot)
+			else:
+				print "\t[!!] Can't fetch information for the bottom IGLOO of the QIE card in FE Crate {0}, FE Slot {1}.".format(crate, slot)
+				return False
+			if result[2] == 1:
+				if v: print "\tFetched information for the BRIDGE of the QIE card in FE Crate {0}, FE Slot {1}.".format(crate, slot)
+			else:
+				print "\t[!!] Can't fetch information for the BRIDGE of the QIE card in FE Crate {0}, FE Slot {1}.".format(crate, slot)
+				return False
+		else:
+			"\t[!!] Couldn't fetch the status of the QIE card in FE Crate {0}, FE Slot {1}.".format(crate, slot)
+			return False
 	return True
 # /FUNCTIONS
 
@@ -103,19 +133,26 @@ if __name__ == "__main__":
 		help="Turn on verbose mode (default is off)",
 		metavar="BOOL"
 	)
+	parser.add_option("-f", "--fast", dest="fast",
+		action="store_true",
+		default=False,
+		help="Turn on fast mode (default is off)",
+		metavar="BOOL"
+	)
 	(options, args) = parser.parse_args()
 	name = options.ts
 	v = options.verbose
+	fast = options.fast
 	
 	# Set up teststand:
 	ts = teststand(name)
-	print "Setting up the {0} teststand ...".format(ts.name)
+	print "\nSetting up the {0} teststand ...".format(ts.name)
 	
 	# Set up the AMC13s:
 	print "(1) Setting up the AMC13s ..."
-	if check_status_amc13(ts=ts, v=v):
+	if check_status_amc13(ts=ts, v=v, fast=fast):
 		print "\tConfiguring the AMC13s ..."
-		setup_results = amc13.setup_all(ts=ts, mode=1)		# Set up the AMC13s in TTC mode.
+		setup_results = amc13.setup_all(ts=ts, mode=0)		# Set up the AMC13s in not TTC mode.
 		for be_crate, setup_result in setup_results.iteritems():
 			if not setup_result:
 				print "\t[!!] Configuration of the AMC13 in BE Crate {0} failed.".format(be_crate)
@@ -156,11 +193,29 @@ if __name__ == "__main__":
 		else:
 			if v: print "\tuHTR in BE Crate {0}, BE Slot {1} set up.".format(be_crate, be_slot)
 	print "\t[OK] Setting up the uHTRs succeeded."
-	if not check_status_uhtr(ts=ts, v=v):
+	print "\tChecking that the uHTRs are functional ..."
+	if not check_status_uhtr(ts=ts, v=v, fast=fast):
 		print "\t[!!] Statusing the uHTRs failed."
 		print "Aborting setup ..."
 		sys.exit()
 	
 	# Set up the QIEs:
 	print "(4) Setting up the QIE cards ..."
+	setup_result = qie.setup(ts=ts, verbose=v)
+	if not setup_result:
+		print "\t[!!] Configuration of the QIE cards failed.".format(be_crate, be_slot)
+		if v: print setup_result["output"]
+		print "Aborting setup ..."
+		sys.exit()
+	print "\t[OK] Setting up the QIE cards succeeded."
+	print "\tChecking that the QIE cards are functional ..."
+	if not check_status_qie(ts=ts, v=v):
+		print "\t[!!] Statusing the QIEs failed."
+		print "Aborting setup ..."
+		sys.exit()
+	else:
+		print "\t[OK] All of the QIE cards appear to be functioning."
+	
+	# Conclusion:
+	print "[OK] Teststand set up successfully."
 # /MAIN

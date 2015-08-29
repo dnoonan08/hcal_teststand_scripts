@@ -120,8 +120,9 @@ class amc13:
 
 class status:
 	# Construction:
-	def __init__(self, ts=None, status=[], ips={}, sn=-1, fw=[], sw=-1):
+	def __init__(self, ts=None, crate=-1, status=[], ips={}, sn=-1, fw=[], sw=-1):
 		self.ts = ts
+		self.crate = crate
 		if not status:
 			status = []
 		self.status = status
@@ -149,11 +150,10 @@ class status:
 	def Print(self, verbose=True):
 		if verbose:
 			print "[{0}] AMC13 status: {1} <- {2}".format(("!!", "OK")[self.good], ("BAD", "GOOD")[self.good], self.status)
-			if self.good:
-				print "\tSN: {0}".format(self.sn)
-				print "\tFW: {0}, {1}".format(self.fw[0], self.fw[1])
-				print "\tSW: {0}".format(self.sw)
-				print "\tIPs: {0}".format(self.ips)
+			print "\tSN: {0}".format(self.sn)
+			print "\tFW: {0}".format(self.fw)
+			print "\tSW: {0}".format(self.sw)
+			print "\tIPs: {0}".format(self.ips)
 		else:
 			print "[{0}] AMC13 status: {1}".format(("!!", "OK")[self.good], ("BAD", "GOOD")[self.good])
 	

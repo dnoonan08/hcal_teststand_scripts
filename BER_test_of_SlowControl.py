@@ -29,18 +29,23 @@ if __name__ == "__main__":
 		default=1,
 		help="The number of cycles you want to run over (default is 1)", metavar="INT")
 	parser.add_option("-v", "--verbose", dest="verbose",
+		action="store_true",
 		default=False,
-		help="Turn on verbose mode (default is off)", metavar="BOOL")
+		help="Turn on verbose mode (default is off)",
+		metavar="BOOL"
+	)
 	parser.add_option("-t", "--teststand", dest="ts",
 		default="904",
 		help="The name of the teststand you want to use (default is 904)", metavar="STR")
 	(options, args) = parser.parse_args()
 	name = options.ts
 	n = int(options.ncycles)
-	v = False
-	if options.verbose:
-		if options.verbose.lower() == "true" or options.verbose  == "1":
+	v = bool(options.verbose)
+	if isinstance(options.verbose, str):
+		if options.verbose.lower() == "true":
 			v = True
+		else:
+			v = False
 	
 	# Set up:
 	ts = teststand(name)		# Initialize a teststand object. This object stores the teststand configuration and has a number of useful methods.
@@ -84,7 +89,7 @@ if __name__ == "__main__":
 				
 				# Perform writting and reading:
 				print ">> Talking to ngccm server ..."
-				output = ngccm.send_commands_parsed(ts.ngccm_port, script)["output"]
+				output = ngfec.send_commands(ts=ts, cmds=script, script=False)
 				
 				# Deal with results:
 				for i in range(1, 33):

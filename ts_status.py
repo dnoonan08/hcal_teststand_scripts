@@ -59,46 +59,47 @@ if __name__ == "__main__":
 	ts = teststand(name)
 	log = ""
 	t_string = time_string()[:-4]
-	print "\n> Statusing the {0} teststand ...".format(ts.name)
+	print "\nStatusing the {0} teststand ...".format(ts.name)
 	
 	# Status the components:
 	## AMC13:
-	print "> Statusing the AMC13 ..."
-	amc13_status = amc13.get_status(ts=ts, ping=not fast)		# Set "ping" to "False" to ignore pinging the AMC13. (Saves time.)
-	amc13_status.Print(verbose=v)
-	log += amc13_status.log()
-	log += "\n\n"
+	print "(1) Statusing the AMC13s ..."
+	amc13_statuses = amc13.get_statuses(ts=ts, ping=not fast)		# Set "ping" to "False" to ignore pinging the AMC13. (Saves time.)
+	for crate, s in amc13_statuses.iteritems():
+		s.Print(verbose=v)
+		log += s.log()
+		log += "\n\n"
 	
 	## uHTR:
-	print "\n> Statusing the uHTRs ..."
-	uhtr_statuses = uhtr.get_status_all(ts=ts, ping=not fast)
-	for uhtr_status in uhtr_statuses:
-		uhtr_status.Print(verbose=v)
-		log += uhtr_status.log()
+	print "(2) Statusing the uHTRs ..."
+	uhtr_statuses = uhtr.get_status(ts=ts, ping=not fast)
+	for crate_slot, s in uhtr_statuses.iteritems():
+		s.Print(verbose=v)
+		log += s.log()
 		log += "\n\n"
 	
 	## BKP:
-	print "\n> Statusing the backplanes ..."
-	bkp_statuses = bkp.get_status_all(ts=ts)
-	for bkp_status in bkp_statuses:
-		bkp_status.Print(verbose=v)
-		log += bkp_status.log()
+	print "(3) Statusing the backplanes ..."
+	bkp_statuses = bkp.get_status(ts=ts)
+	for crate, s in bkp_statuses.iteritems():
+		s.Print(verbose=v)
+		log += s.log()
 		log += "\n\n"
 	
 	## ngCCM:
-	print "\n> Statusing the ngCCMs ..."
-	ngccm_statuses = ngccm.get_status_all(ts=ts)
-	for ngccm_status in ngccm_statuses:
-		ngccm_status.Print(verbose=v)
-		log += ngccm_status.log()
+	print "(4) Statusing the ngCCMs ..."
+	ngccm_statuses = ngccm.get_status(ts=ts)
+	for crate, s in ngccm_statuses.iteritems():
+		s.Print(verbose=v)
+		log += s.log()
 		log += "\n\n"
 	
 	## QIE:
-	print "\n> Statusing the QIEs ..."
-	qie_statuses = qie.get_status_all(ts=ts)
-	for qie_status in qie_statuses:
-		qie_status.Print(verbose=v)
-		log += qie_status.log()
+	print "(5) Statusing the QIEs ..."
+	qie_statuses = qie.get_status(ts=ts)
+	for crate_slot, s in qie_statuses.iteritems():
+		s.Print(verbose=v)
+		log += s.log()
 		log += "\n\n"
 	
 	# Write out the status log:

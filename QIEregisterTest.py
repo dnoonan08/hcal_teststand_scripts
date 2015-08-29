@@ -3,6 +3,35 @@ from hcal_teststand.hcal_teststand import teststand
 import sys
 import random
 
+# VARIABLES:
+fe_crate = 1
+fe_slot = 10
+register_names = []
+for i_qie in range(1, 25):
+	register_names.extend([
+		"HF{0}-{1}-QIE{2}_CalMode".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_ChargeInjectDAC".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_Lvds".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_TGain".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_CapID0pedestal".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_CkOutEn".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_PedestalDAC".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_TimingIref".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_CapID1pedestal".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_DiscOn".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_RangeSet".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_TimingThresholdDAC".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_CapID2pedestal".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_FixRange".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_RinSel".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_Trim".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_CapID3pedestal".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_Idcset".format(fe_crate, fe_slot, i_qie),
+		"HF{0}-{1}-QIE{2}_TDCMode".format(fe_crate, fe_slot, i_qie),
+	])
+# /VARIABLES
+
+# FUNCTIONS:
 def getRandomValue( ) : 
 
 	### 
@@ -43,7 +72,7 @@ def testRandomValue( register ):
 		return True
 	else : 
 		return False 
-
+# /FUNCTIONS
 
 # MAIN:
 if __name__ == "__main__":
@@ -58,8 +87,8 @@ if __name__ == "__main__":
 
 	result = [0]*24
 	registers = []
-	for q in range(24) : 
-		registers.append( register(ts,"HF1-10-QIE{0}".format(q+1),48) )
+	for name in register_names:
+		registers.append(register(ts, name, 48))		# HERE on "48"
 
 	for i in range( 5 ) :
 		#print "test",i

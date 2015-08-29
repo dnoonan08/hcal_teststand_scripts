@@ -11,11 +11,12 @@ import meta
 # CLASSES:
 class qie:
 	# Construction:
-	def __init__(self, crate=None, slot=None, control_hub=None, unique_id=None, fiber=-1, links=-1):
+	def __init__(self, crate=None, slot=None, control_hub=None, port=ngfec.port_default, unique_id=None, fiber=-1, links=-1):
 		self.id = unique_id
 		self.crate = crate
 		self.slot = slot
 		self.control_hub = control_hub
+		self.port = port
 		self.crate_slot = (crate, slot)
 		self.fiber = fiber
 		self.links = links
@@ -23,7 +24,7 @@ class qie:
 	# String behavior
 	def __str__(self):
 		try:
-			return "<QIE card in FE Crate {0}, FE Slot {1}>".format(self.crate, self.slot)
+			return "<QIE card in FE Crate {0}, FE Slot {1}>".format(self.crate, self.slot	)
 		except Exception as ex:
 #			print ex
 			return "<empty qie object>"
@@ -31,13 +32,16 @@ class qie:
 	# Methods:
 	def update(self):
 		try:
-			info = get_info(fe_crate=self.crate, fe_slot=self.slot, control_hub=self.control_hub)[(self.crate_slot)]
+			info = get_info(crate=self.crate, slot=self.slot, control_hub=self.control_hub, port=self.port)[(self.crate_slot)]
 #			print info
 			self.fw_igloo_top = info["fws"][0]
 			self.fw_igloo_bot = info["fws"][1]
 			self.fw_bridge = info["fws"][2]
 			self.fws = info["fws"]
-			return True
+			if self.set_unique_id():
+				return True
+			else:
+				return False
 		except Exception as ex:
 			print ex
 			return False
@@ -45,6 +49,16 @@ class qie:
 	def Print(self):
 		print self
 	
+	def setup(self, i_qie=None):
+		return setup(crate=self.crate, slot=self.slot, i_qie=i_qie, control_hub=self.control_hub, port=self.port)["output"]
+	
+	def set_unique_id(self):
+		unique_id = set_unique_id(crate=self.crate, slot=self.slot, control_hub=self.control_hub, port=self.port)[self.crate_slot]
+		if unique_id:
+			self.id = unique_id
+			return True
+		else:
+			return False
 #	def get_data(self, method=0):		# Method 0 is for uHTR SPY. Nothing else is implemented, yet.
 #		if method == 0:
 #			return uhtr.get_data_parsed_new(self.ts, self.uhtr_slot, 300, self.link)[channel]
@@ -81,7 +95,7 @@ class datum:
 
 class status:
 	# Construction:
-	def __init__(self, ts=None, status=[], crate=-1, slot=-1, fw_top=[], fw_bot="", fw_b=[]):
+	def __init__(self, ts=None, status=[], crate=-1, slot=-1, id_top=[], id_bot=[], fw_top=[], fw_bot=[], fw_b=[]):
 		if not ts:
 			ts = None
 		self.ts = ts
@@ -90,6 +104,12 @@ class status:
 		self.status = status
 		self.crate = crate
 		self.slot = slot
+		if not id_top:
+			id_top = []
+		self.id_top = id_top
+		if not id_bot:
+			id_bot = []
+		self.id_bot = id_bot
 		if not fw_top:
 			fw_top = []
 		self.fw_top = fw_top
@@ -113,13 +133,14 @@ class status:
 	
 	def Print(self, verbose=True):
 		if verbose:
-			print "[{0}] QIE card in crate {1}, slot {2} status: {3} <- {4}".format(("!!", "OK")[self.good], self.crate, self.slot, ("BAD", "GOOD")[self.good], self.status)
-			if self.good:
-				print "\tFW IGLOO2 top: {0}".format(self.fw_top)
-				print "\tFW IGLOO2 bottom: {0}".format(self.fw_bot)
-				print "\tFW bridge: {0}".format(self.fw_b)
+			print "[{0}] QIE card in Crate {1}, Slot {2} Status: {3} <- {4}".format(("!!", "OK")[self.good], self.crate, self.slot, ("BAD", "GOOD")[self.good], self.status)
+			print "\tID IGLOO2 top: {0}".format(self.id_top)
+			print "\tFW IGLOO2 top: {0}".format(self.fw_top)
+			print "\tID IGLOO2 bottom: {0}".format(self.id_bot)
+			print "\tFW IGLOO2 bottom: {0}".format(self.fw_bot)
+			print "\tFW bridge: {0}".format(self.fw_b)
 		else:
-			print "[{0}] QIE card in crate {1}, slot {2} status: {3}".format(("!!", "OK")[self.good], self.crate, self.slot, ("BAD", "GOOD")[self.good])
+			print "[{0}] QIE card in Crate {1}, Slot {2} status: {3}".format(("!!", "OK")[self.good], self.crate, self.slot, ("BAD", "GOOD")[self.good])
 	
 	def log(self):
 		output = "%% QIE {0}, {1}\n".format(self.crate, self.slot)
@@ -133,13 +154,84 @@ class status:
 # /CLASSES
 
 # FUNCTIONS:
+def setup(ts=None, crate=None, slot=None, i_qie=None, control_hub=None, port=None, verbose=False):
+# Set up any number of QIE cards. Specify a group of QIE cards by the crates and slots. If you specify the ts and nothing else, it will set up all of them.
+	# Arguments:
+	cmds = []
+	## Parse "crate" and "slot"
+	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="fe")
+	if fe:
+		## Parse "i_qie":
+		is_qie = meta.parse_args_qie(i_qie=i_qie)		# The default is range(1, 25)
+		if is_qie:
+			# Define setup commands:
+			for fe_crate, slots in fe.iteritems():
+				for fe_slot in slots:
+#					print fe_crate, fe_slot
+					for i_qie in is_qie:
+						## Put all QIE program register values to default:
+						cmds.extend([
+							"put HF{0}-{1}-QIE{2}_Lvds 0x1".format(fe_crate, fe_slot, i_qie),		# 1 bit
+							"put HF{0}-{1}-QIE{2}_Trim 0x2".format(fe_crate, fe_slot, i_qie),		# 2 bits
+							"put HF{0}-{1}-QIE{2}_DiscOn 0x0".format(fe_crate, fe_slot, i_qie),		# 1 bit
+							"put HF{0}-{1}-QIE{2}_TGain 0x0".format(fe_crate, fe_slot, i_qie),		# 1 bit
+							"put HF{0}-{1}-QIE{2}_TimingThresholdDAC 0xff".format(fe_crate, fe_slot, i_qie),		# 8 bits
+							"put HF{0}-{1}-QIE{2}_TimingIref 0x0".format(fe_crate, fe_slot, i_qie),		# 3 bits
+							"put HF{0}-{1}-QIE{2}_PedestalDAC 0x26".format(fe_crate, fe_slot, i_qie),		# 6 bits
+							"put HF{0}-{1}-QIE{2}_CapID0pedestal 0x0".format(fe_crate, fe_slot, i_qie),		# 4 bits
+							"put HF{0}-{1}-QIE{2}_CapID1pedestal 0x0".format(fe_crate, fe_slot, i_qie),		# 4 bits
+							"put HF{0}-{1}-QIE{2}_CapID2pedestal 0x0".format(fe_crate, fe_slot, i_qie),		# 4 bits
+							"put HF{0}-{1}-QIE{2}_CapID3pedestal 0x0".format(fe_crate, fe_slot, i_qie),		# 4 bits
+							"put HF{0}-{1}-QIE{2}_FixRange 0x0".format(fe_crate, fe_slot, i_qie),		# 1 bit
+							"put HF{0}-{1}-QIE{2}_RangeSet 0x0".format(fe_crate, fe_slot, i_qie),		# 2 bits
+							"put HF{0}-{1}-QIE{2}_ChargeInjectDAC 0x0".format(fe_crate, fe_slot, i_qie),		# 3 bits
+							"put HF{0}-{1}-QIE{2}_RinSel 0x4".format(fe_crate, fe_slot, i_qie),		# 4 bits
+							"put HF{0}-{1}-QIE{2}_Idcset 0x0".format(fe_crate, fe_slot, i_qie),		# 5 bits
+							"put HF{0}-{1}-QIE{2}_CalMode 0x0".format(fe_crate, fe_slot, i_qie),		# 1 bit
+							"put HF{0}-{1}-QIE{2}_CkOutEn 0x0".format(fe_crate, fe_slot, i_qie),		# 1 bit
+							"put HF{0}-{1}-QIE{2}_TDCMode 0x0".format(fe_crate, fe_slot, i_qie),		# 1 bit
+						])
+						## Other QIE-specific things:
+						cmds.extend([
+							'put HF{0}-{1}-Qie{2}_ck_ph 0x0'.format(fe_crate, fe_slot, i_qie),		# Set the clock phase to 0.
+						])
+					## Put all other QIE card values to default values:
+					cmds.extend([
+						"put HF{0}-{1}-iTop_CntrReg_CImode 0x0".format(fe_crate, fe_slot),
+						"put HF{0}-{1}-iBot_CntrReg_CImode 0x0".format(fe_crate, fe_slot),
+						"put HF{0}-{1}-iTop_LinkTestMode 0x0".format(fe_crate, fe_slot),
+						"put HF{0}-{1}-iBot_LinkTestMode 0x0".format(fe_crate, fe_slot),
+						"put HF{0}-{1}-iTop_UniqueID 0x0 0x0".format(fe_crate, fe_slot),
+						"put HF{0}-{1}-iBot_UniqueID 0x0 0x0".format(fe_crate, fe_slot),
+					])
+			if verbose: print "\tSetting all QIE chips and cards to default values ..."
+			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port, script=True)
+			if output:
+				if verbose: print "\tSetting QIE card IDs in the IGLOO registers ..."
+				result = set_unique_id(ts=ts, crate=crate, slot=slot, control_hub=control_hub, port=port)
+				if result:
+					return {
+						"output": output,
+						"fe": fe,
+						"ids": result,
+					}
+				else:
+					if verbose: print "\tERROR (qie.setup): Failed to set up the QIE card IDs."
+					return False
+			else:
+				return False
+		else:
+			return False
+	else:
+		return False
+
 # Functions to fetch component information:
-def get_info(ts=None, fe_crate=None, fe_slot=None, control_hub=None, port=ngfec.port_default):
+def get_info(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default):
 	# Arguments and variables
 	output = []
 	raw_output = ""
 	## Parse crate, slot:
-	fe = meta.parse_args_crate_slot(ts=ts, crate=fe_crate, slot=fe_slot, crate_type="fe")
+	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="fe")
 	if fe:
 		# Prepare:
 		data = {}
@@ -177,6 +269,14 @@ def get_info(ts=None, fe_crate=None, fe_slot=None, control_hub=None, port=ngfec.
 					"fw_igloo_bot_minor",
 					'get HF{0}-{1}-iBot_FPGA_MINOR_VERSION'.format(crate, slot),
 				])
+				data[(crate, slot)].append([
+					"id_igloo_top",
+					'get HF{0}-{1}-iTop_UniqueID'.format(crate, slot),
+				])
+				data[(crate, slot)].append([
+					"id_igloo_bot",
+					'get HF{0}-{1}-iBot_UniqueID'.format(crate, slot),
+				])
 		# Compile list of commands to send:
 		cmds = [d[1] for crate_slot, ds in data.iteritems() for d in ds]
 #		print cmds
@@ -190,9 +290,19 @@ def get_info(ts=None, fe_crate=None, fe_slot=None, control_hub=None, port=ngfec.
 				cmd = d[1]
 				for result in ngfec_out:
 					if result["cmd"] == cmd:
-						results[crate_slot].update({
-							key: int(result["result"], 16)
-						})
+						if "ERROR" not in result["result"]:
+							if "UniqueID" not in cmd:
+								results[crate_slot].update({
+									key: int(result["result"], 16)
+								})
+							else:
+								results[crate_slot].update({
+									key: result["result"].split()
+								})
+						else:
+							results[crate_slot].update({
+								key: False
+							})
 			results[crate_slot]["fws"] = [
 				"{0:02d}.{1:02d}".format(results[crate_slot]["fw_igloo_top_major"], results[crate_slot]["fw_igloo_top_minor"]),
 				"{0:02d}.{1:02d}".format(results[crate_slot]["fw_igloo_bot_major"], results[crate_slot]["fw_igloo_bot_minor"]),
@@ -259,11 +369,29 @@ def get_igloo_info(ts, crate, slot):		# Returns a dictionary of information abou
 		"log":			log.strip(),
 	}
 
-def get_unique_id(ts, crate, slot):		# Reads the unique ID of a given crate and slot and returns it as a list.
-	ngccm_output = ngccm.send_commands_parsed(ts, ["get HF{0}-{1}-UniqueID".format(crate,slot)])		# Results in something like "get HF1-1-UniqueID # '1 0x5f000000 0x9b46ce70'"
-	result = ngccm_output["output"][0]["result"]
-	if "ERROR" not in result: 
-		return result.split()[1:3]		# Get the result of the command, and turn the result into a list (ignoring the first element).
+def get_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default):		# Reads the unique ID of a given set of crates and slots.
+	# INFO: "get HF1-1-UniqueID # '1 0x5f000000 0x9b46ce70'"
+	# Arguments:
+	## Parse "crate" and "slot"
+	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="fe")
+	if fe:
+#		cmds = []
+		results = {}
+		# Get the unique ID for each crate, slot
+		for crate, slots in fe.iteritems():
+			for slot in slots:
+#				cmds=.append("get HF{0}-{1}-UniqueID".format(crate, slot))
+				output = ngfec.send_commands(ts=ts, cmds=["get HF{0}-{1}-UniqueID".format(crate, slot)], control_hub=control_hub, port=port)
+				if output:
+					crate_slot = (crate, slot)
+					result = output[0]["result"]
+					if "ERROR" not in result:
+						results[crate_slot] = result.split()[1:3]		# The first element doesn't matter.
+					else:
+						results[crate_slot] = False
+				else:
+					return False
+		return results
 	else:
 		return False
 
@@ -335,12 +463,12 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 	ts.set_fixed_range(enable=False)
 	
 	# Do the mapping:
-	for fe_crate, fe_slots in ts.fe.iteritems():
-		for fe_slot in fe_slots:
+	for crate, slots in ts.fe.iteritems():
+		for slot in slots:
 #			ts.set_fixed_range(crate=crate, slot=slot, enable=False)
 			for i_qie in range(1, 25):
-				print "> Finding FE crate {0}, FE slot {1}, QIE {2} ...".format(fe_crate, fe_slot, i_qie)
-				ts.set_fixed_range(crate=fe_crate, slot=fe_slot, i_qie=i_qie, enable=True, r=2)
+				print "> Finding FE crate {0}, FE slot {1}, QIE {2} ...".format(crate, slot, i_qie)
+				ts.set_fixed_range(crate=crate, slot=slot, i_qie=i_qie, enable=True, r=2)
 				channel_save = []
 				link_save = []
 				for crate_slot, links in link_dict.iteritems():
@@ -362,8 +490,8 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 					qie_map.append({
 						"be_crate": be_crate,
 						"be_slot": be_slot,
-						"fe_crate": fe_crate,
-						"fe_slot": fe_slot,
+						"fe_crate": crate,
+						"fe_slot": slot,
 						"qie": i_qie,
 						"id": link.qie_unique_id,
 						"link": link.n,
@@ -377,8 +505,8 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 					qie_map.append({
 						"be_crate": [link.crate for link in link_save],
 						"be_slot": [link.slot for link in link_save],
-						"fe_crate": fe_crate,
-						"fe_slot": fe_slot,
+						"fe_crate": crate,
+						"fe_slot": slot,
 						"qie": i_qie,
 						"id": [link.qie_unique_id for link in link_save],
 						"link": [link.n for link in link_save],
@@ -386,96 +514,105 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 						"half": [link.qie_half for link in link_save],
 						"fiber": [link.qie_fiber for link in link_save],
 					})
-				ts.set_fixed_range(crate=fe_crate, slot=fe_slot, i_qie=i_qie, enable=False)
+				ts.set_fixed_range(crate=crate, slot=slot, i_qie=i_qie, enable=False)
 	return qie_map
 # /
 
 # Functions to set up components:
-def set_unique_id(ts, crate, slot):		# Saves the unique ID of a crate slot to the associated QIE card to IGLOO registers.
-	unique_id = get_unique_id(ts, crate, slot)
-	if unique_id:
-		ngccm_output = ngccm.send_commands(ts, [
-			"put HF{0}-{1}-iTop_UniqueID {2} {3}".format(crate, slot, unique_id[0], unique_id[1]),
-			"put HF{0}-{1}-iBot_UniqueID {2} {3}".format(crate, slot, unique_id[0], unique_id[1])
-		])
-		return True
+def set_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default):		# Saves the unique ID of the QIE card in crate, slot to IGLOO registers.
+	#Arguments:
+	## Parse "crate" and "slot"
+	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="fe")
+	if fe:
+		unique_ids = get_unique_id(ts=ts, crate=crate, slot=slot, control_hub=control_hub, port=port)
+		if unique_ids:
+			cmds = []
+			for crate_slot, unique_id in unique_ids.iteritems():
+				cmds.extend([
+					"put HF{0}-{1}-iTop_UniqueID {2} {3}".format(crate_slot[0], crate_slot[1], unique_id[0], unique_id[1]),
+					"put HF{0}-{1}-iBot_UniqueID {2} {3}".format(crate_slot[0], crate_slot[1], unique_id[0], unique_id[1])
+				])
+			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
+			if output:
+				return unique_ids
+			else:
+				return False
+		else:
+			return False
 	else:
 		return False
-
-def set_unique_id_all(ts):		# Repeats the "set_unique_id" function from above for all slots in the teststand.
-	is_set = []
-	for crate, slots in ts.fe.iteritems():
-		for slot in slots:
-			is_set.append(set_unique_id(ts, crate, slot))		# Set the QIE card's unique ID into the correct IGLOO registers.
-	if len(set(is_set)) == 1:
-		return list(set(is_set))[0]
-	else:
-		return 0
 # /
 
 # Functions to "status" components, including calculating clocks:
-def get_status(ts=None, crate=-1, slot=-1):		# Perform basic checks of the QIE cards:
+def get_status(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default):		# Perform basic checks of the QIE cards:
+	# Arguments and variables:
 	log =""
-	s = status(ts=ts, crate=crate, slot=slot)
-	
-#	f_orbit = get_frequency_orbit(ts)
-	if ts:
-		# Check Bridge FPGA and IGLOO2 version are accessible:
-		qie_info = get_info(ts, crate, slot)
-		
-		## Top:
-		s.fw_top = [
-			qie_info["igloo"]["version_fw_major_top"],
-			qie_info["igloo"]["version_fw_minor_top"],
-		]
-		if (s.fw_top[0] != 0):
-			s.status.append(1)
-		else:
-			s.status.append(0)
-		
-		## Bottom:
-		s.fw_bot = [
-			qie_info["igloo"]["version_fw_major_bot"],
-			qie_info["igloo"]["version_fw_minor_bot"],
-		]
-		if (s.fw_bot[0] != 0):
-			s.status.append(1)
-		else:
-			s.status.append(0)
-		
-		## Bridge:
-		qie_info = get_info(ts, crate, slot)
-		s.fw_b = [
-			qie_info["bridge"]["version_fw_major"],
-			qie_info["bridge"]["version_fw_minor"],
-			qie_info["bridge"]["version_fw_svn"]
-		]
-		if (s.fw_b[0] != 0):
-			s.status.append(1)
-		else:
-			s.status.append(0)
-		
-		
-#		# Check QIE resets in the BRIDGE (1) and the IGLOO2s (2):
-#		orbit_temp = []
-#		f_orbit_bridge = f_orbit["bridge"][i_qie]
-#		f_orbit_igloo = f_orbit["igloo"][i_qie]
-#		## (1) Check the BRIDGE:
-#		if (f_orbit_bridge["f"] < 13000 and f_orbit_bridge["f"] > 10000 and f_orbit_bridge["f_e"] < 500):
-#			status["status"].append(1)
-#		else:
-#			status["status"].append(0)
-#		orbit_temp.append([f_orbit_bridge["f"], f_orbit_bridge["f_e"]])
-#		## (2) Check the IGLOO2s:
-#		for i in range(2):
-#			if (f_orbit_igloo["f"][i] < 13000 and f_orbit_igloo["f"][i] > 10000 and f_orbit_igloo["f_e"][i] < 600):
-#				status["status"].append(1)
-#			else:
-#				status["status"].append(0)
-#			orbit_temp.append([f_orbit_igloo["f"][i], f_orbit_igloo["f_e"][i]])
-#		status["orbit"].append(orbit_temp)
-		s.update()
-	return s
+	## Parse "crate" and "slot"
+	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="fe")
+	if fe:
+		statuses = {}
+		qie_info = get_info(ts=ts, crate=crate, slot=slot, control_hub=control_hub, port=port)
+		for crate, slots in fe.iteritems():
+			for slot in slots:
+				crate_slot = (crate, slot)
+				s = status(ts=ts, crate=crate, slot=slot)
+				# IGLOO top status:
+				s.id_top = qie_info[crate_slot]["id_igloo_top"]
+				s.fw_top = [
+					qie_info[crate_slot]["fw_igloo_top_major"],
+					qie_info[crate_slot]["fw_igloo_top_minor"],
+				]
+				if sum(s.fw_top) >= 2 and sum([i !="0" for i in s.id_top]) == 2:
+					s.status.append(1)
+				else:
+					s.status.append(0)
+				
+				# IGLOO bottom status:
+				s.id_bot = qie_info[crate_slot]["id_igloo_bot"]
+				s.fw_bot = [
+					qie_info[crate_slot]["fw_igloo_bot_major"],
+					qie_info[crate_slot]["fw_igloo_bot_minor"],
+				]
+				if sum(s.fw_bot) >= 2 and sum([i !="0" for i in s.id_bot]) == 2:
+					s.status.append(1)
+				else:
+					s.status.append(0)
+				
+				# Bridge status:
+				s.fw_b = [
+					qie_info[crate_slot]["fw_bridge_major"],
+					qie_info[crate_slot]["fw_bridge_minor"],
+					qie_info[crate_slot]["fw_bridge_svn"],
+				]
+				if sum(s.fw_b) >= 3:
+					s.status.append(1)
+				else:
+					s.status.append(0)
+				
+		#		# Check QIE resets in the BRIDGE (1) and the IGLOO2s (2):
+		#		orbit_temp = []
+		#		f_orbit_bridge = f_orbit["bridge"][i_qie]
+		#		f_orbit_igloo = f_orbit["igloo"][i_qie]
+		#		## (1) Check the BRIDGE:
+		#		if (f_orbit_bridge["f"] < 13000 and f_orbit_bridge["f"] > 10000 and f_orbit_bridge["f_e"] < 500):
+		#			status["status"].append(1)
+		#		else:
+		#			status["status"].append(0)
+		#		orbit_temp.append([f_orbit_bridge["f"], f_orbit_bridge["f_e"]])
+		#		## (2) Check the IGLOO2s:
+		#		for i in range(2):
+		#			if (f_orbit_igloo["f"][i] < 13000 and f_orbit_igloo["f"][i] > 10000 and f_orbit_igloo["f_e"][i] < 600):
+		#				status["status"].append(1)
+		#			else:
+		#				status["status"].append(0)
+		#			orbit_temp.append([f_orbit_igloo["f"][i], f_orbit_igloo["f_e"][i]])
+		#		status["orbit"].append(orbit_temp)
+				
+				s.update()
+				statuses[crate_slot] = s
+		return statuses
+	else:
+		return False
 
 def get_status_all(ts=None):
 	log = ""
@@ -500,6 +637,7 @@ def read_counter_qie_bridge(ts, crate, slot):
 		"count": count,
 		"log": log,
 	}
+
 def read_counter_qie_igloo(ts, crate, slot):
 	log = ""
 	counts = [-1, -1]
@@ -600,7 +738,7 @@ def set_mode(ts=None, crate=None, slot=None, mode=0):		# 0: normal mode, 1: link
 				])
 		
 		# Send commands:
-		output = ngccm.send_commands_parsed(ts, cmds)["output"]
+		output = ngfec.send_commands(ts, cmds)
 		results = ["ERROR" not in j for j in [i["result"] for i in output]]
 		if sum(results) == len(results):
 #			for thing in output:
@@ -614,6 +752,41 @@ def set_mode(ts=None, crate=None, slot=None, mode=0):		# 0: normal mode, 1: link
 			return False
 	else:
 		print "ERROR (qie.set_mode): The crate, slot arguments were not good."
+		return False
+## /
+
+## Set charge inject (CI) mode:
+def set_ci(ts=None, crate=None, slot=None, enable=False):
+	# Parse "crate" and "slot":
+	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
+	if fe:
+		# Parse enable:
+		if enable:
+			enable_cmd = 1
+		else:
+			enable_cmd = 0
+		
+		# Build command list:
+		cmds = []
+		for crate, slots in fe.iteritems():
+			for slot in slots:
+				cmds.extend([
+					"put HF{0}-{1}-iTop_CntrReg_CImode 0x{2}".format(crate, slot, enable_cmd),
+					"put HF{0}-{1}-iBot_CntrReg_CImode 0x{2}".format(crate, slot, enable_cmd),
+				])
+		
+		# Send commands:
+		output = ngfec.send_commands(ts, cmds)
+		results = ["ERROR" not in j for j in [i["result"] for i in output]]
+		if sum(results) == len(results):
+			return True
+		else:
+			print "ERROR (qie.set_ci): Setting the mode resulted in the following:"
+			for thing in output:
+				print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+			return False
+	else:
+		print "ERROR (qie.set_ci): The crate, slot arguments were not good."
 		return False
 ## /
 # /
@@ -699,7 +872,7 @@ def set_ped(ts=False, crate=None, slot=None, i_qie=None, dac=None, dac_cid=None,
 								])
 	
 			# Send commands:
-			output = ngccm.send_commands_parsed(ts, cmds)["output"]
+			output = ngccm.send_commands(ts, cmds)
 			results = ["ERROR" not in j for j in [i["result"] for i in output]]
 			if sum(results) == len(results):
 		#		for thing in output:
@@ -766,7 +939,7 @@ def set_fixed_range(ts=False, crate=None, slot=None, i_qie=None, enable=None, r=
 							])
 			
 			# Send commands:
-			output = ngccm.send_commands_parsed(ts, cmds)["output"]
+			output = ngccm.send_commands(ts, cmds)
 			results = ["ERROR" not in j for j in [i["result"] for i in output]]
 			if sum(results) == len(results):
 #				for thing in output:
@@ -832,7 +1005,7 @@ def set_clk_phase(ts=False, crate=None, slot=None, i_qie=None, phase=0):
 						])
 			
 			# Send commands:
-			output = ngccm.send_commands_parsed(ts, cmds)["output"]
+			output = ngccm.send_commands(ts, cmds)
 			results = ["ERROR" not in j for j in [i["result"] for i in output]]
 			if sum(results) == len(results):
 #				for thing in output:

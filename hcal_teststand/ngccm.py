@@ -10,6 +10,8 @@ from subprocess import Popen, PIPE
 import pexpect
 from time import time, sleep
 from print_table import *
+import ngfec
+import meta
 
 
 # CLASSES:
@@ -96,7 +98,7 @@ def get_info(ts, crate):		# Returns a dictionary of information about the ngCCM,
 		"get HF{0}-mezz_FPGA_MAJOR_VERSION".format(crate),
 		"get HF{0}-mezz_FPGA_MINOR_VERSION".format(crate),
 	]
-	output = send_commands_parsed(ts, cmds)["output"]
+	output = ngfec.send_commands(ts=ts, cmds=cmds)
 	result = output[0]["result"]
 	if "ERROR" not in output[0]["result"]:
 #		version_str_x = "{0:#08x}".format(int(match.group(3),16))		# Deprecated
@@ -149,15 +151,16 @@ def get_info(ts, crate):		# Returns a dictionary of information about the ngCCM,
 #			"log": log,
 #		}
 
-def get_status(ts=None, crate=-1):		# Perform basic checks of the ngCCMs:
+def get_status(ts=None, crate=None):		# Perform basic checks of the ngCCMs:
+	# Arguments and variables:
 	log = ""
-	s = status(ts=ts, crate=crate)
-	
-	if ts:
-		# Check that versions are accessible:
-		if crate in ts.fe_crates:
-			s.crate = crate
-			ngccm_info = get_info(ts, crate)
+	## Parse "crate":
+	crates = meta.parse_args_crate(ts=ts, crate=crate, crate_type="fe")
+	if crates:
+		statuses = {}
+		for fe_crate in crates:
+			s= status(ts=ts, crate=fe_crate)
+			ngccm_info = get_info(ts, fe_crate)
 			s.fw = [
 				ngccm_info["version_fw_mez_major"],
 				ngccm_info["version_fw_mez_minor"]
@@ -167,8 +170,10 @@ def get_status(ts=None, crate=-1):		# Perform basic checks of the ngCCMs:
 			else:
 				s.status.append(0)
 			s.update()
-		else:
-			print "ERROR (ngccm.get_status): The crate you want ({0}) is not in the teststand object you supplied.".format(crate)
+			statuses[fe_crate] = s
+		return statuses
+	else:
+		return False
 		
 #		# Check the temperature:
 #		temp = ts.get_temps()[0]
@@ -183,34 +188,24 @@ def get_status(ts=None, crate=-1):		# Perform basic checks of the ngCCMs:
 #				status["status"].append(1)
 #			else:
 #				status["status"].append(0)
-	return s
 
-def get_status_all(ts=None):
-	log = ""
-	ss = []
-	
-	if ts:
-		for crate in ts.fe_crates:
-			ss.append(get_status(ts=ts, crate=crate))
-	return ss
-
-def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:
-	log = ""
-	status = {}
-	status["status"] = []
-	# Enable, reset, and check the BKP power:
-	for crate in ts.fe_crates:
-		ngccm_output = send_commands_fast(ts, ["put HF{0}-bkp_pwr_enable 1".format(crate), "put HF{0}-bkp_reset 1".format(crate), "put HF{0}-bkp_reset 0".format(crate)])["output"]
-		log += ngccm_output
-		ngccm_output = send_commands_fast(ts, "get HF{0}-bkp_pwr_bad".format(crate))["output"]
-		log += ngccm_output
-		match = search("{0} # ([01])".format("get HF{0}-bkp_pwr_bad".format(crate)), ngccm_output)
-		if match:
-			status["status"].append((int(match.group(1))+1)%2)
-		else:
-			log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get HF{0}-bkp_pwr_bad".format(crate))
-			status["status"].append(0)
-	return status
+#def get_status_bkp(ts):		# Perform basic checks of the FE crate backplanes:
+#	log = ""
+#	status = {}
+#	status["status"] = []
+#	# Enable, reset, and check the BKP power:
+#	for crate in ts.fe_crates:
+#		ngccm_output = send_commands_fast(ts, ["put HF{0}-bkp_pwr_enable 1".format(crate), "put HF{0}-bkp_reset 1".format(crate), "put HF{0}-bkp_reset 0".format(crate)])["output"]
+#		log += ngccm_output
+#		ngccm_output = send_commands_fast(ts, "get HF{0}-bkp_pwr_bad".format(crate))["output"]
+#		log += ngccm_output
+#		match = search("{0} # ([01])".format("get HF{0}-bkp_pwr_bad".format(crate)), ngccm_output)
+#		if match:
+#			status["status"].append((int(match.group(1))+1)%2)
+#		else:
+#			log += "ERROR: Could not find the result of \"{0}\" in the output.".format("get HF{0}-bkp_pwr_bad".format(crate))
+#			status["status"].append(0)
+#	return status
 
 def get_power(ts=False):
 	output = {}
@@ -228,7 +223,7 @@ def get_power(ts=False):
 				"get HF{0}-1V5_current_f".format(crate),		# This is really the current of 1.5 V plust the current of 1.2 V.
 				"get HF{0}-1V2_voltage_f".format(crate),
 			]
-			output[crate] = send_commands_parsed(ts, cmds)["output"]
+			output[crate] = ngfec.send_commands(ts=ts, cmds=cmds)
 			return output
 	else:
 		return output
@@ -245,7 +240,7 @@ def set_CI_mode(ts , crate , slot , enable = True , DAC = 0 ) :
 			    #"put HF{0}-{1}-iBot_CntrReg_CImode 0".format(crate,slot)]
 
 	
-	ngccm_output = send_commands_parsed( ts , commands )
+	ngfec_output = ngfec.send_commands(ts=ts, cmds=commands)
 
 # This function should be moved to "qie.py":
 def get_qie_shift_reg(ts , crate , slot , qie_list = range(1,5) ):
@@ -276,7 +271,7 @@ def get_qie_shift_reg(ts , crate , slot , qie_list = range(1,5) ):
 		for setting in qie_settings : 
 			commands.append("get HF{0}-{1}-QIE{2}_{3}".format(crate,slot,qie,setting))
 	
-	ngccm_output = send_commands_parsed(ts , commands)
+	ngccm_output = ngfec.send_commands(ts=ts, cmds=commands)
 	
 	for qie in qie_list : 
 		qieLabels.append("QIE {0}".format(qie))

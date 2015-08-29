@@ -61,15 +61,15 @@ class uhtr:
 
 class status:
 	# Construction:
-	def __init__(self, ts=None, status=[], be_crate=None, be_slot=None, ip={}, fws=[], links=[], dump=""):
+	def __init__(self, ts=None, status=[], crate=None, slot=None, ip={}, fws=[], links=[], dump=""):
 		if not ts:
 			ts = None
 		self.ts = ts
 		if not status:
 			status = []
 		self.status = status
-		self.crate = be_crate
-		self.slot = be_slot
+		self.crate = crate
+		self.slot = slot
 		if not ip:
 			ip = {}
 		self.ip = ip
@@ -105,10 +105,7 @@ class status:
 		output = "%% uHTR {0}, {1}\n".format(self.crate, self.slot)
 		output += "{0}\n".format(int(self.good))
 		output += "{0}\n".format(self.status)
-		output += "{0}\n".format(self.fw_type_front)
-		output += "{0}\n".format(self.fw_front)
-		output += "{0}\n".format(self.fw_type_back)
-		output += "{0}\n".format(self.fw_back)
+		output += "{0}\n".format(self.fws)
 		output += "{0}\n".format(self.links)
 		output += "{0}\n".format(self.ip)
 		output += "{0}\n".format(self.dump)
@@ -119,10 +116,10 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	qie_half_labels = ['bottom', 'top']
 	
 	# CONSTRUCTION
-	def __init__(self, ts="unknown", be_crate=-1, be_slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False, qies=[-1, -1, -1, -1]):
+	def __init__(self, ts="unknown", crate=-1, slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False, qies=[-1, -1, -1, -1]):
 		self.ts = ts
-		self.crate = be_crate
-		self.slot = be_slot
+		self.crate = crate
+		self.slot = slot
 		self.n = link_number
 		self.qie_unique_id = self.id = qie_unique_id
 		self.qie_half = self.half = qie_half
@@ -133,14 +130,14 @@ class link:		# An object that represents a uHTR link. It contains information ab
 		if self.qie_half in [0, 1]: 
 			self.qie_half_label = self.half_label = self.qie_half_labels[self.qie_half]
 		try:
-			self.uhtr_ip = self.ip = ts.uhtr_ip(be_crate, be_slot)
+			self.uhtr_ip = self.ip = ts.uhtr_ip(crate, slot)
 		except Exception as ex:
 			self.uhtr_ip = self.ip = ""
 	# /CONSTRUCTION
 	
 	# METHODS
 	def get_data_spy(self, n_bx=50):
-		data = get_data_spy(ts=self.ts, be_crate=self.crate, be_slot=self.slot, n_bx=n_bx, i_link=self.n)
+		data = get_data_spy(ts=self.ts, crate=self.crate, slot=self.slot, n_bx=n_bx, i_link=self.n)
 		if data:
 			return data
 		else:
@@ -162,14 +159,14 @@ class link:		# An object that represents a uHTR link. It contains information ab
 # /CLASSES
 
 # FUNCTIONS:
-def send_commands(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, cmds=cmds_default, script=False):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
+def send_commands(ts=None, crate=None, slot=None, ip=None, control_hub=None, cmds=cmds_default, script=False):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
 	# Arguments and variables:
 	log = ""
 	raw = ""
 	results = {}		# Results will be indexed by uHTR IP unless a "ts" has been specified, in which case they'll be indexed by (crate, slot).
 	
 	## Parse ip argument:
-	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	ips = meta.parse_args_ip(ts=ts, crate=crate, slot=slot, ip=ip)
 	if ips:
 		## Parse control_hub argument:
 		control_hub = meta.parse_args_hub(ts=ts, control_hub=control_hub)
@@ -212,10 +209,10 @@ def send_commands(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=Non
 	else:
 		return False
 
-def setup(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=55):
+def setup(ts=None, crate=None, slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=59):
 # Set up any number of uHTRs. Specify a group of uHTRs by the crates and slots or by the IPs. If you specify the ts and nothing else it will set up all of them.
 	# Arguments:
-	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	ips = meta.parse_args_ip(ts=ts, crate=crate, slot=slot, ip=ip)
 	if not ips:
 		return False
 	else:
@@ -241,15 +238,15 @@ def setup(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, auto_
 		# Run setup commands:
 		cs_exists = [bool(crate_slot) for ip, crate_slot in ips.iteritems()]
 		if sum(cs_exists) == len(cs_exists):
-			uhtr_out = send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot, cmds=cmds)
+			uhtr_out = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds)
 		else:
 			uhtr_out = send_commands(ip=ips.keys(), cmds=cmds, control_hub=control_hub)
 		return uhtr_out
 
-def setup_links(ts=None, be_crate=None, be_slot=None):
+def setup_links(ts=None, crate=None, slot=None):
 	if ts:
 		# Parse crates and slots:
-		be = meta.parse_args_crate_slot(ts=ts, crate=be_crate, slot=be_slot, crate_type="be")
+		be = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="be")
 		if be:
 			# Define setup commands:
 			cmds = [
@@ -257,7 +254,7 @@ def setup_links(ts=None, be_crate=None, be_slot=None):
 				"link",
 				"init",
 				"1",		# Auto realign
-				"55",		# Orbit delay
+				"59",		# Orbit delay
 				"0",
 				"0",
 				"0",
@@ -267,9 +264,9 @@ def setup_links(ts=None, be_crate=None, be_slot=None):
 			]
 		
 			# Run setup commands:
-			for be_crate, be_slots in be.iteritems():
-				for be_slot in be_slots:
-					output = send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot, cmds=cmds)["output"]
+			for crate, slots in be.iteritems():
+				for slot in slots:
+					output = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds)["output"]
 			sleep(1)		# Wait to give the links time to initialize.
 			return True
 		else:
@@ -279,9 +276,9 @@ def setup_links(ts=None, be_crate=None, be_slot=None):
 		print "ERROR (uhtr.setup_links): You must supply a teststand argument!"
 		return False
 
-def get_info(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None):		# Returns dictionaries of information about the uHTRs, such as the FW versions.
+def get_info(ts=None, crate=None, slot=None, ip=None, control_hub=None):		# Returns dictionaries of information about the uHTRs, such as the FW versions.
 	# Arguments and variables:
-	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	ips = meta.parse_args_ip(ts=ts, crate=crate, slot=slot, ip=ip)
 	if not ips:
 		return False
 	else:
@@ -291,7 +288,7 @@ def get_info(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None):		
 		## Run basic commands, which have version info in the output:
 		cs_exists = [bool(crate_slot) for ip, crate_slot in ips.iteritems()]
 		if sum(cs_exists) == len(cs_exists):
-			uhtr_out = send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot)
+			uhtr_out = send_commands(ts=ts, crate=crate, slot=slot)
 		else:
 			uhtr_out = send_commands(ip=ips.keys(), control_hub=control_hub)
 		for key, results  in uhtr_out.iteritems():
@@ -325,9 +322,9 @@ def get_info(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None):		
 				return False
 		return data
 
-def get_status(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, ping=True):		# Perform basic checks with the uHTRTool.exe:
+def get_status(ts=None, crate=None, slot=None, ip=None, control_hub=None, ping=True):		# Perform basic checks with the uHTRTool.exe:
 	# Arguments and variables:
-	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	ips = meta.parse_args_ip(ts=ts, crate=crate, slot=slot, ip=ip)
 	if not ips:
 		return False
 	else:
@@ -352,8 +349,8 @@ def get_status(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, 
 			
 			# Make sure the versions are accessible:
 			if crate_slot:
-				be_crate, be_slot = crate_slot
-				uhtr_info = get_info(ts=ts, be_crate=be_crate, be_slot=be_slot)[crate_slot]
+				crate, slot = crate_slot
+				uhtr_info = get_info(ts=ts, crate=crate, slot=slot)[crate_slot]
 			else:
 				uhtr_info = get_info(ip=ip, control_hub=control_hub)[ip]
 			if uhtr_info:
@@ -364,8 +361,8 @@ def get_status(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, 
 			
 			# Additional info:
 			if crate_slot:
-				be_crate, be_slot = crate_slot
-				dump = get_dump(ts=ts, be_crate=be_crate, be_slot=be_slot)[crate_slot]
+				crate, slot = crate_slot
+				dump = get_dump(ts=ts, crate=crate, slot=slot)[crate_slot]
 			else:
 				dump = get_dump(ip=ip, control_hub=control_hub)[ip]
 			s.dump = dump
@@ -377,15 +374,6 @@ def get_status(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None, 
 			else:
 				statuses[ip] = s
 		return statuses
-
-def get_status_all(ts=None, ping=True):
-	log = ""
-	ss = []
-	
-	if ts:
-		for slot in ts.uhtr_slots:
-			ss.append(get_status(ts=ts, slot=slot, ping=ping))
-	return ss
 
 ## Parse raw uHTR output:
 def parse_link_status(raw):		# Parses the raw ouput of the uHTRTool.exe's "LINK" > "STATUS".	
@@ -425,36 +413,36 @@ def parse_link_status(raw):		# Parses the raw ouput of the uHTRTool.exe's "LINK"
 	return info
 
 ## Get link information:
-def get_info_links(ts=None, be_crate=None, be_slot=None):		# Statuses links and then returns a list of link indicies, for a certain uHTR.
+def get_info_links(ts=None, crate=None, slot=None):		# Statuses links and then returns a list of link indicies, for a certain uHTR.
 	# Variables:
 	log = ""
 	
 	# Get raw link information (LINK > STATUS):
-	raw_output = get_raw_status(ts=ts, be_crate=be_crate, be_slot=be_slot)
+	raw_output = get_raw_status(ts=ts, crate=crate, slot=slot)
 	
 	# Parse the information:
 	link_info = parse_link_status(raw_output)
 	
 	return link_info
 
-def list_active_links(ts=None, be_crate=None, be_slot=None):		# Returns a list of the indices of the active links for a particular uHTR.
-	link_info = get_info_links(ts=ts, be_crate=be_crate, be_slot=be_slot)
+def list_active_links(ts=None, crate=None, slot=None):		# Returns a list of the indices of the active links for a particular uHTR.
+	link_info = get_info_links(ts=ts, crate=crate, slot=slot)
 	return [i_link for i_link, active in enumerate(link_info["active"]) if active]
 
 ## Get link objects:
-def get_links(ts=None, be_crate=None, be_slot=None):		# Initializes and sets up links of a uHTR and then returns a list of links.
+def get_links(ts=None, crate=None, slot=None):		# Initializes and sets up links of a uHTR and then returns a list of links.
 	# Parse crate, slot info:
-	be = meta.parse_args_crate_slot(ts=ts, crate=be_crate, slot=be_slot, crate_type="be")
+	be = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="be")
 	
 	# Set up the QIE card unique IDs:
 	is_set = qie.set_unique_id_all(ts)
 	if is_set:
 		results = {}
-		for be_crate, be_slots in be.iteritems():
-			for be_slot in be_slots:
+		for crate, slots in be.iteritems():
+			for slot in slots:
 				# Get a list of the active links:
-				print "Fetching links from the uHTR in BE Crate {0}, BE Slot {1} ...".format(be_crate, be_slot)
-				active_links = list_active_links(ts=ts, be_crate=be_crate, be_slot=be_slot)
+				print "Fetching links from the uHTR in BE Crate {0}, BE Slot {1} ...".format(crate, slot)
+				active_links = list_active_links(ts=ts, crate=crate, slot=slot)
 #				print active_links
 	
 				# For each active link, read QIE unique ID and fiber number from SPY data:
@@ -464,7 +452,7 @@ def get_links(ts=None, be_crate=None, be_slot=None):		# Initializes and sets up 
 					links = []
 					for i in range(24):		# Every uHTR has 24 possible links labeled 0 to 23.
 						if i in active_links:
-							data = get_data_spy(ts=ts, be_crate=be_crate, be_slot=be_slot, i_link=i)		# Reading fewer than 50 "samples" sometimes results in no data ...
+							data = get_data_spy(ts=ts, crate=crate, slot=slot, i_link=i)		# Reading fewer than 50 "samples" sometimes results in no data ...
 							if data:
 				#				print data["raw"]
 								qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
@@ -477,8 +465,8 @@ def get_links(ts=None, be_crate=None, be_slot=None):		# Initializes and sets up 
 								qie_half = data[0][0].half
 								links.append(link(
 									ts=ts,
-									be_crate=be_crate,
-									be_slot=be_slot,
+									crate=crate,
+									slot=slot,
 									link_number=i,
 									qie_unique_id=qie_unique_id,
 									qie_half=qie_half,
@@ -488,38 +476,38 @@ def get_links(ts=None, be_crate=None, be_slot=None):		# Initializes and sets up 
 							else:
 								links.append(link(
 									ts=ts,
-									be_crate=be_crate,
-									be_slot=be_slot,
+									crate=crate,
+									slot=slot,
 									on=True
 								))
 						else:
 							links.append(link(
 								ts=ts,
-								be_crate=be_crate,
-								be_slot=be_slot,
+								crate=crate,
+								slot=slot,
 								link_number=i,
 								on=False
 							))
-					results[(be_crate, be_slot)] = links
+					results[(crate, slot)] = links
 		result = ts.set_mode(mode=0)		# Return the teststand to normal mode operation.
 		return results
 	else:
 		print "ERROR (uhtr.get_links): The unique IDs couldn't be set."
 		return False
 
-def get_link_from_map(ts=False, be_crate=None, be_slot=None, i_link=-1, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
+def get_link_from_map(ts=False, crate=None, slot=None, i_link=-1, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
 	if ts:
 		qie_map = ts.read_qie_map(f=f, d=d)
 #		uhtr_info = ts.uhtr_from_qie()
 		qies = []
 		for ch in range(4):
-			qies.extend([i for i in qie_map if i["be_crate"] == be_crate and i["be_slot"] == be_slot and i["link"] == i_link and i["channel"] == ch])
+			qies.extend([i for i in qie_map if i["crate"] == crate and i["slot"] == slot and i["link"] == i_link and i["channel"] == ch])
 		if len(qies) == 4:
 			qie = qies[0]
 			return link(
 				ts=ts,
-				be_crate=be_crate,
-				be_slot=be_slot,
+				crate=crate,
+				slot=slot,
 				link_number=i_link,
 				qie_unique_id=qie["id"],
 				qie_half=qie["half"],
@@ -528,10 +516,10 @@ def get_link_from_map(ts=False, be_crate=None, be_slot=None, i_link=-1, f="", d=
 				qies=[qie["qie"] for qie in qies]
 			)
 		elif len(qies) > 1:
-			print "ERROR (get_link_from_map): More than one QIE in the map matches your criterion of be_crate = {0}, be_slot = {1}, and i_link = {2}.".format(be_crate, be_slot, i_link)
+			print "ERROR (get_link_from_map): More than one QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(crate, slot, i_link)
 			return False
 		else:
-			print "ERROR (get_link_from_map): No QIE in the map matches your criterion of be_crate = {0}, be_slot = {1}, and i_link = {2}.".format(be_crate, be_slot, i_link)
+			print "ERROR (get_link_from_map): No QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(crate, slot, i_link)
 			return False
 	else:
 		print "ERROR (get_link_from_map): One of the arguments needs to be a teststand object."
@@ -608,7 +596,7 @@ def read_histo(file_in=""):
 
 # Perform basic uHTR commands:
 ## Returning raw output:
-def get_raw_spy(ts=None, be_crate=None, be_slot=None, n_bx=50, i_link=0):
+def get_raw_spy(ts=None, crate=None, slot=None, n_bx=50, i_link=0):
 	log = ""
 	
 	cmds = [
@@ -624,9 +612,9 @@ def get_raw_spy(ts=None, be_crate=None, be_slot=None, n_bx=50, i_link=0):
 		'-1',
 	]
 	
-	return send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot, cmds=cmds)["output"]
+	return send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds)["output"]
 
-def get_raw_status(ts=None, be_crate=None, be_slot=None):
+def get_raw_status(ts=None, crate=None, slot=None):
 	# Variables:
 	log = ""
 	cmds = [
@@ -639,7 +627,7 @@ def get_raw_status(ts=None, be_crate=None, be_slot=None):
 	]
 	
 	# Send commands:
-	result = send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot, cmds=cmds)
+	result = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds)
 	if result:
 		return result["output"]
 	else:
@@ -654,7 +642,7 @@ def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
 		'link',
 		'init',
 		'1',
-		'55',
+		'59',
 		'0',
 		'0',
 		'status',
@@ -754,18 +742,18 @@ def parse_spy(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc.
 				))
 		return results
 
-def get_data_spy(ts=None, be_crate=None, be_slot=None, n_bx=50, i_link=0):
-	result = parse_spy(get_raw_spy(ts=ts, be_crate=be_crate, be_slot=be_slot, n_bx=n_bx, i_link=i_link))
+def get_data_spy(ts=None, crate=None, slot=None, n_bx=50, i_link=0):
+	result = parse_spy(get_raw_spy(ts=ts, crate=crate, slot=slot, n_bx=n_bx, i_link=i_link))
 	if result:
 		return result
 	else:
 		print "ERROR (uhtr.get_data_spy): There was no SPY data in the raw uhtr output for link {0}".format(i_link)
 		return False
 
-def get_dump(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None):
+def get_dump(ts=None, crate=None, slot=None, ip=None, control_hub=None):
 # Set up any number of uHTRs. Specify a group of uHTRs by the crates and slots or by the IPs. If you specify the ts and nothing else it will set up all of them.
 	# Arguments:
-	ips = meta.parse_args_ip(ts=ts, be_crate=be_crate, be_slot=be_slot, ip=ip)
+	ips = meta.parse_args_ip(ts=ts, crate=crate, slot=slot, ip=ip)
 	if not ips:
 		return False
 	else:
@@ -790,7 +778,7 @@ def get_dump(ts=None, be_crate=None, be_slot=None, ip=None, control_hub=None):
 		# Run setup commands:
 		cs_exists = [bool(crate_slot) for ip, crate_slot in ips.iteritems()]
 		if sum(cs_exists) == len(cs_exists):
-			uhtr_out = send_commands(ts=ts, be_crate=be_crate, be_slot=be_slot, cmds=cmds)
+			uhtr_out = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds)
 		else:
 			uhtr_out = send_commands(ip=ips.keys(), cmds=cmds, control_hub=control_hub)
 		return uhtr_out

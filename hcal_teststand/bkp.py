@@ -5,7 +5,7 @@
 # backplanes.                                                      #
 ####################################################################
 
-import ngccm
+import ngfec
 import meta
 
 # CLASSES:
@@ -32,7 +32,7 @@ class bkp:
 				"put HF{0}-bkp_reset 0".format(self.crate),
 				"get HF{0}-bkp_pwr_bad".format(self.crate),
 			]
-			ngfec_output = ngccm.send_commands_parsed(ts, cmds)["output"]
+			ngfec_output = ngfec.send_commands(ts=ts, cmds=cmds)
 			for cmd in ngfec_output[:-1]:
 				if "OK" not in cmd["result"]:
 					return False
@@ -114,18 +114,17 @@ class status:
 def get_status(ts=None, crate=None):		# Perform basic checks of the FE crate backplanes:
 	# Arguments:
 	log = ""
-	crates = meta.parse_args_crate(ts=ts, crate=crate)
-	statuses = []
-	
-	if ts:
+	crates = meta.parse_args_crate(ts=ts, crate=crate, crate_type="fe")
+	if crates:
+		statuses = {}
 		# Status each crate:
-		for crate in crates:
+		for fe_crate in crates:
 			# Initialize status object
-			s = status(ts=ts, crate=crate)
+			s = status(ts=ts, crate=fe_crate)
 	
 			# Enable, reset, and check the BKP power:
-			if crate in ts.fe_crates:
-				ngfec_output = ngccm.send_commands_parsed(ts, "get HF{0}-bkp_pwr_bad".format(crate))["output"]
+			if fe_crate in ts.fe_crates:
+				ngfec_output = ngfec.send_commands(ts=ts, cmds=["get HF{0}-bkp_pwr_bad".format(fe_crate)])
 				if "ERROR" not in ngfec_output[0]["result"]:
 					try:
 						good = not int(ngfec_output[0]["result"])
@@ -137,22 +136,13 @@ def get_status(ts=None, crate=None):		# Perform basic checks of the FE crate bac
 				else:
 					s.status.append(0)
 			else:
-				print "ERROR (bkp.get_status): The crate you want ({0}) is not in the teststand object you supplied. It has the following crates:\n\t{1}".format(crate, ts.fe_crates)
+				print "ERROR (bkp.get_status): The crate you want ({0}) is not in the teststand object you supplied. It has the following crates:\n\t{1}".format(fe_crate, ts.fe_crates)
 				return False
 			s.update()
-			statuses.append(s)
+			statuses[fe_crate] = s
 		return statuses
 	else:
 		return False
-
-def get_status_all(ts=None):
-	log = ""
-	ss = []
-	
-	if ts:
-		for crate in ts.fe_crates:
-			ss.append(get_status(ts=ts, crate=crate))
-	return ss
 # /FUNCTIONS
 
 if __name__ == "__main__":

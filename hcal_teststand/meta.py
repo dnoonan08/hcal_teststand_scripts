@@ -123,7 +123,7 @@ def parse_args_crate_slot(ts=None, crate=None, slot=None, crate_type="fe"):
 ## /
 
 ## Parse ip:
-def parse_args_ip(ts=None, be_crate=None, be_slot=None, ip=None):
+def parse_args_ip(ts=None, crate=None, slot=None, ip=None):
 	# Arguments and variables:
 	results = {}
 	good_args = [
@@ -147,15 +147,15 @@ def parse_args_ip(ts=None, be_crate=None, be_slot=None, ip=None):
 	# TS is correct (ignore "ip"):
 	elif good_args[1]:
 		# Parse crate, slot info:
-		be = parse_args_crate_slot(ts=ts, crate=be_crate, slot=be_slot, crate_type="be")
+		be = parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="be")
 		if be:
-			for be_crate, be_slots in be.iteritems():
-				for be_slot in be_slots:
-					ip = ts.uhtr_ip(be_crate, be_slot)
-					results[ip] = (be_crate, be_slot)
+			for crate, slots in be.iteritems():
+				for slot in slots:
+					ip = ts.uhtr_ip(crate, slot)
+					results[ip] = (crate, slot)
 			return results
 		else:
-			print "ERROR (meta.parse_args_ip): The following crate, slot arguments were not good:\ncrate={0}\nslot={1}".format(be_crate, be_slot)
+			print "ERROR (meta.parse_args_ip): The following crate, slot arguments were not good:\ncrate={0}\nslot={1}".format(crate, slot)
 			return False
 	else:
 		print "ERROR (meta.parse_args_ip): This point shouldn't have been reached."
