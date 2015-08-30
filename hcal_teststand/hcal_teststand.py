@@ -150,8 +150,11 @@ class teststand:
 			result[uhtr_slot] = uhtr.list_active_links(self, uhtr_slot)
 		return result
 	
-	def get_links(self, be_crate=None, be_slot=None):
-		return uhtr.get_links(ts=self, be_crate=be_crate, be_slot=be_slot)
+	def get_links(self, be_crate=None, be_slot=None, ip=None):
+		return uhtr.get_links(ts=self, crate=be_crate, slot=be_slot, ip=ip)
+	
+	def get_links_from_map(self, be_crate=None, be_slot=None, i_link=None, f="", d="configuration/maps"):
+		return uhtr.get_links_from_map(ts=self, crate=be_crate, slot=be_slot, i_link=i_link, f=f, d=d)
 	
 	## QIE:
 	def set_ped(self, dac=None, dac_cid=None, i_qie=None, i_cid=set(range(4)), crate=None, slot=None):		# Set pedestal values.

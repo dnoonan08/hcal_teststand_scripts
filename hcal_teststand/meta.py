@@ -181,6 +181,26 @@ def parse_args_qie(i_qie=None):
 		return range(1, 25)
 ## /
 
+## Parse i_link:
+def parse_args_link(i_link=None):
+	if i_link != None:
+		i_link_original = i_link
+		if isinstance(i_link, int):
+			i_link = [int(i_link)]
+		if not isinstance(i_link, list):
+			print "ERROR (meta.parse_args_link): You must enter an integer or a list of integers for \"i_link\"."
+			return False
+		else:
+			i_link = set(i_link)
+			if not i_link.issubset(set(range(24))):
+				print "ERROR (meta.parse_args_link): \"i_link\" can only contain elements of [0, 2, ..., 23], but you tried to set it to {0}.".format(i_link_original)
+				return False
+			else:
+				return sorted(list(i_link))
+	else:
+		return range(24)
+## /
+
 ## Parse port:
 def parse_args_hub(ts=None, control_hub=None):
 	if ts == None:

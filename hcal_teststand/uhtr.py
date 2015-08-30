@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE
 import hcal_teststand
 import qie
 import meta
+import ngfec
 from ROOT import *
 from time import sleep
 
@@ -137,7 +138,7 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	
 	# METHODS
 	def get_data_spy(self, n_bx=50):
-		data = get_data_spy(ts=self.ts, crate=self.crate, slot=self.slot, n_bx=n_bx, i_link=self.n)
+		data = get_data_spy(ts=self.ts, crate=self.crate, slot=self.slot, n_bx=n_bx, i_link=self.n)[(self.crate, self.slot)][self.n]
 		if data:
 			return data
 		else:
@@ -161,7 +162,6 @@ class link:		# An object that represents a uHTR link. It contains information ab
 # FUNCTIONS:
 def send_commands(ts=None, crate=None, slot=None, ip=None, control_hub=None, cmds=cmds_default, script=False):		# Sends commands to "uHTRtool.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
 	# Arguments and variables:
-	log = ""
 	raw = ""
 	results = {}		# Results will be indexed by uHTR IP unless a "ts" has been specified, in which case they'll be indexed by (crate, slot).
 	
@@ -193,18 +193,11 @@ def send_commands(ts=None, crate=None, slot=None, ip=None, control_hub=None, cmd
 				raw_output = Popen(['{0} < uhtr_script.cmd'.format(uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()
 			else:
 				raw_output = Popen(['printf "{0}" | {1}'.format(cmds_str, uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
-			log += "----------------------------\nYou ran the following script with the uHTRTool:\n\n{0}\n----------------------------".format(cmds_str)
 			raw += raw_output[0] + raw_output[1]
 			if crate_slot:
-				results[crate_slot] = {
-					"output": raw,
-					"log": log,
-				}
+				results[crate_slot] = raw
 			else:
-				results[uhtr_ip] = {
-					"output": raw,
-					"log": log,
-				}
+				results[uhtr_ip] = raw
 		return results
 	else:
 		return False
@@ -243,38 +236,38 @@ def setup(ts=None, crate=None, slot=None, ip=None, control_hub=None, auto_realig
 			uhtr_out = send_commands(ip=ips.keys(), cmds=cmds, control_hub=control_hub)
 		return uhtr_out
 
-def setup_links(ts=None, crate=None, slot=None):
-	if ts:
-		# Parse crates and slots:
-		be = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="be")
-		if be:
-			# Define setup commands:
-			cmds = [
-				"0",
-				"link",
-				"init",
-				"1",		# Auto realign
-				"59",		# Orbit delay
-				"0",
-				"0",
-				"0",
-				"quit",
-				"exit",
-				"-1",
-			]
-		
-			# Run setup commands:
-			for crate, slots in be.iteritems():
-				for slot in slots:
-					output = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds)["output"]
-			sleep(1)		# Wait to give the links time to initialize.
-			return True
-		else:
-			print "ERROR (uhtr.setup_links): The crate, slot arguments were not good."
-			return False
-	else:
-		print "ERROR (uhtr.setup_links): You must supply a teststand argument!"
-		return False
+#def setup_links(ts=None, crate=None, slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=59):
+#	if ts:
+#		# Parse crates and slots:
+#		be = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="be")
+#		if be:
+#			# Define setup commands:
+#			cmds = [
+#				"0",
+#				"link",
+#				"init",
+#				"1",		# Auto realign
+#				"59",		# Orbit delay
+#				"0",
+#				"0",
+#				"0",
+#				"quit",
+#				"exit",
+#				"-1",
+#			]
+#		
+#			# Run setup commands:
+#			for crate, slots in be.iteritems():
+#				for slot in slots:
+#					output = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds)["output"]
+#			sleep(1)		# Wait to give the links time to initialize.
+#			return True
+#		else:
+#			print "ERROR (uhtr.setup_links): The crate, slot arguments were not good."
+#			return False
+#	else:
+#		print "ERROR (uhtr.setup_links): You must supply a teststand argument!"
+#		return False
 
 def get_info(ts=None, crate=None, slot=None, ip=None, control_hub=None):		# Returns dictionaries of information about the uHTRs, such as the FW versions.
 	# Arguments and variables:
@@ -291,8 +284,8 @@ def get_info(ts=None, crate=None, slot=None, ip=None, control_hub=None):		# Retu
 			uhtr_out = send_commands(ts=ts, crate=crate, slot=slot)
 		else:
 			uhtr_out = send_commands(ip=ips.keys(), control_hub=control_hub)
-		for key, results  in uhtr_out.iteritems():
-			raw_output = results["output"]
+		for key, raw  in uhtr_out.iteritems():
+			raw_output = raw
 			
 			## Find the version info from the raw output:
 			## "HF-4800 (41) 00.0f.00" => FW = [00, 0f, 00], FW_type = [HF-4800, 41] (repeat for "back")
@@ -413,139 +406,147 @@ def parse_link_status(raw):		# Parses the raw ouput of the uHTRTool.exe's "LINK"
 	return info
 
 ## Get link information:
-def get_info_links(ts=None, crate=None, slot=None):		# Statuses links and then returns a list of link indicies, for a certain uHTR.
+def get_info_links(ts=None, crate=None, slot=None, ip=None, control_hub=None, script=False):		# Statuses links and then returns a list of link indicies, for a certain uHTR.
 	# Variables:
 	log = ""
+	link_info = {}
 	
 	# Get raw link information (LINK > STATUS):
-	raw_output = get_raw_status(ts=ts, crate=crate, slot=slot)
+	raw = get_raw_status(ts=ts, crate=crate, slot=slot, ip=ip, control_hub=control_hub, script=script)
 	
 	# Parse the information:
-	link_info = parse_link_status(raw_output)
+	for key, raw_output in raw.iteritems():
+		link_info[key] = parse_link_status(raw_output)
 	
 	return link_info
 
-def list_active_links(ts=None, crate=None, slot=None):		# Returns a list of the indices of the active links for a particular uHTR.
-	link_info = get_info_links(ts=ts, crate=crate, slot=slot)
-	return [i_link for i_link, active in enumerate(link_info["active"]) if active]
+def list_active_links(ts=None, crate=None, slot=None, ip=None, control_hub=None, port=ngfec.port_default, script=False):		# Returns a list of the indices of the active links for a particular set of uHTRs.
+	# Variables:
+	active_links = {}
+	
+	# Get link info:
+	link_info = get_info_links(ts=ts, crate=crate, slot=slot, ip=ip, control_hub=control_hub, script=script)
+	for key, info in link_info.iteritems():
+		active_links[key] = [i_link for i_link, active in enumerate(info["active"]) if active]
+	return active_links
 
 ## Get link objects:
-def get_links(ts=None, crate=None, slot=None):		# Initializes and sets up links of a uHTR and then returns a list of links.
+def get_links(ts=None, crate=None, slot=None, ip=None, control_hub=None, port=ngfec.port_default):		# Fetches link objects for the links in specific uHTRs.
 	# Parse crate, slot info:
 	be = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="be")
-	
-	# Set up the QIE card unique IDs:
-	is_set = qie.set_unique_id_all(ts)
-	if is_set:
-		results = {}
-		for crate, slots in be.iteritems():
-			for slot in slots:
-				# Get a list of the active links:
-				print "Fetching links from the uHTR in BE Crate {0}, BE Slot {1} ...".format(crate, slot)
-				active_links = list_active_links(ts=ts, crate=crate, slot=slot)
-#				print active_links
-	
-				# For each active link, read QIE unique ID and fiber number from SPY data:
-				# (self, uhtr_ip = "unknown", link_number = -1, qie_unique_id = "unknown", qie_half = -1, qie_fiber = -1, on = False)
-				result = ts.set_mode(mode=2)		# Turn on test mode B.
-				if result:
-					links = []
-					for i in range(24):		# Every uHTR has 24 possible links labeled 0 to 23.
-						if i in active_links:
-							data = get_data_spy(ts=ts, crate=crate, slot=slot, i_link=i)		# Reading fewer than 50 "samples" sometimes results in no data ...
-							if data:
-				#				print data["raw"]
-								qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
-									data[0][0].raw[2][1:5],
-									data[0][0].raw[1][1:5],
-									data[0][0].raw[4][1:5],
-									data[0][0].raw[3][1:5]
-								)
-								qie_fiber = data[0][0].fiber
-								qie_half = data[0][0].half
-								links.append(link(
-									ts=ts,
-									crate=crate,
-									slot=slot,
-									link_number=i,
-									qie_unique_id=qie_unique_id,
-									qie_half=qie_half,
-									qie_fiber=qie_fiber,
-									on=True
-								))
+	if be:
+		# Set up the QIE card unique IDs if needed:
+		if not qie.check_unique_id(ts=ts, crate=crate, slot=slot, control_hub=control_hub, port=port):
+			is_set = qie.set_unique_id(ts=ts, crate=crate, slot=slot, control_hub=control_hub, port=port)
+		else:
+			is_set = True
+		if is_set:
+			results = {}
+			# Get lists of the active links in the uHTRs in question:
+			active_links = list_active_links(ts=ts, crate=crate, slot=slot, ip=ip, control_hub=control_hub, port=port)
+			for be_crate, be_slots in be.iteritems():
+				for be_slot in be_slots:
+					crate_slot = (be_crate, be_slot)
+					# For each active link, read QIE unique ID and fiber number from SPY data:
+					# (self, uhtr_ip = "unknown", link_number = -1, qie_unique_id = "unknown", qie_half = -1, qie_fiber = -1, on = False)
+					i_links_active = active_links[crate_slot]
+					result = ts.set_mode(mode=2)		# Turn on test mode B.
+					if result:
+						links = []
+						for i in range(24):		# Every uHTR has 24 possible links labeled 0 to 23.
+							if i in i_links_active:
+								data = get_data_spy(ts=ts, crate=be_crate, slot=be_slot, i_link=i)[crate_slot][i]		# Reading fewer than 50 "samples" sometimes results in no data ...
+								if data:
+#									print data
+									qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
+										data[0][0].raw[2][1:5],
+										data[0][0].raw[1][1:5],
+										data[0][0].raw[4][1:5],
+										data[0][0].raw[3][1:5]
+									)
+									qie_fiber = data[0][0].fiber
+									qie_half = data[0][0].half
+									links.append(link(
+										ts=ts,
+										crate=be_crate,
+										slot=be_slot,
+										link_number=i,
+										qie_unique_id=qie_unique_id,
+										qie_half=qie_half,
+										qie_fiber=qie_fiber,
+										on=True
+									))
+								else:
+									links.append(link(
+										ts=ts,
+										crate=be_crate,
+										slot=be_slot,
+										on=True
+									))
 							else:
 								links.append(link(
 									ts=ts,
-									crate=crate,
-									slot=slot,
-									on=True
+									crate=be_crate,
+									slot=be_slot,
+									link_number=i,
+									on=False
 								))
-						else:
-							links.append(link(
-								ts=ts,
-								crate=crate,
-								slot=slot,
-								link_number=i,
-								on=False
-							))
-					results[(crate, slot)] = links
-		result = ts.set_mode(mode=0)		# Return the teststand to normal mode operation.
-		return results
-	else:
-		print "ERROR (uhtr.get_links): The unique IDs couldn't be set."
-		return False
-
-def get_link_from_map(ts=False, crate=None, slot=None, i_link=-1, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
-	if ts:
-		qie_map = ts.read_qie_map(f=f, d=d)
-#		uhtr_info = ts.uhtr_from_qie()
-		qies = []
-		for ch in range(4):
-			qies.extend([i for i in qie_map if i["crate"] == crate and i["slot"] == slot and i["link"] == i_link and i["channel"] == ch])
-		if len(qies) == 4:
-			qie = qies[0]
-			return link(
-				ts=ts,
-				crate=crate,
-				slot=slot,
-				link_number=i_link,
-				qie_unique_id=qie["id"],
-				qie_half=qie["half"],
-				qie_fiber=qie["fiber"],
-				on=True,
-				qies=[qie["qie"] for qie in qies]
-			)
-		elif len(qies) > 1:
-			print "ERROR (get_link_from_map): More than one QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(crate, slot, i_link)
-			return False
+						results[(be_crate, be_slot)] = links
+					else:
+						print "ERROR (uhtr.get_links): Setting the teststand readout mode to Mode 2 failed."
+						return False
+			result = ts.set_mode(mode=0)		# Return the teststand to normal mode operation.
+			return results
 		else:
-			print "ERROR (get_link_from_map): No QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(crate, slot, i_link)
+			print "ERROR (uhtr.get_links): The unique IDs couldn't be set."
 			return False
 	else:
-		print "ERROR (get_link_from_map): One of the arguments needs to be a teststand object."
 		return False
 
-def get_links_all_from_map(ts=False, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
-	links = []
-	if ts:
+def get_links_from_map(ts=False, crate=None, slot=None, i_link=None, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
+	# Arguments and variables:
+	links = {}
+	be = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="be")
+	i_links = meta.parse_args_link(i_link=i_link)
+	if be:
 		qie_map = ts.read_qie_map(f=f, d=d)
 #		uhtr_info = ts.uhtr_from_qie()
-		for qie in [i for i in qie_map if i["channel"] == 0]:
-			uhtr_slot = qie["uhtr_slot"]
-			link_i = qie["link"]
-			links.append(link(
-				ts=ts,
-				uhtr_slot=uhtr_slot,
-				link_number=link_i,
-				qie_unique_id=qie["id"],
-				qie_half=qie["half"],
-				qie_fiber=qie["fiber"],
-				on=True
-			))
+		for be_crate, be_slots in be.iteritems():
+			for be_slot in be_slots:
+				crate_slot = (be_crate, be_slot)
+				links[crate_slot] = []
+				for i_link in i_links:
+					qies = []
+					for ch in range(4):
+						qies.extend([i for i in qie_map if i["be_crate"] == be_crate and i["be_slot"] == be_slot and i["uhtr_link"] == i_link and i["uhtr_channel"] == ch])
+					if len(qies) == 4:
+						qie = qies[0]
+						links[crate_slot].append(link(
+							ts=ts,
+							crate=be_crate,
+							slot=be_slot,
+							link_number=i_link,
+							qie_unique_id=qie["qie_id"],
+							qie_half=qie["uhtr_half"],
+							qie_fiber=qie["uhtr_fiber"],
+							on=True,
+							qies=[qie["qie_n"] for qie in qies]
+						))
+					elif len(qies) > 1:
+						print "ERROR (get_link_from_map): More than one QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(be_crate, be_slot, i_link)
+						return False
+					else:
+#						print "WARNING (get_link_from_map): No QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(be_crate, be_slot, i_link)
+						links[crate_slot].append(link(
+							ts=ts,
+							crate=be_crate,
+							slot=be_slot,
+							link_number=i_link,
+							on=False,
+						))
 		return links
 	else:
-		print "ERROR (get_links_all_from_map): One of the arguments needs to be a teststand object."
-		return links
+		return False
 
 # calls the uHTRs histogramming functionality
 # ip - ip address of the uHTR (e.g. teststand("904").uhtr_ips[0])
@@ -596,25 +597,38 @@ def read_histo(file_in=""):
 
 # Perform basic uHTR commands:
 ## Returning raw output:
-def get_raw_spy(ts=None, crate=None, slot=None, n_bx=50, i_link=0):
-	log = ""
-	
-	cmds = [
-		'0',
-		'link',
-		'spy',
-		'{0}'.format(i_link),
-		'0',
-		'0',
-		'{0}'.format(n_bx),
-		'quit',
-		'exit',
-		'-1',
-	]
-	
-	return send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds)["output"]
+def get_raw_spy(ts=None, crate=None, slot=None, ip=None, control_hub=None, script=False, n_bx=50, i_link=None):
+	# Goal: return a list of raw SPY data indexed by crate_slot, then link number.
 
-def get_raw_status(ts=None, crate=None, slot=None):
+	# Arguments and variables:
+	raw_spy = {}
+	## Parse "i_link":
+	i_links = meta.parse_args_link(i_link=i_link)
+	
+	for i_link in i_links:
+		# Set up list of commands:
+		cmds = [
+			'0',
+			'link',
+			'spy',
+			'{0}'.format(i_link),
+			'0',
+			'0',
+			'{0}'.format(n_bx),
+			'quit',
+			'exit',
+			'-1',
+		]
+		# Send commands:
+		result = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds, ip=ip, control_hub=control_hub, script=script)
+		if result:
+			for key, raw_output in result.iteritems():
+				if key not in raw_spy:
+					raw_spy[key] = {}
+				raw_spy[key][i_link] = raw_output
+	return raw_spy
+
+def get_raw_status(ts=None, crate=None, slot=None, ip=None, control_hub=None, script=False):
 	# Variables:
 	log = ""
 	cmds = [
@@ -627,9 +641,9 @@ def get_raw_status(ts=None, crate=None, slot=None):
 	]
 	
 	# Send commands:
-	result = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds)
+	result = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds, ip=ip, control_hub=control_hub, script=script)
 	if result:
-		return result["output"]
+		return result
 	else:
 		return False
 
@@ -661,9 +675,7 @@ def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
 	]
 
 	uhtr_out = send_commands(ts, uhtr_slot, commands)
-	raw_output = uhtr_out["output"]
-	log += uhtr_out["log"]
-	#return uhtr_out
+#	raw_output = uhtr_out
 
 # Parse uHTRTool.exe SPY data:
 def parse_spy(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc. organized into sublists per fiber.
@@ -684,6 +696,7 @@ def parse_spy(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc.
 	for line in raw.split("\n"):
 		if search("\s*\d+\s*[0-9A-F]{5}", line):
 			raw_data.append(line.strip())
+#	print raw_data
 	
 	# Put all the data in the data dictionary:
 	raw_temp = []
@@ -707,7 +720,7 @@ def parse_spy(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc.
 				data["half"].append(0)
 			elif half_match.group(1) == "TOP":
 				data["half"].append(1)
-		fiber_match = search("fiber\s([012])", line)
+		fiber_match = search("fiber\s([0123])", line)		# "3" implies that there's a problem. 
 		if fiber_match:
 			data["fiber"].append(int(fiber_match.group(1)))
 		raw_match = search("\d+\s+([0-9A-F]{5})\s*(.*)", line)
@@ -718,6 +731,7 @@ def parse_spy(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc.
 			if not raw_thing:
 				data["raw"].append(raw_temp)
 				raw_temp = []
+#	print data
 	
 	# Prepare the output:
 	if not data["raw"]:
@@ -742,12 +756,21 @@ def parse_spy(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc.
 				))
 		return results
 
-def get_data_spy(ts=None, crate=None, slot=None, n_bx=50, i_link=0):
-	result = parse_spy(get_raw_spy(ts=ts, crate=crate, slot=slot, n_bx=n_bx, i_link=i_link))
-	if result:
-		return result
+def get_data_spy(ts=None, crate=None, slot=None, ip=None, control_hub=None, script=False, n_bx=50, i_link=None):
+	# Arguments and variables:
+	data_spy = {}
+	
+	# Get raw data:
+	raw_spy = get_raw_spy(ts=ts, crate=crate, slot=slot, ip=ip, control_hub=control_hub, n_bx=n_bx, i_link=i_link)
+	if raw_spy:
+		for key, raw_by_link in raw_spy.iteritems():
+			for i, raw_output in raw_by_link.iteritems():
+				if key not in data_spy:
+					data_spy[key] = {}
+				data_spy[key][i] = parse_spy(raw_output)
+		return data_spy
 	else:
-		print "ERROR (uhtr.get_data_spy): There was no SPY data in the raw uhtr output for link {0}".format(i_link)
+		print "ERROR (uhtr.get_data_spy): Couldn't fetch SPY data from i_link = {0}".format(i_link)
 		return False
 
 def get_dump(ts=None, crate=None, slot=None, ip=None, control_hub=None):

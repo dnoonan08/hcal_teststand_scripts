@@ -86,7 +86,7 @@ class datum:
 	# String behavior
 	def __str__(self):
 		if self.adc != -1:
-			return "<qie.datum object>"
+			return "<qie.datum object: CID = {0}, ADC = {1}, LE TDC = {2}>".format(self.cid, self.adc, self.tdc_le)
 		else:
 			return "<empty qie.datum object>"
 	
@@ -313,62 +313,6 @@ def get_info(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_d
 	else:
 		return False
 
-def get_bridge_info(ts, crate, slot):		# Returns a dictionary of information about the Bridge FPGA, such as the FW versions.
-	data = [
-		["version_fw_major", 'get HF{0}-{1}-B_FIRMVERSION_MAJOR'.format(crate, slot), 0],
-		["version_fw_minor", 'get HF{0}-{1}-B_FIRMVERSION_MINOR'.format(crate, slot), 0],
-		["version_fw_svn", 'get HF{0}-{1}-B_FIRMVERSION_SVN'.format(crate, slot), 0],
-	]
-	log = ""
-	parsed_output = ngccm.send_commands_parsed(ts, [info[1] for info in data])["output"]
-#	print parsed_output
-	for info in data:
-		result = parsed_output[data.index(info)]["result"]
-		cmd = parsed_output[data.index(info)]["cmd"]
-		if "ERROR" not in result:
-			info[2] = int(result, 16)
-		else:
-			log += '>> ERROR: Failed to find the result of "{0}". The data string follows:\n{1}'.format(cmd, result)
-	version_fw = "{0:02d}.{1:02d}.{2:04d}".format(data[0][2], data[1][2], data[2][2])
-	return {
-		"slot":	slot,
-		"version_fw_major":	data[0][2],
-		"version_fw_minor":	data[1][2],
-		"version_fw_svn":	data[2][2],
-		"version_fw":	version_fw,
-		"log":			log.strip(),
-	}
-
-def get_igloo_info(ts, crate, slot):		# Returns a dictionary of information about the IGLOO2, such as the FW versions.
-	data = [
-		["version_fw_major_top", 'get HF{0}-{1}-iTop_FPGA_MAJOR_VERSION'.format(crate, slot), 0],
-		["version_fw_minor_top", 'get HF{0}-{1}-iTop_FPGA_MINOR_VERSION'.format(crate, slot), 0],
-		["version_fw_major_bot", 'get HF{0}-{1}-iBot_FPGA_MAJOR_VERSION'.format(crate, slot), 0],
-		["version_fw_minor_bot", 'get HF{0}-{1}-iBot_FPGA_MINOR_VERSION'.format(crate, slot), 0],
-	]
-	log = ""
-	parsed_output = ngccm.send_commands_parsed(ts, [info[1] for info in data])["output"]
-#	print parsed_output
-	for info in data:
-		result = parsed_output[data.index(info)]["result"]
-		cmd = parsed_output[data.index(info)]["cmd"]
-		if "ERROR" not in result:
-			info[2] = int(result, 16)
-		else:
-			log += '>> ERROR: Failed to find the result of "{0}". The data string follows:\n{1}'.format(cmd, result)
-	version_fw_top = "{0:02d}.{1:02d}".format(data[0][2], data[1][2])
-	version_fw_bot = "{0:02d}.{1:02d}".format(data[2][2], data[3][2])
-	return {
-		"slot": slot,
-		"version_fw_major_top":	data[0][2],
-		"version_fw_minor_top":	data[1][2],
-		"version_fw_top":	version_fw_top,
-		"version_fw_major_bot":	data[2][2],
-		"version_fw_minor_bot":	data[3][2],
-		"version_fw_bot":	version_fw_bot,
-		"log":			log.strip(),
-	}
-
 def get_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default):		# Reads the unique ID of a given set of crates and slots.
 	# INFO: "get HF1-1-UniqueID # '1 0x5f000000 0x9b46ce70'"
 	# Arguments:
@@ -463,16 +407,16 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 	ts.set_fixed_range(enable=False)
 	
 	# Do the mapping:
-	for crate, slots in ts.fe.iteritems():
-		for slot in slots:
+	for fe_crate, fe_slots in ts.fe.iteritems():
+		for fe_slot in fe_slots:
 #			ts.set_fixed_range(crate=crate, slot=slot, enable=False)
 			for i_qie in range(1, 25):
-				print "> Finding FE crate {0}, FE slot {1}, QIE {2} ...".format(crate, slot, i_qie)
-				ts.set_fixed_range(crate=crate, slot=slot, i_qie=i_qie, enable=True, r=2)
+				print "> Finding FE crate {0}, FE slot {1}, QIE {2} ...".format(fe_crate, fe_slot, i_qie)
+				ts.set_fixed_range(crate=fe_crate, slot=fe_slot, i_qie=i_qie, enable=True, r=2)
 				channel_save = []
 				link_save = []
-				for crate_slot, links in link_dict.iteritems():
-					be_crate, be_slot = crate_slot
+				for be_crate_slot, links in link_dict.iteritems():
+					be_crate, be_slot = be_crate_slot
 					for link in [l for l in links if l.on]:
 						data = link.get_data_spy()
 						if data:
@@ -490,14 +434,14 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 					qie_map.append({
 						"be_crate": be_crate,
 						"be_slot": be_slot,
-						"fe_crate": crate,
-						"fe_slot": slot,
-						"qie": i_qie,
-						"id": link.qie_unique_id,
-						"link": link.n,
-						"channel": channel,
-						"half": link.qie_half,
-						"fiber": link.qie_fiber,
+						"fe_crate": fe_crate,
+						"fe_slot": fe_slot,
+						"qie_n": i_qie,
+						"qie_id": link.qie_unique_id,
+						"uhtr_link": link.n,
+						"uhtr_channel": channel,
+						"uhtr_half": link.qie_half,
+						"uhtr_fiber": link.qie_fiber,
 					})
 				else:
 					if len(channel_save) > 1:
@@ -505,20 +449,20 @@ def get_map_slow(ts):		# Determines the QIE map of the teststand. A qie map is f
 					qie_map.append({
 						"be_crate": [link.crate for link in link_save],
 						"be_slot": [link.slot for link in link_save],
-						"fe_crate": crate,
-						"fe_slot": slot,
-						"qie": i_qie,
-						"id": [link.qie_unique_id for link in link_save],
-						"link": [link.n for link in link_save],
-						"channel": channel_save,
-						"half": [link.qie_half for link in link_save],
-						"fiber": [link.qie_fiber for link in link_save],
+						"fe_crate": fe_crate,
+						"fe_slot": fe_slot,
+						"qie_n": i_qie,
+						"qie_id": [link.qie_unique_id for link in link_save],
+						"uhtr_link": [link.n for link in link_save],
+						"uhtr_channel": channel_save,
+						"uhtr_half": [link.qie_half for link in link_save],
+						"uhtr_fiber": [link.qie_fiber for link in link_save],
 					})
-				ts.set_fixed_range(crate=crate, slot=slot, i_qie=i_qie, enable=False)
+				ts.set_fixed_range(crate=fe_crate, slot=fe_slot, i_qie=i_qie, enable=False)
 	return qie_map
 # /
 
-# Functions to set up components:
+# Functions dealing with QIE card unique ID:
 def set_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default):		# Saves the unique ID of the QIE card in crate, slot to IGLOO registers.
 	#Arguments:
 	## Parse "crate" and "slot"
@@ -536,6 +480,51 @@ def set_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.p
 			if output:
 				return unique_ids
 			else:
+				return False
+		else:
+			return False
+	else:
+		return False
+
+## Check to see if the QIE card unique IDs have been set in the IGLOO registers.
+def check_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default, verbose=False):
+	#Arguments:
+	## Parse "crate" and "slot"
+	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="fe")
+	if fe:
+		# Get the unique ID values:
+		cmds = []
+		for fe_crate, fe_slots in fe.iteritems():
+			for fe_slot in fe_slots:
+				cmds.extend([
+					"get HF{0}-{1}-iTop_UniqueID".format(fe_crate, fe_slot),
+					"get HF{0}-{1}-iBot_UniqueID".format(fe_crate, fe_slot),
+				])
+		results = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
+		
+		# Check the unique ID values:
+		if results:
+			good = []
+			values_previous = []
+			for i, result in enumerate(results):
+				values = [int(j, 16) for j in result["result"].split()]
+				if len(values) == 2 and 0 not in values:
+					if i%2 == 1:
+						if values == values_previous:
+							good.append(True)
+						else:
+#							print values, values_previous
+							good.append(False)
+					else:
+						good.append(True)
+				else:
+					good.append(False)
+				values_previous = values
+			if sum(good) == len(good):
+				if verbose: print "[OK] The unique IDs were all set properly:\n{0}".format(results)
+				return True
+			else:
+				if verbose: print "[!!] The unique IDs were not all set properly:\n{0}".format(results)
 				return False
 		else:
 			return False
@@ -628,7 +617,7 @@ def read_counter_qie_bridge(ts, crate, slot):
 	log = ""
 	count = -1
 	cmd = "get HF{0}-{1}-B_RESQIECOUNTER".format(crate, slot)
-	output = ngccm.send_commands_parsed(ts, cmd)["output"]
+	output = ngfec.send_commands(ts=ts, cmds=cmds)
 	try:
 		count = int(output[0]["result"], 16)
 	except Exception as ex:
@@ -646,8 +635,7 @@ def read_counter_qie_igloo(ts, crate, slot):
 		"get HF{0}-{1}-iTop_RST_QIE_count".format(crate, slot),
 		"get HF{0}-{1}-iBot_RST_QIE_count".format(crate, slot),
 	]
-	result = ngccm.send_commands_parsed(ts, cmds)
-	output = result["output"]
+	output = ngfec.send_commands(ts=ts, cmds=cmds)
 	for i in range(2):
 		try:
 			counts[i] = int(output[i]["result"], 16)
@@ -711,7 +699,7 @@ def get_frequency_orbit(ts):
 
 # Functions to set IGLOO settings:
 ## Set IGLOO readout mode:
-def set_mode(ts=None, crate=None, slot=None, mode=0):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
+def set_mode(ts=None, crate=None, slot=None, mode=0, control_hub=None, port=ngfec.port_default, verbose=False):		# 0: normal mode, 1: link test mode A (test mode string), 2: link test mode B (IGLOO register)
 	# Parse "crate" and "slot":
 	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
 	if fe:
@@ -738,13 +726,17 @@ def set_mode(ts=None, crate=None, slot=None, mode=0):		# 0: normal mode, 1: link
 				])
 		
 		# Send commands:
-		output = ngfec.send_commands(ts, cmds)
+		output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
 		results = ["ERROR" not in j for j in [i["result"] for i in output]]
 		if sum(results) == len(results):
-#			for thing in output:
-#				print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
-			uhtr.setup_links(ts)		# This initializes all uHTRs' links. This is necessary after changing modes.
-			return True
+			if verbose:
+				for thing in output:
+					print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+			if uhtr.setup(ts=ts):		# This initializes all uHTRs' links. This is necessary after changing modes.
+				return True
+			else:
+				print "ERROR (qie.set_mode): Reinitializing the uHTR links failed."
+				return False
 		else:
 			print "ERROR (qie.set_mode): Setting the mode resulted in the following:"
 			for thing in output:
@@ -793,7 +785,7 @@ def set_ci(ts=None, crate=None, slot=None, enable=False):
 
 # Functions to set QIE registers:
 ## Pedestals:
-def set_ped(ts=False, crate=None, slot=None, i_qie=None, dac=None, dac_cid=None, i_cid=set(range(4))):		# Set the pedestal of QIE "i_qie" to DAC value "dac" and CID DAC value of "dac_cid".
+def set_ped(ts=False, crate=None, slot=None, i_qie=None, dac=None, dac_cid=None, i_cid=set(range(4)), control_hub=None, port=ngfec.port_default):		# Set the pedestal of QIE "i_qie" to DAC value "dac" and CID DAC value of "dac_cid".
 	# Parse "crate" and "slot":
 	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
 	if fe:
@@ -872,7 +864,7 @@ def set_ped(ts=False, crate=None, slot=None, i_qie=None, dac=None, dac_cid=None,
 								])
 	
 			# Send commands:
-			output = ngccm.send_commands(ts, cmds)
+			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
 			results = ["ERROR" not in j for j in [i["result"] for i in output]]
 			if sum(results) == len(results):
 		#		for thing in output:
@@ -892,7 +884,7 @@ def set_ped(ts=False, crate=None, slot=None, i_qie=None, dac=None, dac_cid=None,
 ## /
 
 ## Fixed Range Mode:
-def set_fixed_range(ts=False, crate=None, slot=None, i_qie=None, enable=None, r=None):		# Turn fixed range mode on or off for a given QIE.
+def set_fixed_range(ts=False, crate=None, slot=None, i_qie=None, enable=None, r=None, control_hub=None, port=ngfec.port_default):		# Turn fixed range mode on or off for a given QIE.
 	# Parse "crate" and "slot":
 	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
 	if fe:
@@ -939,7 +931,7 @@ def set_fixed_range(ts=False, crate=None, slot=None, i_qie=None, enable=None, r=
 							])
 			
 			# Send commands:
-			output = ngccm.send_commands(ts, cmds)
+			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
 			results = ["ERROR" not in j for j in [i["result"] for i in output]]
 			if sum(results) == len(results):
 #				for thing in output:
@@ -962,8 +954,7 @@ def set_fixed_range(ts=False, crate=None, slot=None, i_qie=None, enable=None, r=
 def set_cal_mode(ts, crate, slot, qie, enable=False):
 	value = 1 if enable else 0
 	commands = ["put HF{0}-{1}-QIE{2}_CalMode {3}".format(crate, slot, qie, value)]
-	raw_output = ngccm.send_commands_fast(ts, commands)["output"]
-#	raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
+	raw_output = ngfec.send_commands(ts=ts, cmds=cmds)
 	return raw_output
 
 def set_cal_mode_all(ts, crate, slot, enable=False):
@@ -971,13 +962,12 @@ def set_cal_mode_all(ts, crate, slot, enable=False):
 	value = 1 if enable else 0
 	for qie in range(1, 25):
 		commands.append("put HF{0}-{1}-QIE{2}_CalMode {3}".format(crate, slot, qie, value))
-	raw_output = ngccm.send_commands_fast(ts, commands)["output"]
-#	raw_output = ngccm.send_commands_parsed(ts, commands)["output"]
+	raw_output = ngfec.send_commands(ts=ts, cmds=cmds)
 	return raw_output
 ## /
 
 ## QIE clock phase:
-def set_clk_phase(ts=False, crate=None, slot=None, i_qie=None, phase=0):
+def set_clk_phase(ts=False, crate=None, slot=None, i_qie=None, phase=0, control_hub=None, port=ngfec.port_default):
 	# Parse "crate" and "slot":
 	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
 	if fe:
@@ -1005,7 +995,7 @@ def set_clk_phase(ts=False, crate=None, slot=None, i_qie=None, phase=0):
 						])
 			
 			# Send commands:
-			output = ngccm.send_commands(ts, cmds)
+			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
 			results = ["ERROR" not in j for j in [i["result"] for i in output]]
 			if sum(results) == len(results):
 #				for thing in output:
