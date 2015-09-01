@@ -21,11 +21,14 @@ if __name__ == "__main__":
 	yers=array('d')
 	parser=OptionParser()
 	parser.add_option('-t','--teststand',dest='name',default='904',help="The name of the teststand you want to use (default is \"904\").")
-	parser.add_option('-q','--qieid',dest='qieid',default='0x8D000000 0xAA24DA70',help="The ID of the QIE card from which we read the pedestal.")
+	parser.add_option('-q','--qieid',dest='qieid',default='0x9B32C370 0x67000000',help="The ID of the QIE card from which we read the pedestal.")
 	parser.add_option('-o','--output',dest='out',default='data/ts_904/plots',help="The directory in which the output file will be saved.")
 	(options, args) = parser.parse_args()
 	ts = teststand(options.name)
 	slotlink=ts.uhtr_from_qie(qie_id=options.qieid)
+	if slotlink=={}:
+		print 'ERROR: No such QIE ID'
+		exit()
 	slot=slotlink.keys()[0]
 	links=slotlink[slot]
 	print 'slot:',slot
@@ -34,7 +37,7 @@ if __name__ == "__main__":
 	if not os.path.exists(fdnm):
 		os.makedirs(fdnm)
 	print "pedestalTest_{0}.root".format(d)
-	uhtr.get_histo(ts,slot,1000,0,fdnm+"/pedestalTest_{0}.root".format(d))
+	uhtr.get_histo(ts,50,slot,1000,0,fdnm+"/pedestalTest_{0}.root".format(d))
 	inputFile = TFile(fdnm+"/pedestalTest_{0}.root".format(d),"READ")
 	gStyle.SetFillColor(0)
 	can = TCanvas("can","can",500,500)
