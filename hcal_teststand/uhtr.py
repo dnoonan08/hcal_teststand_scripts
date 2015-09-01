@@ -554,7 +554,7 @@ def get_links_from_map(ts=False, crate=None, slot=None, i_link=None, f="", d="co
 # sepCapID - whether to distinguish between different cap IDs
 # (currently I think this means you can only read out range 0)
 # fileName - output file name
-def get_histo(ts=False, uhtr_slot=-1, n_orbits=1000, sepCapID=1, file_out=""):
+def get_histo(ts=False,crate=None, uhtr_slot=-1, n_orbits=1000, sepCapID=1, file_out=""):
 	# Set up some variables:
 	log = ""
 	if not file_out:
@@ -575,10 +575,7 @@ def get_histo(ts=False, uhtr_slot=-1, n_orbits=1000, sepCapID=1, file_out=""):
 		'exit',
 		'-1'
 	]
-	
-	result = send_commands_script(ts, uhtr_slot, cmds)
-	log += result["log"]
-#	raw_output = result["output"]
+	result = send_commands(ts=ts,crate=crate, slot=uhtr_slot, cmds=cmds)
 	return file_out
 
 def read_histo(file_in=""):
