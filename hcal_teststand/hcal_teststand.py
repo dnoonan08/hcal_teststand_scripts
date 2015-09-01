@@ -81,6 +81,7 @@ class teststand:
 				for fe_crate, fe_slots in self.fe.iteritems():
 					for fe_slot in fe_slots:
 						self.qies[(fe_crate, fe_slot)] = qie.qie(
+							ts=self,
 							crate=fe_crate,
 							slot=fe_slot,
 							control_hub=control_hub,

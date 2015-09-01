@@ -11,8 +11,9 @@ import meta
 # CLASSES:
 class qie:
 	# Construction:
-	def __init__(self, crate=None, slot=None, control_hub=None, port=ngfec.port_default, unique_id=None, fiber=-1, links=-1):
+	def __init__(self, ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default, unique_id=None, fiber=-1, links=-1):
 		self.id = unique_id
+		self.ts = ts
 		self.crate = crate
 		self.slot = slot
 		self.control_hub = control_hub
@@ -59,12 +60,38 @@ class qie:
 			return True
 		else:
 			return False
-#	def get_data(self, method=0):		# Method 0 is for uHTR SPY. Nothing else is implemented, yet.
-#		if method == 0:
-#			return uhtr.get_data_parsed_new(self.ts, self.uhtr_slot, 300, self.link)[channel]
-#		else:
-#			print "ERROR (qie object {0}): Could not get data because method value {1} wasn't recognized.".format(self.id, method)
-#			return False
+	
+	def check_unique_id(self, verbose=False):
+		return check_unique_id(crate=self.crate, slot=self.slot, control_hub=self.control_hub, port=self.port, verbose=verbose)
+	
+	def get_data(self, n_bx=50, i_qie=None, from_map=True, method=0):		# Method 0 is for uHTR SPY. Nothing else is implemented, yet.
+		# Get the link objects corresponding to this QIE:
+		if from_map:
+			links = uhtr.get_links_from_map(ts=self.ts, crate=self.crate, slot=self.slot, end="fe")
+			if links:
+				links = [i for i in links[self.crate_slot] if i.on]		# Save only the active links.
+			else:
+				return False
+		else:
+			print "ERROR (qie.qie.get_data): Getting the links straight from the uHTR (from_map = {0}) isn't implemented, yet.".format(from_map)
+			return False
+		
+		# Read data off of each link:
+		data = {}		# Will be indexed by QIE number
+		for link in links:
+#			print link
+			if method == 0:
+				result = link.get_data_spy(n_bx=n_bx)
+				if result:
+					for i_qie, data_temp in zip(link.qies, result):
+						data[i_qie] = data_temp
+				else:
+					print "ERROR (qie.qie.get_data): Unable to get data from the links."
+					return False
+			else:
+				print "ERROR (qie.qie.get_data): Could not get data because method value {0} wasn't recognized.".format(method)
+				return False
+		return data
 	# /Methods
 
 class datum:
@@ -508,6 +535,8 @@ def check_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec
 			values_previous = []
 			for i, result in enumerate(results):
 				values = [int(j, 16) for j in result["result"].split()]
+#				values = [int(j, 16) for j in "0 0xbad".split()]
+				print values
 				if len(values) == 2 and 0 not in values:
 					if i%2 == 1:
 						if values == values_previous:
@@ -520,7 +549,7 @@ def check_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec
 				else:
 					good.append(False)
 				values_previous = values
-			if sum(good) == len(good):
+			if sum(good) == len(good) and len(good) > 0:
 				if verbose: print "[OK] The unique IDs were all set properly:\n{0}".format(results)
 				return True
 			else:

@@ -117,10 +117,12 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	qie_half_labels = ['bottom', 'top']
 	
 	# CONSTRUCTION
-	def __init__(self, ts="unknown", crate=-1, slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False, qies=[-1, -1, -1, -1]):
+	def __init__(self, ts="unknown", be_crate=-1, be_slot=-1, fe_crate=-1, fe_slot=-1, link_number=-1, qie_unique_id="unknown", qie_half=-1, qie_fiber=-1, on=False, qies=[-1, -1, -1, -1]):
 		self.ts = ts
-		self.crate = crate
-		self.slot = slot
+		self.be_crate = be_crate
+		self.be_slot = be_slot
+		self.fe_crate = fe_crate
+		self.fe_slot = fe_slot
 		self.n = link_number
 		self.qie_unique_id = self.id = qie_unique_id
 		self.qie_half = self.half = qie_half
@@ -138,7 +140,7 @@ class link:		# An object that represents a uHTR link. It contains information ab
 	
 	# METHODS
 	def get_data_spy(self, n_bx=50):
-		data = get_data_spy(ts=self.ts, crate=self.crate, slot=self.slot, n_bx=n_bx, i_link=self.n)[(self.crate, self.slot)][self.n]
+		data = get_data_spy(ts=self.ts, crate=self.be_crate, slot=self.be_slot, n_bx=n_bx, i_link=self.n)[(self.be_crate, self.be_slot)][self.n]
 		if data:
 			return data
 		else:
@@ -468,8 +470,8 @@ def get_links(ts=None, crate=None, slot=None, ip=None, control_hub=None, port=ng
 									qie_half = data[0][0].half
 									links.append(link(
 										ts=ts,
-										crate=be_crate,
-										slot=be_slot,
+										be_crate=be_crate,
+										be_slot=be_slot,
 										link_number=i,
 										qie_unique_id=qie_unique_id,
 										qie_half=qie_half,
@@ -479,15 +481,15 @@ def get_links(ts=None, crate=None, slot=None, ip=None, control_hub=None, port=ng
 								else:
 									links.append(link(
 										ts=ts,
-										crate=be_crate,
-										slot=be_slot,
+										be_crate=be_crate,
+										be_slot=be_slot,
 										on=True
 									))
 							else:
 								links.append(link(
 									ts=ts,
-									crate=be_crate,
-									slot=be_slot,
+									be_crate=be_crate,
+									be_slot=be_slot,
 									link_number=i,
 									on=False
 								))
@@ -503,49 +505,51 @@ def get_links(ts=None, crate=None, slot=None, ip=None, control_hub=None, port=ng
 	else:
 		return False
 
-def get_links_from_map(ts=False, crate=None, slot=None, i_link=None, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
+def get_links_from_map(ts=None, crate=None, slot=None, end="be", i_link=None, f="", d="configuration/maps"):		# Returns a list of link objects configured with the data from the uhtr_map.
 	# Arguments and variables:
 	links = {}
-	be = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type="be")
 	i_links = meta.parse_args_link(i_link=i_link)
-	if be:
+	if not i_links: return False
+	if end in ["be", "fe"]:
+		end_name = end
+		end = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot, crate_type=end_name)
 		qie_map = ts.read_qie_map(f=f, d=d)
 #		uhtr_info = ts.uhtr_from_qie()
-		for be_crate, be_slots in be.iteritems():
-			for be_slot in be_slots:
-				crate_slot = (be_crate, be_slot)
+		for crate, slots in end.iteritems():
+			for slot in slots:
+				crate_slot = (crate, slot)
 				links[crate_slot] = []
 				for i_link in i_links:
 					qies = []
 					for ch in range(4):
-						qies.extend([i for i in qie_map if i["be_crate"] == be_crate and i["be_slot"] == be_slot and i["uhtr_link"] == i_link and i["uhtr_channel"] == ch])
+						qies.extend([i for i in qie_map if i["{0}_crate".format(end_name)] == crate and i["{0}_slot".format(end_name)] == slot and i["uhtr_link"] == i_link and i["uhtr_channel"] == ch])
 					if len(qies) == 4:
-						qie = qies[0]
 						links[crate_slot].append(link(
 							ts=ts,
-							crate=be_crate,
-							slot=be_slot,
+							be_crate=qies[0]["be_crate"],
+							be_slot=qies[0]["be_slot"],
+							fe_crate=qies[0]["fe_crate"],
+							fe_slot=qies[0]["fe_slot"],
 							link_number=i_link,
-							qie_unique_id=qie["qie_id"],
-							qie_half=qie["uhtr_half"],
-							qie_fiber=qie["uhtr_fiber"],
+							qie_unique_id=qies[0]["qie_id"],
+							qie_half=qies[0]["uhtr_half"],
+							qie_fiber=qies[0]["uhtr_fiber"],
 							on=True,
-							qies=[qie["qie_n"] for qie in qies]
+							qies=[i["qie_n"] for i in qies]
 						))
 					elif len(qies) > 1:
 						print "ERROR (get_link_from_map): More than one QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(be_crate, be_slot, i_link)
 						return False
 					else:
-#						print "WARNING (get_link_from_map): No QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(be_crate, be_slot, i_link)
+#						print "WARNING (get_link_from_map): No QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(crate, slot, i_link)
 						links[crate_slot].append(link(
 							ts=ts,
-							crate=be_crate,
-							slot=be_slot,
 							link_number=i_link,
 							on=False,
 						))
 		return links
 	else:
+		print "ERROR (uhtr.get_links_from_map): \"end\" must be either \"fe\" or \"be\"."
 		return False
 
 # calls the uHTRs histogramming functionality
