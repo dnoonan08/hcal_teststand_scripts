@@ -540,13 +540,13 @@ def get_links_from_map(ts=None, crate=None, slot=None, end="be", i_link=None, f=
 					elif len(qies) > 1:
 						print "ERROR (get_link_from_map): More than one QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(be_crate, be_slot, i_link)
 						return False
-					else:
+#					else:
 #						print "WARNING (get_link_from_map): No QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(crate, slot, i_link)
-						links[crate_slot].append(link(
-							ts=ts,
-							link_number=i_link,
-							on=False,
-						))
+#						links[crate_slot].append(link(
+#							ts=ts,
+#							link_number=i_link,
+#							on=False,
+#						))
 		return links
 	else:
 		print "ERROR (uhtr.get_links_from_map): \"end\" must be either \"fe\" or \"be\"."
