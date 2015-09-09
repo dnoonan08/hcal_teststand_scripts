@@ -256,9 +256,9 @@ class teststand:
 	def crate_slot_from_qie(self, qie_id="", f="", d="configuration/maps"):
 		qie_map = self.read_qie_map(f=f, d=d)
 		if qie_id:
-			info = sorted(list(set([(qie["crate"], qie["slot"]) for qie in qie_map if qie["id"] == qie_id])))
+			info = sorted(list(set([(qie["fe_crate"], qie["fe_slot"]) for qie in qie_map if qie["qie_id"] == qie_id])))
 		else:
-			info = sorted(list(set([(qie["crate"], qie["slot"]) for qie in qie_map])))
+			info = sorted(list(set([(qie["fe_crate"], qie["fe_slot"]) for qie in qie_map])))
 		if len(info) == 1:
 			return info[0]
 		else:
