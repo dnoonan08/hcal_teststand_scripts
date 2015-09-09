@@ -12,7 +12,7 @@ import pexpect
 # CLASSES:
 class amc13:
 	# Construction:
-	def __init__(self, ip_t1=None, ip_t2=None, crate=None, sn=None, fw_t1=None, fw_t2=None, config=None, i_sn=0):
+	def __init__(self, ip_t1=None, ip_t2=None, crate=None, sn=None, fw_t1=None, fw_t2=None, sw=None, config=None, i_sn=0):
 		self.ip_t1 = ip_t1
 		self.ip_t2 = ip_t2
 		self.crate = crate
@@ -23,6 +23,7 @@ class amc13:
 		self.i_sn = i_sn
 		self.ips = [self.ip_t1, self.ip_t2]
 		self.fws = self.fw = [self.fw_t1, self.fw_t2]
+		self.sw = sw
 	
 	# String behavior
 	def __str__(self):
@@ -36,10 +37,12 @@ class amc13:
 	def update(self):
 		try:
 			info = get_info(config=self.config)[self.i_sn]
+#			print info
 			self.sn = info["sn"]
-			self.fw_t1 = info["fw_t1"]
-			self.fw_t2 = info["fw_t2"]
-			self.fws = self.fw = [self.fw_t1, self.fw_t2]
+			fw_t1 = info["fw_t1"]
+			fw_t2 = info["fw_t2"]
+			self.fw = [fw_t1, fw_t2]
+#			self.sw = info["sw"]		# get_info doesn't get SW version!
 			return True
 		except Exception as ex:
 			print ex
@@ -53,7 +56,7 @@ class amc13:
 	
 	def get_status(self, ping=True):		# This should not do anything to the AMC13 but should only be a passive assessment. See "setup".
 		# Prepare:
-		if not self.fw_t1:
+		if None in self.fw:
 			self.update()
 		
 		# Variables:
@@ -75,7 +78,10 @@ class amc13:
 				s.status.append(-1)
 		
 		# Versions:
-		if self.fw_t1 and self.fw_t2:
+		if None not in self.fw:
+			s.sn = self.sn
+			s.fw = self.fw
+			s.sw = self.sw
 			s.status.append(1)
 		else:
 			s.status.append(0)
@@ -120,7 +126,7 @@ class amc13:
 
 class status:
 	# Construction:
-	def __init__(self, ts=None, crate=-1, status=[], ips={}, sn=-1, fw=[], sw=-1):
+	def __init__(self, ts=None, crate=-1, status=[], ips={}, sn=None, fw=[], sw=None):
 		self.ts = ts
 		self.crate = crate
 		if not status:
@@ -259,8 +265,12 @@ def get_info(config=None):		# Returns a dictionary of information about the AMC1
 	else:
 		return False
 
-def get_statuses(ts=None, ping=True):
+def get_status(ts=None, crate=None, ping=True):
+	# Arguments and variables:
 	statuses = {}
+#	crates = meta.parse_args_crate(ts=ts, crate=crate, crate_type="be")		# Right now, using the ts is manditory.
+	
+	# Get statuses:
 	for be_crate, amc13 in ts.amc13s.iteritems():
 		statuses[be_crate] = amc13.get_status(ping=ping)
 	return statuses
