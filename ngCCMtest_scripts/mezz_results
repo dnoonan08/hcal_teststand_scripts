@@ -1,0 +1,11 @@
+get HF2-mezz_BoardID: 0x644d 0x5520326f 0x6f6c6769
+get HF2-mezz_FPGA_MAJOR_VERSION: 2
+get HF2-mezz_FPGA_MINOR_VERSION: 8
+get HF2-mezz_ONES: 0xffffffff 0xffffffff 0xffffffff 0xffffffff
+get HF2-mezz_RX_BITSLIP_NUMBER: 5
+get HF2-mezz_SERDES_LANE_SEL: 0
+get HF2-mezz_SERDES_REFCLK_SEL: 0
+get HF2-mezz_TMR_ERROR_COUNT: 0
+get HF2-mezz_ZEROES: 0 0 0 0
+get HF2-mezz_slowSig1: 0
+get HF2-mezz_slowSig2: 0
