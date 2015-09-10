@@ -27,6 +27,9 @@ def getdata(string):
         time=float(hm)+float(timest[-2:])-basetime
         temps.append(float(tmpst))
         times.append(time/3600)
+    if len(times)==0:
+        print 'ERROR: {0} has no data'.format(string)
+        return TGraph()
     adctt=TGraph(len(times),times,temps)
     adctt.SetTitle('{0} vs t;t/h;'.format(string))
     return adctt
@@ -80,8 +83,7 @@ def readvolt(cc):
 def readcurr(cc):
     cc.cd()
     curr=[]
-#    label=['HF1-VIN_current_f','HF1-3V3_current_f','HF1-2V5_current_f','HF1-1V5_current_f']
-    label=['HF1-VIN_current_f']
+    label=['HF1-VIN_current_f','HF1-3V3_current_f','HF1-2V5_current_f','HF1-1V5_current_f']
     leg=TLegend(.8,.8,1,1)
     for i in range(len(label)):
         curr.append(getdata(label[i]))
@@ -119,6 +121,7 @@ def adcplt():
     for i in range(48):
         adccg.append(TGraph(len(times),times,adccc[i]))
         adccg[i].SetTitle('mean ADC vs t;t/h;ADC')
+        adccg[i].SetMinimum(0)
     return adccg
 
 def getlinkdata(string):
@@ -163,7 +166,7 @@ def getlinkFB(string):
     adctt=[TGraph(len(times),times,temps1),TGraph(len(times),times,temps2)]
     adctt[0].SetTitle('{0} vs t;t/h;{0}'.format(string))
     adctt[0].SetMaximum(temps1[0]*1.5)
-    adctt[0].SetMinimum(temps1[0]*0.5)
+    adctt[0].SetMinimum(0)
     adctt[0].SetMarkerColor(2)
     adctt[1].SetMarkerColor(3)
     adctt[0].SetFillColor(0)
@@ -178,65 +181,60 @@ def getlinkFB(string):
     
 
 if __name__=='__main__':
-    c=TCanvas('c','c',1800,600)
-    c.Divide(3,1)
-    c0=TCanvas('c0','c0',400,400)
-    c1=TCanvas('a','a',1600,400)
-    c1.Divide(4,1)
-    c2=TCanvas('a1','a1',1200,800)
-    c2.Divide(3,2)
-
+    c0=TCanvas('c0','c0',600,600)
 
     #temperature vs time
     print '\n===reading temperature'
     adctt=adc58temphist()
     watt=watemphist()
     wbtt=wbtemphist()
-    c.cd(1)
     adctt.SetMarkerStyle(7)
     adctt.Draw("ap")
-    c.cd(2)
+    c0.Print('{0}ADC58TMP.png'.format(path))
+
     watt.SetMarkerStyle(7)
     watt.Draw("ap")
-    c.cd(3)
+    c0.Print('{0}1waTMP.png'.format(path))
+
     wbtt.SetMarkerStyle(7)
     wbtt.Draw("ap")
-    c.Print("{0}tvt.png".format(path))
+    c0.Print('{0}1wbTMP.png'.format(path))
+
     #pwrbad vs time
     print '\n===reading powerbad'
     pwrbad=pwrbadhist()
-    c0.cd()
     pwrbad.SetMarkerStyle(7)
     pwrbad.Draw('ap')
     c0.Print('{0}pwrbad.png'.format(path))
+
     #adc vs time
     print '\n===reading mean adc'
     adccg=adcplt()
     for n in range(12):
         for i in range(4):
-            c1.cd(i+1)
             adccg[n*4+i].SetMarkerStyle(7)
+            adccg[n*4+i].SetTitle('mean ADC link{0}ch{1} vs t;t/h;ADC'.format(n+12,i))
             adccg[n*4+i].Draw('ap')
-        c1.Print("{0}adcplt{1}.png".format(path,n+12))
+            c0.Print("{0}adcplt{1}ch{2}.png".format(path,n+12,i))
 
     #bad align vs time
     print '\n===reading bad align'
     badas=getlinkdata('Bad align')
-    for n in range(2):
-        for i in range(6):
-            c2.cd(i+1)
-            badas[n*6+i].SetMarkerStyle(7)
-            badas[n*6+i].Draw('ap')
-        c2.Print("{0}badalign{1}to{2}.png".format(path,n*6+12,n*6+17))
+    for n in range(12):
+        badas[n].SetMarkerStyle(7)
+        badas[n].SetMinimum(0)
+        badas[n].Draw('ap')
+        c0.Print("{0}badalign{1}.png".format(path,n+12))
+
     #bad data vs time
     print '\n===reading bad data'
     baddata=getlinkdata('Bad Data')
-    for n in range(2):
-        for i in range(6):
-            c2.cd(i+1)
-            baddata[n*6+i].SetMarkerStyle(7)
-            baddata[n*6+i].Draw('ap')
-        c2.Print("{0}baddata{1}to{2}.png".format(path,n*6+12,n*6+17))
+    for n in range(12):
+        baddata[n].SetMarkerStyle(7)
+        baddata[n].SetMinimum(0)
+        baddata[n].Draw('ap')
+        c0.Print("{0}baddata{1}.png".format(path,n+12))
+
     #orbit rate vs time
     print '\n===reading orbit rate'
     orrate=getlinkdata('OrbitRate(kHz)')
@@ -245,28 +243,28 @@ if __name__=='__main__':
     leg.AddEntry(orrate[0],'Link OrbitRate')
     leg.AddEntry(fborr[0],'FrontFPGA OrbitRate')
     leg.AddEntry(fborr[1],'BackFPGA OrbitRate')
-    for n in range(2):
-        for i in range(6):
-            c2.cd(i+1)
-            orrate[n*6+i].SetMarkerStyle(7)
-            orrate[n*6+i].SetMaximum(13)
-            orrate[n*6+i].SetMinimum(9)
-            orrate[n*6+i].Draw('ap')
-            fborr[0].Draw('samep')
-            fborr[1].Draw('samep')
-            leg.Draw('same')
-        c2.Print("{0}OrbitRate{1}to{2}.png".format(path,n*6+12,n*6+17))
+    for n in range(12):
+        orrate[n].SetMarkerStyle(7)
+        orrate[n].SetMaximum(13)
+        orrate[n].SetMinimum(9)
+        orrate[n].Draw('ap')
+        fborr[0].Draw('samep')
+        fborr[1].Draw('samep')
+        leg.Draw('same')
+        c0.Print("{0}OrbitRate{1}.png".format(path,n+12))
+
     #Error data vs time
     print '\n===reading Error information'
     errinfo=[getlinkFB('BC0 Error'),getlinkFB('Single Error'),getlinkFB('Double Error')]
     for i in range(3):
-        c.cd(i+1)
         errinfo[i][0].Draw('ap')
         errinfo[i][1].Draw('samep')
         errinfo[i][2].Draw('same')
-    c.Print('{0}ErrorData.png'.format(path))
+        c0.Print('{0}ErrorData{1}.png'.format(path,i))
+
     #I/V vs time
     print '\n===reading I/V information'
     readvolt(c0)
     readcurr(c0)
+
 

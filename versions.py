@@ -113,7 +113,7 @@ if __name__ == "__main__":
 	else:
 		name = "904"
 	ts = teststand(name)
-	print "\n>> Finding the versions of the {0} teststand...".format(name)
+#	print "\n>> Finding the versions of the {0} teststand...".format(name)
 	print_amc13_info(ts)
 	print_glib_info(ts)
 	print_uhtr_info(ts)

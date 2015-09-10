@@ -40,6 +40,12 @@ def log_temp(ts):
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 	return log
 
+def log_version(ts):
+	log= "%% VERSIONS\n"
+	log+=getoutput('python versions.py {0}'.format(ts.name))
+	log+='\n\n'
+	return log
+
 def log_power(ts):
 	log = "%% POWER\n"
 	t0 = time_string()		# Get the time before. I get the time again after everything.
@@ -133,6 +139,7 @@ def record(ts=False, path="data/unsorted", scale=0):
 	# Log basics:
 	log += log_power(ts)		# Power
 	log += "\n"
+	log += log_version(ts)
 	log += log_temp(ts)		# Temperature
 	log += "\n"
 	log += '%% USERS\n'
