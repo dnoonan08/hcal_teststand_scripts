@@ -14,7 +14,6 @@ from optparse import OptionParser
 from ROOT import *
 
 # FUNCTIONS:
-counter=0
 
 def create_plots(qie_id):
 	th1s = {}
@@ -34,16 +33,16 @@ def check_pattern_raw(raw, link_pattern="feed beef"):		# Check the link pattern 
 		string = raw[4][1:].lower() + " " + raw[2][1:].lower()		# Chop the leading "0" off and combine into one string.
 		counters = [raw[1], raw[3], raw[5]]
 		if len(set(counters)) != 1:
-			return False
+			return False,0
 		else:
 			if string != string_true:
-				return False
+				return False,0
 			else:
 				counter=int(raw[1],16)
-				return True
+				return True,counter
 	else:
 		print "ERROR (check_pattern_raw): The raw data had a length of {0}, not 6.".format(len(raw))
-		return False
+		return False,0
 
 def check_pattern(data):		# Check link pattern test data.
 	if len(data) == 4:
@@ -51,10 +50,19 @@ def check_pattern(data):		# Check link pattern test data.
 		for ch, d in enumerate(data):
 			nbx = len(d)
 			if nbx > 0:
+				backcounter=0
 				for i_bx in range(nbx):
 					result = check_pattern_raw(d[i_bx].raw)
-					if not result:
+					print backcounter,result[1]
+					if not result[0]:
 						errors[ch] += 1
+						backcounter=result[1]
+						continue
+					if backcounter!=0 and result[1]-backcounter!=1:
+						errors[ch] += 1
+						backcounter=result[1]
+						continue
+					backcounter=result[1]
 			else:
 				print "ERROR (check_pattern): The number of bunch crossings recorded for Channel {0} was {1}.".format(ch, nbx)
 				return False
@@ -128,7 +136,7 @@ if __name__ == "__main__":
 		print "> Reading data ... ({0}/{1})".format(n_read + 1, n_reads)
 		for l, link in enumerate(links):
 #			print l, link.n
-			data = link.get_data_spy()
+			data = link.get_data_spy(n_bx=300)
 #			print data[0][0].raw
 			errors = check_pattern(data)
 			print errors
