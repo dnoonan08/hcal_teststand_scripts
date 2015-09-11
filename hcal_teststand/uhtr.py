@@ -204,7 +204,7 @@ def send_commands(ts=None, crate=None, slot=None, ip=None, control_hub=None, cmd
 	else:
 		return False
 
-def setup(ts=None, crate=None, slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=59):
+def setup(ts=None, crate=None, slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=3500):
 # Set up any number of uHTRs. Specify a group of uHTRs by the crates and slots or by the IPs. If you specify the ts and nothing else it will set up all of them.
 	# Arguments:
 	ips = meta.parse_args_ip(ts=ts, crate=crate, slot=slot, ip=ip)

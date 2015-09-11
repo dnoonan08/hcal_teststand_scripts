@@ -14,6 +14,8 @@ from optparse import OptionParser
 from ROOT import *
 
 # FUNCTIONS:
+counter=0
+
 def create_plots(qie_id):
 	th1s = {}
 	histogram = TH1F("link_pattern", "{0}: Link Pattern Errors".format(qie_id), 24, -0.5, 23.5)
@@ -37,6 +39,7 @@ def check_pattern_raw(raw, link_pattern="feed beef"):		# Check the link pattern 
 			if string != string_true:
 				return False
 			else:
+				counter=int(raw[1],16)
 				return True
 	else:
 		print "ERROR (check_pattern_raw): The raw data had a length of {0}, not 6.".format(len(raw))
@@ -70,9 +73,10 @@ if __name__ == "__main__":
 		metavar="STR"
 	)
 	parser.add_option("-q", "--qie", dest="qie",
-		default="0x67000000 0x9B32C370",
-		help="The unique ID of the QIE card you're testing",
-		metavar="STR"
+			  #		default="0x67000000 0x9B32C370",
+			  default="0x9B32C370 0x67000000",
+			  help="The unique ID of the QIE card you're testing",
+			  metavar="STR"
 	)
 	parser.add_option("-v", "--verbose", dest="verbose",
 		action="store_true",
@@ -110,10 +114,7 @@ if __name__ == "__main__":
 	# Set up basic variables for the test:
 	crate, slot = ts.crate_slot_from_qie(qie_id=options.qie)
 	link_dict = ts.uhtr_from_qie(qie_id=options.qie)
-	links = []
-	for uhtr_slot, i_links in link_dict.iteritems():
-		for i_link in i_links:
-			links.append(uhtr.get_link_from_map(ts=ts, uhtr_slot=uhtr_slot, i_link=i_link))
+	links=uhtr.get_links_from_map(ts=ts,crate=crate,slot=slot,end='fe')[crate,slot]
 	th1s = create_plots(options.qie)
 	print "\tTeststand: {0}".format(ts.name)
 	print "\tQIE card: {0} (crate {1}, slot {2})".format(options.qie, crate, slot)
@@ -130,7 +131,7 @@ if __name__ == "__main__":
 			data = link.get_data_spy()
 #			print data[0][0].raw
 			errors = check_pattern(data)
-#			print errors
+			print errors
 			if sum(errors) != 0:
 				if link.n not in error_record:
 					error_record[link.n] = [0 for i in range(4)]
