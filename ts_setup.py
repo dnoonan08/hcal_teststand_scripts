@@ -18,7 +18,7 @@ from optparse import OptionParser
 # FUNCTIONS:
 def check_status_amc13(ts=None, v=False, fast=False):
 	# Get AMC13 statuses:
-	statuses = amc13.get_statuses(ts=ts, ping=not fast)
+	statuses = amc13.get_status(ts=ts, ping=not fast)
 	
 	# Check the AMC13 statuses:
 	for be_crate, s in statuses.iteritems():
