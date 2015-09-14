@@ -74,6 +74,7 @@ class teststand:
 							slot=be_slot,
 							ip="192.168.{0}.{1}".format(be_crate, 4*be_slot),
 							control_hub=control_hub,
+							ts=self,
 						)
 				
 				# QIEs:

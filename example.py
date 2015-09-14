@@ -28,7 +28,7 @@ if __name__ == "__main__":
 	
 	# Initialize a teststand object:
 	ts = teststand(name)		# This object stores the teststand configuration and has a number of useful methods.
-	ts.update()		# Set version info in each component.
+#	ts.update()		# Set version info in each component.
 	
 	# Print out some information about the teststand:
 	ts.Print()

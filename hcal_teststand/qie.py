@@ -65,6 +65,9 @@ class qie:
 		return check_unique_id(crate=self.crate, slot=self.slot, control_hub=self.control_hub, port=self.port, verbose=verbose)
 	
 	def get_data(self, n_bx=50, i_qie=None, from_map=True, method=0):		# Method 0 is for uHTR SPY. Nothing else is implemented, yet.
+		# Arguments and variables:
+		i_qie = meta.parse_args_qie(i_qie=i_qie)
+		
 		# Get the link objects corresponding to this QIE:
 		if from_map:
 			links = uhtr.get_links_from_map(ts=self.ts, crate=self.crate, slot=self.slot, end="fe")
@@ -81,13 +84,15 @@ class qie:
 		for link in links:
 #			print link
 			if method == 0:
-				result = link.get_data_spy(n_bx=n_bx)
-				if result:
-					for i_qie, data_temp in zip(link.qies, result):
-						data[i_qie] = data_temp
-				else:
-					print "ERROR (qie.qie.get_data): Unable to get data from the links."
-					return False
+				if set(link.qies) & set(i_qie):		# If the two sets intersect (have any common elements) ...
+					result = link.get_data_spy(n_bx=n_bx)
+					if result:
+						for i, data_temp in zip(link.qies, result):
+							if i in i_qie:
+								data[i] = data_temp
+					else:
+						print "ERROR (qie.qie.get_data): Unable to get data from the links."
+						return False
 			else:
 				print "ERROR (qie.qie.get_data): Could not get data because method value {0} wasn't recognized.".format(method)
 				return False

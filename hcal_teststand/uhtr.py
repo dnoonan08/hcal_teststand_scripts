@@ -21,11 +21,19 @@ cmds_default = ["0", "exit", "-1"]
 # CLASSES:
 class uhtr:
 	# Construction:
-	def __init__(self, crate=None, slot=None, ip=None, control_hub=None):
+	def __init__(self, crate=None, slot=None, ip=None, control_hub=None, ts=None):
 		self.crate = crate
 		self.slot = slot
 		self.ip = ip
 		self.control_hub=control_hub
+		if ts:
+			links = get_links_from_map(ts=ts, crate=crate, slot=slot, end="be")
+			if links:
+				self.links = links
+			else:
+				self.links = []
+		else:
+			self.links = []
 	
 	# String behavior
 	def __str__(self):
