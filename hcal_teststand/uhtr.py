@@ -608,6 +608,26 @@ def read_histo(file_in=""):
 
 # Perform basic uHTR commands:
 ## Returning raw output:
+def get_raw_err(ts=None, crate=None, slot=None, ip=None, control_hub=None, script=False):
+	cmds=[
+		'0',
+		'link',
+		'errors',
+		'1000',
+		'88000',
+		'1',
+		'1',
+		'3500',
+		'0',
+		'0',
+		'0',
+		'quit',
+		'exit',
+		'-1',
+		]
+	result = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds, ip=ip, control_hub=control_hub, script=script)
+	return result
+
 def get_raw_spy(ts=None, crate=None, slot=None, ip=None, control_hub=None, script=False, n_bx=50, i_link=None):
 	# Goal: return a list of raw SPY data indexed by crate_slot, then link number.
 
@@ -689,6 +709,21 @@ def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
 #	raw_output = uhtr_out
 
 # Parse uHTRTool.exe SPY data:
+def parse_err(raw):
+	bdr=[]
+	raw=raw.values()[0].split('\n')
+	for s in raw:
+		if 'Status|' in s:
+			stat=[st.strip() for st in s.split('|')[1:-1]]
+		if "Bad" in s and "data" in s and "rate" in s:
+			bdr.extend(s.split()[3:])
+	err={}
+	for i in range(24):
+		if stat[i]=='ON':
+			err[i]=float(bdr[i])
+	return err
+
+	
 def parse_spy(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc. organized into sublists per fiber.
 	# Variables:
 	data = {

@@ -17,9 +17,9 @@ from ROOT import *
 
 def create_plots(qie_id):
 	th1s = {}
-	histogram = TH1F("link_pattern", "{0}: Link Pattern Errors".format(qie_id), 24, -0.5, 23.5)
+	histogram = TH1F("link_pattern", "{0}: Link Pattern Errors".format(qie_id), 6, -0.5, 5.5)
 	histogram.GetXaxis().CenterTitle(1)
-	histogram.GetXaxis().SetTitle("Channel")
+	histogram.GetXaxis().SetTitle("link")
 	histogram.GetYaxis().CenterTitle(1)
 	histogram.GetYaxis().SetTitle("Link Pattern Error Rate")
 	histogram.SetLineColor(kRed)
@@ -46,26 +46,25 @@ def check_pattern_raw(raw, link_pattern="feed beef"):		# Check the link pattern 
 
 def check_pattern(data):		# Check link pattern test data.
 	if len(data) == 4:
-		errors = [0 for i in range(4)]
-		for ch, d in enumerate(data):
-			nbx = len(d)
-			if nbx > 0:
-				backcounter=0
-				for i_bx in range(nbx):
-					result = check_pattern_raw(d[i_bx].raw)
-					print backcounter,result[1]
-					if not result[0]:
-						errors[ch] += 1
-						backcounter=result[1]
-						continue
-					if backcounter!=0 and result[1]-backcounter!=1:
-						errors[ch] += 1
-						backcounter=result[1]
-						continue
+		errors = 0
+		d=data[0]
+		nbx = len(d)
+		if nbx > 0:
+			backcounter=0
+			for i_bx in range(nbx):
+				result = check_pattern_raw(d[i_bx].raw)
+				if not result[0]:
+					errors += 1
 					backcounter=result[1]
-			else:
-				print "ERROR (check_pattern): The number of bunch crossings recorded for Channel {0} was {1}.".format(ch, nbx)
-				return False
+					continue
+				if backcounter!=0 and result[1]-backcounter!=1:
+					errors += 1
+					backcounter=result[1]
+					continue
+				backcounter=result[1]
+		else:
+			print "ERROR (check_pattern): The number of bunch crossings recorded for Channel {0} was {1}.".format(ch, nbx)
+			return False
 		return errors
 	else:
 		print "ERROR (check_pattern): There wasn't data for all channels in the link."
@@ -139,14 +138,11 @@ if __name__ == "__main__":
 			data = link.get_data_spy(n_bx=300)
 #			print data[0][0].raw
 			errors = check_pattern(data)
-			print errors
-			if sum(errors) != 0:
+			if errors != 0:
 				if link.n not in error_record:
-					error_record[link.n] = [0 for i in range(4)]
-				error_record[link.n] = [sum(x) for x in zip(error_record[link.n], errors)]
-			for ch in range(4):
-#				print l*4 + ch, errors[ch]
-				th1s["link_pattern"].Fill(l*4 + ch, errors[ch])
+					error_record[link.n] = 0
+				error_record[link.n] += errors
+				th1s["link_pattern"].Fill(l, errors)
 	
 	# Return the teststand to normal:
 	ts.set_mode(crate=crate, slot=slot, mode=0)		# Turn off link pattern test mode.
@@ -187,7 +183,12 @@ if __name__ == "__main__":
 #		print error_record
 		print "[!!] Errors: (indexed by channel)"
 		for i_link, errors in error_record.iteritems():
-			print "\t* Link {0}: error rates = {1}".format(i_link, list_to_string([i/float(100*n_reads) for i in errors]))
+			print "\t* Link {0}: error rates = {1}".format(i_link, errors/float(100*n_reads))
 	else:
 		print "[OK] There were no errors!"
 	print "==========================================="
+
+	crateslot=ts.uhtrs.keys()[0]
+	errdata=uhtr.parse_err(uhtr.get_raw_err(ts=ts,crate=crateslot[0],slot=crateslot[1]))
+	for a in errdata.keys():
+		print 'link {0}: BadDataRate {1}'.format(a,errdata[a])
