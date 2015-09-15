@@ -20,7 +20,7 @@ class teststand:
 			f = "teststands.txt"
 			ts_info = {}
 			try:
-				# Exctract teststand info from the teststand configuration file:
+				# Extract teststand info from the teststand configuration file:
 				ts_info = parse_ts_configuration(f)[self.name]
 #				print ts_info
 				for key, value in ts_info.iteritems():
@@ -51,17 +51,19 @@ class teststand:
 				self.amc13s = {}		# AMC13 objects indexed by the BE crate number.
 				for i, crate in enumerate(self.be_crates):
 					self.amc13s[crate] = amc13.amc13(
+						ts=self,
+						crate=crate,
 						ip_t1=self.amc13_ips[i][0],
 						ip_t2=self.amc13_ips[i][1],
-						crate=crate,
 						config="amc13_904_config.xml",
-						i_sn = i
+						i_sn = i,
 					)
 				
 				# BKP:
 				self.bkps = {}		# Backplane objects indexed by the FE crate number.
 				for i, crate in enumerate(self.fe_crates):
 					self.bkps[crate] = bkp.bkp(
+						ts=self,
 						crate=crate,
 					)
 				
@@ -70,11 +72,10 @@ class teststand:
 				for be_crate, be_slots in self.be.iteritems():
 					for be_slot in be_slots:
 						self.uhtrs[(be_crate, be_slot)] = uhtr.uhtr(
+							ts=self,
 							crate=be_crate,
 							slot=be_slot,
 							ip="192.168.{0}.{1}".format(be_crate, 4*be_slot),
-							control_hub=control_hub,
-							ts=self,
 						)
 				
 				# QIEs:

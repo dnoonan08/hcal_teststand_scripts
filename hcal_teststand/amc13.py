@@ -12,23 +12,25 @@ import pexpect
 # CLASSES:
 class amc13:
 	# Construction:
-	def __init__(self, ip_t1=None, ip_t2=None, crate=None, sn=None, fw_t1=None, fw_t2=None, sw=None, config=None, i_sn=0):
+	def __init__(self, ts=None, crate=None, ip_t1=None, ip_t2=None, sn=None, fw_t1=None, fw_t2=None, sw=None, config=None, i_sn=0):
+		self.ts = ts
+		self.crate = crate
+		self.end = "be"
 		self.ip_t1 = ip_t1
 		self.ip_t2 = ip_t2
-		self.crate = crate
+		self.ips = [self.ip_t1, self.ip_t2]
+		self.i_sn = i_sn
 		self.sn = sn		# This isn't entirely implemented. Until commandline control hub address specification is added, I can rely on the ordering of the IP addresses for finding the SN when I do "fv" (i_sn).
 		self.fw_t1 = fw_t1
 		self.fw_t2 = fw_t2
-		self.config = config
-		self.i_sn = i_sn
-		self.ips = [self.ip_t1, self.ip_t2]
 		self.fws = self.fw = [self.fw_t1, self.fw_t2]
 		self.sw = sw
+		self.config = config
 	
 	# String behavior
 	def __str__(self):
 		try:
-			return "<AMC13 in BE Crate {0} with T1 = {1}, T2 = {2}>".format(self.crate, self.ip_t1, self.ip_t2)
+			return "<AMC13 in BE Crate {0}: SN = {1}, T1 = {2}, T2 = {3}>".format(self.crate, self.sn, self.ip_t1, self.ip_t2)
 		except Exception as ex:
 #			print ex
 			return "<empty amc13 object>"
@@ -37,12 +39,12 @@ class amc13:
 	def update(self):
 		try:
 			info = get_info(config=self.config)[self.i_sn]
-#			print info
+			print info
 			self.sn = info["sn"]
 			fw_t1 = info["fw_t1"]
 			fw_t2 = info["fw_t2"]
 			self.fw = [fw_t1, fw_t2]
-#			self.sw = info["sw"]		# get_info doesn't get SW version!
+			self.sw = info["sw"]		# get_info doesn't get SW version!
 			return True
 		except Exception as ex:
 			print ex
@@ -51,8 +53,8 @@ class amc13:
 	def Print(self):
 		print self
 	
-	def send_commands(self, cmds=None):
-		return send_commands(cmds=cmds, config=self.config)
+	def send_commands(self, ts=None, cmds=None):
+		return send_commands(ts=ts, cmds=cmds, config=self.config)
 	
 	def get_status(self, ping=True):		# This should not do anything to the AMC13 but should only be a passive assessment. See "setup".
 		# Prepare:
@@ -176,7 +178,7 @@ class status:
 # /CLASSES
 
 # FUNCTIONS:
-def send_commands(cmds=[], config=""):		# Sends commands to "AMC13Tool2.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
+def send_commands(ts=None, cmds=[], config=""):		# Sends commands to "AMC13Tool2.exe" and returns the raw output and a log. The input is a teststand object and a list of commands.
 	# Arguments and variables:
 	## Commands:
 	if not cmds:
@@ -225,27 +227,27 @@ def send_commands(cmds=[], config=""):		# Sends commands to "AMC13Tool2.exe" and
 		"log": log.strip(),
 	}
 
-def get_info(config=None):		# Returns a dictionary of information about the AMC13, such as the FW versions.
+def get_info(ts=None, config=None):		# Returns a dictionary of information about the AMC13, such as the FW versions.
 	# Variables:
 	log = ""
 	info = []
 	version_sw = ""
 	
 	# Get versions from the AMC13:
-	results = send_commands(cmds="fv", config=config)["output"]
+	results = send_commands(ts=ts, cmds="fv", config=config)["output"]
 	if results:
 		# Get SW version:
 		result = results[0]["result"]
 		match = search("Using AMC13 software ver:\s*(\d+)", result)
 		if match:
-			version_sw = int(match.group(1))
+			sw = int(match.group(1))
 		else:
 			print "ERROR (amc13.get_info): Could not find the AMC13 SW version."
 			return False
 		
 		# Get FW versions:
 		result = results[1]["result"]
-		for line in result.split("\n"):
+		for line in result.split("\n"):		# Each line represents a different AMC13.
 #			print line
 			match = search("SN:\s+(\d+)\s+T1v:\s+(\d+)\s+T2v:\s+(\d+)", line)
 			if match:
@@ -256,12 +258,13 @@ def get_info(config=None):		# Returns a dictionary of information about the AMC1
 					"sn": sn,
 					"fw_t1": fw_t1,
 					"fw_t2": fw_t2,
+					"sw": sw,
 				})
-		if not info:
+		if info:
+			return info
+		else:
 			print "ERROR (amc13.get_info): Could not find the AMC13 FW version."
 			return False
-		else:
-			return info
 	else:
 		return False
 

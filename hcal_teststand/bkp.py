@@ -11,7 +11,8 @@ import meta
 # CLASSES:
 class bkp:
 	# Construction:
-	def __init__(self, crate=None):
+	def __init__(self, ts=None, crate=None):
+		self.ts = ts
 		self.crate = crate
 	
 	# String behavior

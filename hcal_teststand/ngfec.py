@@ -53,6 +53,7 @@ def send_commands(ts=None, control_hub=None, port=port_default, cmds=cmds_defaul
 		# Send the ngfec commands:
 #		print ngfec_cmd
 		p = pexpect.spawn(ngfec_cmd)
+#		print p.pid
 		if not script:
 			for i, c in enumerate(cmds):
 #				print c
@@ -94,10 +95,18 @@ def send_commands(ts=None, control_hub=None, port=port_default, cmds=cmds_defaul
 			p.sendline("quit")
 		p.expect(pexpect.EOF)
 		raw_output += p.before
-		sleep(1)		# I need to make sure the ngccm process is killed.
+#		sleep(1)		# I need to make sure the ngccm process is killed.
 		p.close()
+#		print "closed"
+		killall()
 		if raw:
 			return raw_output
 		else:
 			return output
+
+def killall():
+	p = pexpect.spawn('killall ngccm')		# Run script.
+	p.expect(pexpect.EOF)		# Wait for the script to finish.
+	raw_output = p.before.strip()		# Collect all of the script's output.
+	return raw_output
 # /FUNCTIONS

@@ -21,13 +21,15 @@ cmds_default = ["0", "exit", "-1"]
 # CLASSES:
 class uhtr:
 	# Construction:
-	def __init__(self, crate=None, slot=None, ip=None, control_hub=None, ts=None):
+	def __init__(self, ts=None, crate=None, slot=None, ip=None):
+		self.ts = ts
+		self.end = "be"
 		self.crate = crate
 		self.slot = slot
 		self.ip = ip
-		self.control_hub=control_hub
+		self.control_hub=ts.control_hub
 		if ts:
-			links = get_links_from_map(ts=ts, crate=crate, slot=slot, end="be")
+			links = get_links_from_map(ts=ts, crate=crate, slot=slot, end=self.end)
 			if links:
 				self.links = links
 			else:
@@ -38,7 +40,7 @@ class uhtr:
 	# String behavior
 	def __str__(self):
 		try:
-			return "<uHTR in BE Crate {0}, BE Slot {1} with IP = {2}>".format(self.crate, self.slot, self.ip)
+			return "<uHTR in BE Crate {0}, BE Slot {1}: IP = {2}>".format(self.crate, self.slot, self.ip)
 		except Exception as ex:
 #			print ex
 			return "<empty uhtr object>"
