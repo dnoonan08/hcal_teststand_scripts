@@ -34,17 +34,27 @@ def create_plots(qie_id):
 
 def check_cid_rotating(data):		# Check if the CIDs are rotating.
 	n_ch = len(data)
+        print "data whole", data 
+        print "length of data", n_ch
 	result = [0 for i in range(n_ch)]
 	n_bx = 0
 	if n_ch > 0:
 		n_bx = len(data[0])
+                print "data 0:", data[0]
+                print "n_bx:", n_bx 
 	if (n_bx > 0):
 		for ch in range(n_ch):
+                        
 			cid_start = data[ch][0].cid
+                        print "ch, cid_start:",ch, cid_start
 			for bx, datum in enumerate(data[ch]):
 #				if bx < 5:
 #					print "{0}: {1}".format(bx, datum.cid)
+			        print "bx % 4 :" ,bx % 4
+                                print "bx:",bx
+                                print "datum.cid:",datum.cid	
 				if datum.cid != ((bx % 4) + cid_start) % 4:
+                                        print "result[ch]:",result[ch]
 					result[ch] += 1
 		return result
 	else:
@@ -62,7 +72,7 @@ if __name__ == "__main__":
 		metavar="STR"
 	)
 	parser.add_option("-q", "--qie", dest="qie",
-		default="0x67000000 0x9B32C370",
+		default="0x9B32C370 0x67000000",
 		help="The unique ID of the QIE card you're testing",
 		metavar="STR"
 	)
@@ -101,32 +111,38 @@ if __name__ == "__main__":
 	
 	# Set up basic variables for the test:
 	crate, slot = ts.crate_slot_from_qie(qie_id=options.qie)
-	link_dict = ts.uhtr_from_qie(qie_id=options.qie)
+#	link_dict = ts.uhtr_from_qie(qie_id=options.qie)
 	links = []
-	for uhtr_slot, i_links in link_dict.iteritems():
-		for i_link in i_links:
-			links.append(uhtr.get_link_from_map(ts=ts, uhtr_slot=uhtr_slot, i_link=i_link))
+#	for uhtr_slot, i_links in link_dict.iteritems():
+#		for i_link in i_links:
+	links = uhtr.get_links_from_map(ts=ts, crate=crate, slot=slot, end="fe")[crate,slot] #, i_link=i_link)
+# get_links_from_map(ts=None, crate=None, slot=None, end="be", i_link=None, f="", d="configuration/maps"):
 	th1 = create_plots(options.qie)
 	print "\tTeststand: {0}".format(ts.name)
 	print "\tQIE card: {0} (crate {1}, slot {2})".format(options.qie, crate, slot)
 	
 	# Run the test:
 	error_record = {"bxs": n_reads*100}
-	for phase in range(16):		# Loop over possible phase shifts.
+	for phase in range(1):		# Loop over possible phase shifts.
 		print "> Checking phase {0} ...".format(phase)
 		ts.set_clk_phase(crate=crate, slot=slot, phase=phase)
+#                print links 
 		for link in links:
+#                        link.Print()
 			result_total = [0 for i in range(4)]
 			for i in range(n_reads):
-				data = link.get_data_spy()
+	                        data = link.get_data_spy()
+	                        #print data
 				result = check_cid_rotating(data)
 				for ch, errors in enumerate(result):
 #					print "fill {0}: {1} {2}".format(link.qies[ch]-1, phase, errors)
+                                        print "ch,errors" , ch, errors
+                                        print "link.qies[ch]-1:", link.qies[ch]-1
 					th1[link.qies[ch]-1].Fill(phase, errors)
 				result_total = [sum(x) for x in zip(result_total, result)]
 				if (v): print "\t{0} - Link {1}: {2}".format(i, link.n, result)
 #			print result_total
-			
+		        print "sum(result_total)",sum(result_total),"result_total:",result_total	
 			# Record errors:
 			if sum(result_total) != 0:
 				if link.n not in error_record:

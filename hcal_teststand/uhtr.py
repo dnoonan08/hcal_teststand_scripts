@@ -21,26 +21,16 @@ cmds_default = ["0", "exit", "-1"]
 # CLASSES:
 class uhtr:
 	# Construction:
-	def __init__(self, ts=None, crate=None, slot=None, ip=None):
-		self.ts = ts
-		self.end = "be"
+	def __init__(self, crate=None, slot=None, ip=None, control_hub=None):
 		self.crate = crate
 		self.slot = slot
 		self.ip = ip
-		self.control_hub=ts.control_hub
-		if ts:
-			links = get_links_from_map(ts=ts, crate=crate, slot=slot, end=self.end)
-			if links:
-				self.links = links
-			else:
-				self.links = []
-		else:
-			self.links = []
+		self.control_hub=control_hub
 	
 	# String behavior
 	def __str__(self):
 		try:
-			return "<uHTR in BE Crate {0}, BE Slot {1}: IP = {2}>".format(self.crate, self.slot, self.ip)
+			return "<uHTR in BE Crate {0}, BE Slot {1} with IP = {2}>".format(self.crate, self.slot, self.ip)
 		except Exception as ex:
 #			print ex
 			return "<empty uhtr object>"
@@ -157,7 +147,8 @@ class link:		# An object that represents a uHTR link. It contains information ab
 			return False
 	
 	def Print(self):
-		print "uHTR Info: BE Crate {0}, BE Slot {1}, Link {2}".format(self.crate, self.slot, self.n)
+		print "uHTR Info: BE Crate {0}, BE Slot {1}, Link {2}".format(self.be_crate, self.be_slot, self.n)
+                print "QIE card Info: FE Crate {0}, FE Slot {1}, Link {2}".format(self.fe_crate, self.fe_slot, self.n)
 		print "QIE card ID:", self.qie_unique_id
 		print "QIE card half:", self.qie_half_label
 		print "Fiber:", self.qie_fiber
@@ -214,7 +205,7 @@ def send_commands(ts=None, crate=None, slot=None, ip=None, control_hub=None, cmd
 	else:
 		return False
 
-def setup(ts=None, crate=None, slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=3500):
+def setup(ts=None, crate=None, slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=59):
 # Set up any number of uHTRs. Specify a group of uHTRs by the crates and slots or by the IPs. If you specify the ts and nothing else it will set up all of them.
 	# Arguments:
 	ips = meta.parse_args_ip(ts=ts, crate=crate, slot=slot, ip=ip)
@@ -608,26 +599,6 @@ def read_histo(file_in=""):
 
 # Perform basic uHTR commands:
 ## Returning raw output:
-def get_raw_err(ts=None, crate=None, slot=None, ip=None, control_hub=None, script=False):
-	cmds=[
-		'0',
-		'link',
-		'errors',
-		'1000',
-		'88000',
-		'1',
-		'1',
-		'3500',
-		'0',
-		'0',
-		'0',
-		'quit',
-		'exit',
-		'-1',
-		]
-	result = send_commands(ts=ts, crate=crate, slot=slot, cmds=cmds, ip=ip, control_hub=control_hub, script=script)
-	return result
-
 def get_raw_spy(ts=None, crate=None, slot=None, ip=None, control_hub=None, script=False, n_bx=50, i_link=None):
 	# Goal: return a list of raw SPY data indexed by crate_slot, then link number.
 
@@ -709,21 +680,6 @@ def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
 #	raw_output = uhtr_out
 
 # Parse uHTRTool.exe SPY data:
-def parse_err(raw):
-	bdr=[]
-	raw=raw.values()[0].split('\n')
-	for s in raw:
-		if 'Status|' in s:
-			stat=[st.strip() for st in s.split('|')[1:-1]]
-		if "Bad" in s and "data" in s and "rate" in s:
-			bdr.extend(s.split()[3:])
-	err={}
-	for i in range(24):
-		if stat[i]=='ON':
-			err[i]=float(bdr[i])
-	return err
-
-	
 def parse_spy(raw):		# From raw uHTR SPY data, return a list of adcs, cids, etc. organized into sublists per fiber.
 	# Variables:
 	data = {
