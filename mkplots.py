@@ -6,7 +6,7 @@ from array import array
 from sys import argv
 
 
-if len(argv)==2:
+if len(argv)>1:
     path=argv[1]
     if path[-1]!='/':
         path+='/'
@@ -14,6 +14,10 @@ if len(argv)==2:
 else:
     path='./'
     basetime=1438763742
+if len(argv)>2:
+    linknum=eval(argv[2])
+else:
+    linknum=[0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17]
 
 def getdata(string):
     adctmps=getoutput("grep 'get {0}' {1}*.log".format(string,path)).split('\n')
@@ -100,11 +104,11 @@ def readcurr(cc):
     leg.Draw('same')
     cc.Print('{0}Curr.png'.format(path))
 
-def adcplt():
-    files=getoutput('grep "\[12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23\]" {0}*.log'.format(path)).split('\n')
+def adcplt(listnum):
+    files=getoutput("grep '{0}' {1}*.log".format(listnum,path).replace('[','\[').replace(']','\]')).split('\n')
     times=array('d')
     adccc=[]
-    for i in range(48):
+    for i in range(len(listnum)*4):
         adccc.append(array('d'))
     for onefile in files:
         onefile=onefile.split(":")[0]
@@ -115,36 +119,38 @@ def adcplt():
         adcs=eval(getoutput('grep "\[\[" {0}'.format(onefile)))
         adccs=[]
         for i in adcs: adccs.extend(i)
-        for i in range(48):
+        for i in range(len(listnum)*4):
             adccc[i].append(float(adccs[i]))
     adccg=[]
-    for i in range(48):
+    for i in range(len(listnum)*4):
         adccg.append(TGraph(len(times),times,adccc[i]))
         adccg[i].SetTitle('mean ADC vs t;t/h;ADC')
         adccg[i].SetMinimum(0)
     return adccg
 
-def getlinkdata(string):
+def getlinkdata(string,linknum):
     adctmps=getoutput("grep '{0}' {1}*.log".format(string,path)).split('\n')
     times=array("d")
     bada=[]
-    for i in range(12):
+    for i in range(len(linknum)):
         bada.append(array('d'))
     for tmp in range(len(adctmps)):
         if not tmp%2:
+            tmps=adctmps[tmp]
             continue
-        tmp=adctmps[tmp]
-        timest=tmp.split('/')[-1].split('.log:')[0].replace('_',' ')
+        else:
+            tmps+=adctmps[tmp].split(string)[-1]
+        timest=tmps.split('/')[-1].split('.log:')[0].replace('_',' ')
         hm=getoutput('date -d "{0}" +%s'.format(timest[:-2]))
         time=float(hm)+float(timest[-2:])-basetime
         times.append(time/3600)
-        ba=tmp.split(string)[-1].split()
-        for i in range(12):
-            bada[i].append(float(ba[i]))
+        ba=tmps.split(string)[-1].split()
+        for i in range(len(linknum)):
+            bada[i].append(float(ba[linknum[i]]))
     badas=[]
-    for i in range(12):
+    for i in range(len(linknum)):
         badas.append(TGraph(len(times),times,bada[i]))
-        badas[i].SetTitle('{1} link_{0} vs t;t/h;{1}'.format(i+12,string))
+        badas[i].SetTitle('{1} link_{0} vs t;t/h;{1}'.format(linknum[i],string))
         badas[i].SetFillColor(0)
     return badas
 
@@ -206,44 +212,43 @@ if __name__=='__main__':
     pwrbad.SetMarkerStyle(7)
     pwrbad.Draw('ap')
     c0.Print('{0}pwrbad.png'.format(path))
-
     #adc vs time
     print '\n===reading mean adc'
-    adccg=adcplt()
-    for n in range(12):
+    adccg=adcplt(linknum)
+    for n in range(len(linknum)):
         for i in range(4):
             adccg[n*4+i].SetMarkerStyle(7)
-            adccg[n*4+i].SetTitle('mean ADC link{0}ch{1} vs t;t/h;ADC'.format(n+12,i))
+            adccg[n*4+i].SetTitle('mean ADC link{0}ch{1} vs t;t/h;ADC'.format(linknum[n],i))
             adccg[n*4+i].Draw('ap')
-            c0.Print("{0}adcplt{1}ch{2}.png".format(path,n+12,i))
+            c0.Print("{0}adcplt{1}ch{2}.png".format(path,linknum[n],i))
 
     #bad align vs time
     print '\n===reading bad align'
-    badas=getlinkdata('Bad align')
-    for n in range(12):
+    badas=getlinkdata('Bad align',linknum)
+    for n in range(len(linknum)):
         badas[n].SetMarkerStyle(7)
         badas[n].SetMinimum(0)
         badas[n].Draw('ap')
-        c0.Print("{0}badalign{1}.png".format(path,n+12))
+        c0.Print("{0}badalign{1}.png".format(path,linknum[n]))
 
     #bad data vs time
     print '\n===reading bad data'
-    baddata=getlinkdata('Bad Data')
-    for n in range(12):
+    baddata=getlinkdata('Bad Data',linknum)
+    for n in range(len(linknum)):
         baddata[n].SetMarkerStyle(7)
         baddata[n].SetMinimum(0)
         baddata[n].Draw('ap')
-        c0.Print("{0}baddata{1}.png".format(path,n+12))
+        c0.Print("{0}baddata{1}.png".format(path,linknum[n]))
 
     #orbit rate vs time
     print '\n===reading orbit rate'
-    orrate=getlinkdata('OrbitRate(kHz)')
+    orrate=getlinkdata('OrbitRate(kHz)',linknum)
     fborr=getlinkFB('RATE_ORBIT (kHz)')
     leg=TLegend(0.6,.8,1,1)
     leg.AddEntry(orrate[0],'Link OrbitRate')
     leg.AddEntry(fborr[0],'FrontFPGA OrbitRate')
     leg.AddEntry(fborr[1],'BackFPGA OrbitRate')
-    for n in range(12):
+    for n in range(len(linknum)):
         orrate[n].SetMarkerStyle(7)
         orrate[n].SetMaximum(13)
         orrate[n].SetMinimum(9)
@@ -251,7 +256,7 @@ if __name__=='__main__':
         fborr[0].Draw('samep')
         fborr[1].Draw('samep')
         leg.Draw('same')
-        c0.Print("{0}OrbitRate{1}.png".format(path,n+12))
+        c0.Print("{0}OrbitRate{1}.png".format(path,linknum[n]))
 
     #Error data vs time
     print '\n===reading Error information'
@@ -266,5 +271,6 @@ if __name__=='__main__':
     print '\n===reading I/V information'
     readvolt(c0)
     readcurr(c0)
+
 
 
