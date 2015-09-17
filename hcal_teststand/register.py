@@ -5,7 +5,7 @@
 # Author: A. Whitbeck - July 11, 2015
 ##############################################
 
-import ngccm
+import ngfec
 from hcal_teststand import *
 
 class register : 
@@ -38,8 +38,8 @@ class register :
         executeErrors = 0 
         totalTests = 0 
 
-        output = ngccm.send_commands_parsed( self.ts , self.commandCache )["output"]
-
+        output = ngfec.send_commands(ts = self.ts ,cmds= self.commandCache )
+	print output
         if self.verbosity >= 1 :
             print output
         
@@ -78,6 +78,7 @@ class register :
 
             checkNum = []
             for c in check[::-1] :
+		print c
                 checkNum.append( int(c,16) )
 
             ### valueNum and checkNum are compared so that
@@ -92,14 +93,19 @@ class register :
         print "execution errors:",executeErrors
         print "success rate:", 100. * ( 1. - float( errors ) / float( totalTests ) ),"%"
 
-    def addTestToCache( self, value ) :
-
-        self.commandCache.append( "put {0} {1}".format( self.name , value ) )
-        self.commandCache.append( "get {0}".format( self.name , value ) )
+    def addTestToCache( self, value) :
+	input_str=""
+	for i in  value :
+		input_str += i
+		input_str +=" "
+	#input_str.strip()
+	
+        self.commandCache.append( "put {0} {1}".format( self.name , input_str ) )
+        self.commandCache.append( "get {0}".format( self.name ) )
         
     def read( self ) :
         
-        output = ngccm.send_commands_parsed( self.ts, ["get {0}".format(self.name)] )["output"][0]["result"]
+        output = ngfec.send_commands( self.ts, ["get {0}".format(self.name)] )
         if self.verbosity >= 1 : 
             print "REGISTER::READ() --"
             print output
@@ -108,7 +114,7 @@ class register :
 
     def write( self , value = '') :
         
-        output = ngccm.send_commands_parsed(self.ts, ["put {0} {1}".format(self.name,value)] )["output"][0]["result"]
+        output = ngfec.send_commands(self.ts, ["put {0} {1}".format(self.name,value)] )
         if self.verbosity >= 1 : 
             print "REGISTER::WRITE() --"
             print output

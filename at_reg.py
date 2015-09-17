@@ -24,6 +24,8 @@ def getRandomValue( regSize=1 ) :
 	#	randomInt = randomInt - random.randint(0,1)	#biz ekledik	
 	return str(hex(randomInt))
 		
+
+
 def format_random_value(d):
         ab=[]
         a="0x"
@@ -33,40 +35,52 @@ def format_random_value(d):
         if (len(c) >= 18):
                 for i in xrange(2,10):
                         a +=str(c[i])
-                        #print ( int(a) % 32)
-                for i in xrange(10,18):
-                        b +=str(c[i])
+                if (c[10]=="0"):
+                        counter=0
+                        for i in xrange(10,18):
+                                if (c[i]=="0"):
+                                        counter=counter+1
+                                else:
+                                        break
+                        if(counter==8):
+                                b +=str(c[17])
+                        else:
+                                for i in xrange((10+counter),18):
+                                                b +=str(c[i])
+                else:
+                        for i in xrange(10,18):
+                                b +=str(c[i])
                 #print len(c), c
-                
         else:
                 r = 18 - len(c)
                 if (r >= 9):
                         rr= 10 - len(c)
-                        for i in xrange(8):
-                                a +=str(0)
-                        for i in xrange(rr):
-                                b +=str(0)
-
-
                         for i in xrange((2),(10-rr)):
                                 b +=str(c[i])
-                        #print len(c), c
-
                 else:
-                        
-                        for i in xrange(r):
-                                a +=str(0)
                         for i in xrange(2,(10-r)):
                                 a +=str(c[i])
-                                
-                        for i in xrange((10-r),(18-r)):
-                                b +=str(c[i])
-                        #print len(c), c
-                        
-        ab.append(a)
-        ab.append(b)
-        return ab       
-
+                        if (c[10-r]=="0"):
+                                counter=0
+                                for i in xrange((10-r),(18-r)):
+                                        if (c[i]=="0"):
+                                                counter=counter+1
+                                        else:
+                                                break
+                                if(counter==8):
+                                        b +=str(c[17-r])
+                                else:
+                                        for i in xrange((10-r+counter),(18-r)):
+                                                b +=str(c[i])
+                        else:
+                                for i in xrange((10-r),(18-r)):
+                                        b +=str(c[i])
+                #print len(c), c                
+        if ( len(a)>2):
+                ab.append(a)
+        if (len(b)>2):
+                ab.append(b)
+        return ab
 
 def testRandomValue( register ):
 
@@ -96,7 +110,7 @@ def testRandomValue( register ):
 # MAIN:
 if __name__ == "__main__":
 
-	qieid="0xAA24DA70 0x8D000000"
+	qieid="0x9B32C370 0x67000000"
 
 	ts = teststand("904")		# Initialize a teststand object. This object stores the teststand configuration and has a number of useful methods.
 	fe_crate, fe_slot = ts.crate_slot_from_qie(qie_id=qieid)
@@ -123,7 +137,8 @@ if __name__ == "__main__":
 #			register(ts,"HF{0}-{1}-QIE{2}_Idcset".format(fe_crate, fe_slot, i_qie),5),		# 5 bits
 #			register(ts,"HF{0}-{1}-QIE{2}_CalMode".format(fe_crate, fe_slot, i_qie),1),		# 1 bit
 #			register(ts,"HF{0}-{1}-QIE{2}_CkOutEn".format(fe_crate, fe_slot, i_qie),1),		# 1 bit
-			register(ts,"HF{0}-{1}-QIE{2}_TDCMode".format(fe_crate, fe_slot, i_qie),1)		# ? bit
+#			register(ts,"HF{0}-{1}-QIE{2}_TDCMode".format(fe_crate, fe_slot, i_qie),1)		# ? bit
+			register(ts, "HF{0}-{1}-iTop_UniqueID".format(fe_crate, fe_slot), 40 )
 	               	#"HF{0}-{1}-QIE{2}_CalMode".format(fe_crate, fe_slot, i_qie),
 	               	#"HF{0}-{1}-QIE{2}_ChargeInjectDAC".format(fe_crate, fe_slot, i_qie),
                 	#"HF{0}-{1}-QIE{2}_Lvds".format(fe_crate, fe_slot, i_qie),
@@ -131,7 +146,7 @@ if __name__ == "__main__":
                 	#"HF{0}-{1}-QIE{2}_CapID0pedestal".format(fe_crate, fe_slot, i_qie),
                 	#"HF{0}-{1}-QIE{2}_CkOutEn".format(fe_crate, fe_slot, i_qie),
                 	#"HF{0}-{1}-QIE{2}_PedestalDAC".format(fe_crate, fe_slot, i_qie),
-                	#"HF{0}-{1}-QIE{2}_TimingIref".format(fe_crate, fe_slot, i_qie),
+                	#"HF{-1}-{1}-QIE{2}_TimingIref".format(fe_crate, fe_slot, i_qie),
                 	#"HF{0}-{1}-QIE{2}_CapID1pedestal".format(fe_crate, fe_slot, i_qie),
            		#"HF{0}-{1}-QIE{2}_DiscOn".format(fe_crate, fe_slot, i_qie),
                 	#"HF{0}-{1}-QIE{2}_RangeSet".format(fe_crate, fe_slot, i_qie),
@@ -154,9 +169,11 @@ if __name__ == "__main__":
 		#print "test",i
 		for r in registers :
 			#print r.name
-		        value = getRandomValue( r.size )
-			values = [ value[0:8]] #, '0x'+value[8:16] ]
-			r.addTestToCache( values[0]) #+" "+values[1] )
+		        #value = getRandomValue( r.size )
+			value = format_random_value(r.size)
+			#values = [ value ]#, value[8:16] ]
+                        #values = [ value[0:8]] #, '0x'+value[8:16] ]
+			r.addTestToCache( value) #+" "+values[1] )
 			#if not testRandomValue( r ) :
 			#	result[q] = result[q] + 1
 		#print "ERRORS: ",result
