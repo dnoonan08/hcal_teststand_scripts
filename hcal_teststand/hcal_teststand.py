@@ -49,23 +49,31 @@ class teststand:
 				
 				# AMC13:
 				self.amc13s = {}		# AMC13 objects indexed by the BE crate number.
-				for i, crate in enumerate(self.be_crates):
-					self.amc13s[crate] = amc13.amc13(
-						ts=self,
-						crate=crate,
-						ip_t1=self.amc13_ips[i][0],
-						ip_t2=self.amc13_ips[i][1],
-						config="amc13_904_config.xml",
-						i_sn = i,
-					)
+				for i, ips in enumerate(self.amc13_ips):
+					be_crate = self.be_crates[i]
+					if ips:
+						self.amc13s[be_crate] = amc13.amc13(
+							ts=self,
+							crate=be_crate,
+							ip_t1=ips[0],
+							ip_t2=ips[1],
+							config="amc13_904_config.xml",
+							i_sn = i,
+						)
 				
-				# BKP:
-				self.bkps = {}		# Backplane objects indexed by the FE crate number.
-				for i, crate in enumerate(self.fe_crates):
-					self.bkps[crate] = bkp.bkp(
-						ts=self,
-						crate=crate,
-					)
+				# GLIB:
+				self.glibs = {}		# GLIB objects indexed by the BE crate number.
+				for i, glib_slots in enumerate(self.glib_slots):
+					if glib_slots:
+						be_crate = self.be_crates[i]
+						self.glibs[be_crate] = []
+						for glib_slot in glib_slots:
+							self.glibs[be_crate].append(glib.glib(
+								ts=self,
+								crate=be_crate,
+								slot=glib_slot,
+								ip="192.168.1.{0}".format(160 + glib_slot),
+							))
 				
 				# uHTRs:
 				self.uhtrs = {}
@@ -77,6 +85,22 @@ class teststand:
 							slot=be_slot,
 							ip="192.168.{0}.{1}".format(be_crate, 4*be_slot),
 						)
+				
+				# BKP:
+				self.bkps = {}		# Backplane objects indexed by the FE crate number.
+				for i, crate in enumerate(self.fe_crates):
+					self.bkps[crate] = bkp.bkp(
+						ts=self,
+						crate=crate,
+					)
+				
+				# ngCCM:
+				self.ngccms = {}		# ngCCM objects indexed by the FE crate number.
+				for i, crate in enumerate(self.fe_crates):
+					self.ngccms[crate] = ngccm.ngccm(
+						ts=self,
+						crate=crate,
+					)
 				
 				# QIEs:
 				self.qies = {}
@@ -97,7 +121,7 @@ class teststand:
 #					self.uhtr_ips.append(ip)
 					self.uhtr[slot] = ip
 				
-				self.glib_ip = "192.168.1.{0}".format(160 + self.glib_slot)
+#				self.glib_ip = "192.168.1.{0}".format(160 + self.glib_slot)
 			except Exception as ex:		# The above will fail if the teststand names doesn't appear in the configuration file.
 				print "ERROR: Could not read the teststand information for {0} from the configuration file: {1}".format(self.name, f)
 				print ">> {0}".format(ex)
@@ -115,17 +139,55 @@ class teststand:
 		for crate_slot, qie in self.qies.iteritems():
 			qie.update()
 	
-	def Print(self):
-		print "TESTSTAND {0}".format(self.name)
-		print "== AMC13s =="
-		for crate, amc13 in self.amc13s.iteritems():
-			amc13.Print()
-		print "== uHTRs =="
-		for crate_slot, uhtr in self.uhtrs.iteritems():
-			uhtr.Print()
-		print "== QIEs =="
-		for crate_slot, qie in self.qies.iteritems():
-			qie.Print()
+	def Print(self, verbose=True):
+		result = ""
+		result += "######################################################\n"
+		result += "# TESTSTAND {0}\n".format(self.name)
+		result += "#\n"
+		
+		# Prepare BE stuff:
+		result += "############### BE ###############\n"
+		result += "# (uTCA crates: {0})\n".format(self.be_crates)
+		for be_crate in self.be_crates:
+			result += "### Crate {0}\n".format(be_crate)
+			if be_crate in self.amc13s:		# There is only one possible per BE crate
+				result += "# * AMC13s:\n"
+				result += "#\t{0}\n".format(self.amc13s[be_crate])
+			if be_crate in self.glibs:
+				result += "# * GLIBs:\n"
+				for glib in self.glibs[be_crate]:
+					result += "#\t{0}\n".format(glib)
+			uhtrs = [uhtr for crate_slot, uhtr in self.uhtrs.iteritems() if crate_slot[0] == be_crate]
+#			print uhtrs
+			if uhtrs:
+				result += "# * uHTRs:\n"
+				for uhtr in uhtrs:
+					result += "#\t{0}\n".format(uhtr)
+			result += "###\n"
+		result += "##################################\n#\n"
+		# Prepare FE stuff:
+		result += "############### FE ###############\n"
+		result += "# (FE crates: {0})\n".format(self.fe_crates)
+		for fe_crate in self.fe_crates:
+			result += "### Crate {0}\n".format(fe_crate)
+			if fe_crate in self.bkps:		# There is only one possible per FE crate
+				result += "# * Backplanes:\n"
+				result += "#\t{0}\n".format(self.bkps[fe_crate])
+			if fe_crate in self.ngccms:		# There is only one possible per FE crate
+				result += "# * ngCCMs:\n"
+				result += "#\t{0}\n".format(self.ngccms[fe_crate])
+			qies = [qie for crate_slot, qie in self.qies.iteritems() if crate_slot[0] == fe_crate]
+#			print uhtrs
+			if qies:
+				result += "# * QIE cards:\n"
+				for qie in qies:
+					result += "#\t{0}\n".format(qie)
+			result += "###\n"
+		result += "##################################\n"
+		result += "######################################################"
+		if verbose:
+			print result
+		return result
 	
 	## uHTR:
 	def uhtr_ip(self, be_crate=None, be_slot=None):
@@ -386,40 +448,37 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 		"log": log,
 	}
 
-def parse_ts_configuration(f="teststands.txt"):		# This function is used to parse the "teststands.txt" configuration file. It is run by the "teststand" class; usually you want to use that instead of running this yourself.
-	# WHEN YOU EDIT THIS SCRIPT, MAKE SURE TO UPDATE install.py!
-	variables = ["name", "fe_crates", "be_crates", "ngfec_port", "uhtr_slots", "uhtr_settings", "glib_slot", "mch_ips", "amc13_ips", "qie_slots", "control_hub"]
+def parse_ts_configuration(f="teststands.txt"):		# This function must be compatible with Python 2.4. (Don't use "format".)
+	variables = ["name", "fe_crates", "be_crates", "ngfec_port", "uhtr_slots", "uhtr_settings", "glib_slots", "mch_ips", "amc13_ips", "qie_slots", "control_hub"]
 	teststand_info = {}
 	raw = ""
 	if ("/" in f):
-		raw = open("{0}".format(f)).read()
+		raw = open(f).read()
 	else:
-		raw = open("configuration/{0}".format(f)).read()
+		raw = open("configuration/" + f).read()
 	teststands_raw = split("\n\s*%%", raw)
 	for teststand_raw in teststands_raw:
 		lines = teststand_raw.strip().split("\n")
 		ts_name = ""
 		for variable in variables:
+#			print variable
 			for line in lines:
 				if line:		# Skip empty lines. This isn't really necessary.
-					if search("^\s*{0}".format(variable), line):		# Consider lines beginning with the variable name.
+					if search("^\s*" + variable, line):		# Consider lines beginning with the variable name.
 						if (variable == "name"):
-							ts_name = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							ts_name = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name] = {}
 						elif (variable == "fe_crates"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
 						elif (variable == "be_crates"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
 						elif (variable == "ngfec_port"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name][variable] = int(value)
-#						elif (variable == "uhtr_ip_base"):
-#							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
-							teststand_info[ts_name][variable] = value.strip()
 						elif (variable == "uhtr_slots"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							crate_lists = value.split(";")
 							teststand_info[ts_name][variable] = []
 							for crate_list in crate_lists:
@@ -431,16 +490,16 @@ def parse_ts_configuration(f="teststands.txt"):		# This function is used to pars
 							if not teststand_info[ts_name][variable][-1]:
 								del teststand_info[ts_name][variable][-1]
 						elif (variable == "uhtr_settings"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name][variable] = [i for i in value.split(",")]
-						elif (variable == "glib_slot"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
-							teststand_info[ts_name][variable] = int(value)
+						elif (variable == "glib_slots"):
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
+							teststand_info[ts_name][variable] = parse_config_list(value)
 						elif (variable == "mch_ips"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name][variable] = [i.strip() for i in value.split(";")]
 						elif (variable == "amc13_ips"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							crate_lists = value.split(";")
 							teststand_info[ts_name][variable] = []
 							for crate_list in crate_lists:
@@ -452,7 +511,7 @@ def parse_ts_configuration(f="teststands.txt"):		# This function is used to pars
 							if not teststand_info[ts_name][variable][-1]:
 								del teststand_info[ts_name][variable][-1]
 						elif (variable == "qie_slots"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							crate_lists = value.split(";")
 							teststand_info[ts_name][variable] = []
 							for crate_list in crate_lists:
@@ -464,9 +523,22 @@ def parse_ts_configuration(f="teststands.txt"):		# This function is used to pars
 							if not teststand_info[ts_name][variable][-1]:
 								del teststand_info[ts_name][variable][-1]
 						elif (variable == "control_hub"):
-							value = search("{0}\s*=\s*([^#]+)".format(variable), line).group(1).strip()
+							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
 							teststand_info[ts_name][variable] = value.strip()
 	return teststand_info
+
+def parse_config_list(raw):
+	lists = raw.split(";")
+	result = []
+	for l in lists:
+		if l:
+			result.append([int(i) for i in l.split(",")])
+		else:
+			result.append([])
+#	# Let a semicolon be at the end of the last list without adding an empty list:
+#	if not result[-1]:
+#		del result[-1]
+	return result
 # /FUNCTIONS
 
 # This is what gets exectuted when hcal_teststand.py is executed (not imported).
