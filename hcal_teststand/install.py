@@ -117,11 +117,11 @@ def make_amc13_configs(f="teststands.txt"):		# Write configuration files for AMC
 			for i, ips in enumerate(amc13s):
 #				string += '\t<!-- AMC13 with SN = ' + str(amc13.sn_from_ip(ips[0])) + ' -->\n'
 				if len(amc13s) > 1:
-					prefix = "." 
+					prefix = str(i) + "."
 				else:
 					prefix = ""
-				string += '\t<connection id="' + str(i) + prefix + 'T1" uri="chtcp-2.0://' + ch + ':10203?target=' + ips[0] + ':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1.xml" />\n'
-				string += '\t<connection id="' + str(i) + prefix + 'T2" uri="chtcp-2.0://' + ch + ':10203?target=' + ips[1] + ':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2.xml" />\n'
+				string += '\t<connection id="' + prefix + 'T1" uri="chtcp-2.0://' + ch + ':10203?target=' + ips[0] + ':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1.xml" />\n'
+				string += '\t<connection id="' + prefix + 'T2" uri="chtcp-2.0://' + ch + ':10203?target=' + ips[1] + ':50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2.xml" />\n'
 			string += '</connections>'
 			try:
 				out = open("configuration/amc13_" + name + "_config.xml", "w")
