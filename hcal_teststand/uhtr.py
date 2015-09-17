@@ -4,7 +4,7 @@
 # Description: This module contains functions for talking to the   #
 # uHTRs.                                                           #
 ####################################################################
-#
+
 from re import search
 from subprocess import Popen, PIPE
 import hcal_teststand

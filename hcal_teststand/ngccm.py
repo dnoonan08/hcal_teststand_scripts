@@ -15,41 +15,6 @@ import meta
 
 
 # CLASSES:
-class ngccm:
-	# Construction:
-	def __init__(self, ts=None, crate=None):
-		self.ts = ts
-		self.crate = crate
-	
-	# String behavior
-	def __str__(self):
-		try:
-			return "<ngCCM in FE Crate {0}>".format(self.crate)
-		except Exception as ex:
-#			print ex
-			return "<empty ngccm object>"
-	
-	# Methods:
-#	def setup(self, ts=None):
-#		if ts:
-#			cmds = [
-#				"put HF{0}-bkp_pwr_enable 0".format(self.crate),
-#				"put HF{0}-bkp_pwr_enable 1".format(self.crate),
-#				"put HF{0}-bkp_reset 1".format(self.crate),
-#				"put HF{0}-bkp_reset 0".format(self.crate),
-#				"get HF{0}-bkp_pwr_bad".format(self.crate),
-#			]
-#			ngfec_output = ngfec.send_commands(ts=ts, cmds=cmds)
-#			for cmd in ngfec_output[:-1]:
-#				if "OK" not in cmd["result"]:
-#					return False
-#			if ngfec_output[-1]["result"] == "1":
-#				return False
-#			return True
-#		else:
-#			return False
-	# /Methods
-
 class status:
 	# Construction:
 	def __init__(self, ts=None, status=[], crate=-1, fw=[]):

@@ -6,47 +6,6 @@ import ngccm
 from time import time, sleep
 from numpy import mean, std
 
-# CLASSES:
-class glib:
-	# Construction:
-	def __init__(self, ts=None, crate=None, slot=None, ip=None):
-		self.ts = ts
-		self.end = "be"
-		self.crate = crate
-		self.slot = slot
-		self.ip = ip
-	
-	# String behavior
-	def __str__(self):
-		try:
-			return "<GLIB in BE Crate {0}, BE Slot {1}: IP = {2}>".format(self.crate, self.slot, self.ip)
-		except Exception as ex:
-#			print ex
-			return "<empty glib object>"
-	
-	# Methods:
-#	def update(self):
-#		try:
-#			info = get_info(ip=self.ip, control_hub=self.control_hub)[self.ip]
-##			print info
-#			self.fw_type_front = info["fw_type_front"]
-#			self.fw_front = info["fw_front"]
-#			self.fw_type_back = info["fw_type_back"]
-#			self.fw_back = info["fw_back"]
-#			self.fws = ["fws"]
-#			return True
-#		except Exception as ex:
-#			print ex
-#			return False
-	
-	def Print(self):
-		print self
-	
-#	def setup(self):
-#		return setup(ip=self.ip, control_hub=self.control_hub)
-	# /Methods
-# /CLASSES
-
 # FUNCTIONS:
 def get_info(ts):		# Returns a dictionary of information about the GLIB, such as the FW version.
 	data = {
