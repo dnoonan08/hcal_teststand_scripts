@@ -504,10 +504,14 @@ def set_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.p
 		if unique_ids:
 			cmds = []
 			for crate_slot, unique_id in unique_ids.iteritems():
-				cmds.extend([
-					"put HF{0}-{1}-iTop_UniqueID {2} {3}".format(crate_slot[0], crate_slot[1], unique_id[0], unique_id[1]),
-					"put HF{0}-{1}-iBot_UniqueID {2} {3}".format(crate_slot[0], crate_slot[1], unique_id[0], unique_id[1])
-				])
+				if unique_id:
+					cmds.extend([
+						"put HF{0}-{1}-iTop_UniqueID {2} {3}".format(crate_slot[0], crate_slot[1], unique_id[0], unique_id[1]),
+						"put HF{0}-{1}-iBot_UniqueID {2} {3}".format(crate_slot[0], crate_slot[1], unique_id[0], unique_id[1])
+					])
+				else:
+					print "ERROR (set_unique_id): The unique ID for the card in FE Crate {0}, Slot {1} could not be fetched. Therefore, it can't be set.".format(crate_slot[0], crate_slot[1])
+					return False
 			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
 			if output:
 				return unique_ids

@@ -39,7 +39,7 @@ class amc13:
 	def update(self):
 		try:
 			info = get_info(config=self.config)[self.i_sn]
-			print info
+#			print info
 			self.sn = info["sn"]
 			fw_t1 = info["fw_t1"]
 			fw_t2 = info["fw_t2"]
