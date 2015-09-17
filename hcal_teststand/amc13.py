@@ -284,6 +284,12 @@ def setup_all(ts=None, mode=0):		# Mode: 0 for normal, 1 for TTC generation.
 		results[be_crate] = amc13.setup(mode=mode)
 	return results
 
+def ip_from_sn(sn=100):		# Get a set of AMC13 IP addresses from a SN.
+	return False if sn < 0 else ["168.192.{0}.{1}".format([1, 2, 3][sn/128], i - 2*(sn%128)) for i in [255, 254]]
+
+def sn_from_ip(ip="168.192.1.55"):		# Get an AMC13 SN from an IP address (either T1 or T2).
+	return False if len(ip.split(".")) != 4 else 128*(int(ip.split(".")[2]) - 1) + (255 - int(ip.split(".")[3]))/2
+
 #def check_scratch(ts=False, values=['0xffffffff', '0xffffffff', '0xffffffff', '0xffffffff']):
 #	if ts:
 #		output = ngccm.send_commands
