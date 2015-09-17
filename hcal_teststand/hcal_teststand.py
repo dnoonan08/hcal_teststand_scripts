@@ -9,6 +9,7 @@ import qie
 import bkp
 import json
 import os
+import install
 
 # CLASSES:
 class teststand:
@@ -21,7 +22,7 @@ class teststand:
 			ts_info = {}
 			try:
 				# Extract teststand info from the teststand configuration file:
-				ts_info = parse_ts_configuration(f)[self.name]
+				ts_info = install.parse_ts_configuration(f)[self.name]
 #				print ts_info
 				for key, value in ts_info.iteritems():
 					setattr(self, key, value)
@@ -401,6 +402,7 @@ def get_temp(ts, crate):		# It's more flexible to not have the input be a testst
 		"log":	log,
 	}
 
+# THIS IS NOT GOING TO WORK, NEEDS TO BE UPDATED:
 def get_temps(ts=False):		# It's more flexible to not have the input be a teststand object. I should make it accept both.
 	output = {}
 	
@@ -447,98 +449,6 @@ def get_ts_status(ts):		# This function does basic initializations and checks. I
 		"info": status,
 		"log": log,
 	}
-
-def parse_ts_configuration(f="teststands.txt"):		# This function must be compatible with Python 2.4. (Don't use "format".)
-	variables = ["name", "fe_crates", "be_crates", "ngfec_port", "uhtr_slots", "uhtr_settings", "glib_slots", "mch_ips", "amc13_ips", "qie_slots", "control_hub"]
-	teststand_info = {}
-	raw = ""
-	if ("/" in f):
-		raw = open(f).read()
-	else:
-		raw = open("configuration/" + f).read()
-	teststands_raw = split("\n\s*%%", raw)
-	for teststand_raw in teststands_raw:
-		lines = teststand_raw.strip().split("\n")
-		ts_name = ""
-		for variable in variables:
-#			print variable
-			for line in lines:
-				if line:		# Skip empty lines. This isn't really necessary.
-					if search("^\s*" + variable, line):		# Consider lines beginning with the variable name.
-						if (variable == "name"):
-							ts_name = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name] = {}
-						elif (variable == "fe_crates"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
-						elif (variable == "be_crates"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
-						elif (variable == "ngfec_port"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = int(value)
-						elif (variable == "uhtr_slots"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							crate_lists = value.split(";")
-							teststand_info[ts_name][variable] = []
-							for crate_list in crate_lists:
-								if crate_list:
-									teststand_info[ts_name][variable].append([int(i) for i in crate_list.split(",")])
-								else:
-									teststand_info[ts_name][variable].append([])
-							# Let a semicolon be at the end of the last list without adding an empty list:
-							if not teststand_info[ts_name][variable][-1]:
-								del teststand_info[ts_name][variable][-1]
-						elif (variable == "uhtr_settings"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = [i for i in value.split(",")]
-						elif (variable == "glib_slots"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = parse_config_list(value)
-						elif (variable == "mch_ips"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = [i.strip() for i in value.split(";")]
-						elif (variable == "amc13_ips"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							crate_lists = value.split(";")
-							teststand_info[ts_name][variable] = []
-							for crate_list in crate_lists:
-								if crate_list:
-									teststand_info[ts_name][variable].append([i.strip() for i in crate_list.split(",")])
-								else:
-									teststand_info[ts_name][variable].append([])
-							# Let a semicolon be at the end of the last list without adding an empty list:
-							if not teststand_info[ts_name][variable][-1]:
-								del teststand_info[ts_name][variable][-1]
-						elif (variable == "qie_slots"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							crate_lists = value.split(";")
-							teststand_info[ts_name][variable] = []
-							for crate_list in crate_lists:
-								if crate_list:
-									teststand_info[ts_name][variable].append([int(i) for i in crate_list.split(",")])
-								else:
-									teststand_info[ts_name][variable].append([])
-							# Let a semicolon be at the end of the last list without adding an empty list:
-							if not teststand_info[ts_name][variable][-1]:
-								del teststand_info[ts_name][variable][-1]
-						elif (variable == "control_hub"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = value.strip()
-	return teststand_info
-
-def parse_config_list(raw):
-	lists = raw.split(";")
-	result = []
-	for l in lists:
-		if l:
-			result.append([int(i) for i in l.split(",")])
-		else:
-			result.append([])
-#	# Let a semicolon be at the end of the last list without adding an empty list:
-#	if not result[-1]:
-#		del result[-1]
-	return result
 # /FUNCTIONS
 
 # This is what gets exectuted when hcal_teststand.py is executed (not imported).
