@@ -71,7 +71,7 @@ def parse_config_var(raw=None, var_type="s"):
 			for l in lists:
 				if l:
 					if "s" in var_type:
-						result.append([str(i) for i in l.split(",")])
+						result.append([str(i).strip() for i in l.split(",")])
 					elif "i" in var_type:
 						result.append([int(i) for i in l.split(",")])
 				else:

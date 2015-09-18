@@ -38,7 +38,7 @@ class amc13:
 	# Methods:
 	def update(self):
 		try:
-			info = get_info(config=self.config)[self.i_sn]
+			info = get_info(config=self.config)[0]		# I don't know how to make multiple ACM13s appear in "fv". If I can, I can reimplement the "i_sn" thing.
 #			print info
 			self.sn = info["sn"]
 			fw_t1 = info["fw_t1"]
@@ -235,6 +235,7 @@ def get_info(ts=None, config=None):		# Returns a dictionary of information about
 	
 	# Get versions from the AMC13:
 	results = send_commands(ts=ts, cmds="fv", config=config)["output"]
+#	print results
 	if results:
 		# Get SW version:
 		result = results[0]["result"]
@@ -275,6 +276,7 @@ def get_status(ts=None, crate=None, ping=True):
 	
 	# Get statuses:
 	for be_crate, amc13 in ts.amc13s.iteritems():
+#		print amc13
 		statuses[be_crate] = amc13.get_status(ping=ping)
 	return statuses
 
