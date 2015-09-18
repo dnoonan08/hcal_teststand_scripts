@@ -48,6 +48,20 @@ control_hub = hcal904daq01
 
 %%
 
+name = 904cal
+fe_crates = 1
+be_crates = 50
+ngfec_port = 4242
+uhtr_slots = 12
+uhtr_settings = 1, 55           # This isn't implemented, yet!
+glib_slots = 10
+mch_ips = 192.168.1.28          # This is in Crate 50, I don't know what the MCH for Crate 53 is
+amc13_ips = 192.168.2.137, 192.168.2.136 
+qie_slots = 2
+control_hub = hcal904daq01
+
+%%
+
 name = 157
 fe_crates = 1
 be_crates = 29
