@@ -4,7 +4,7 @@
 # Description: ?                                                   #
 #                                                                  #
 # Notes: Keep this module compatible with Python 2.4. That means   #
-# don't use format!                                                #
+# don't use "format"!                                              #
 ####################################################################
 
 from re import search, split
@@ -12,7 +12,19 @@ from re import search, split
 
 # FUNCTIONS:
 def parse_ts_configuration(f="teststands.txt"):		# This function must be compatible with Python 2.4. (Don't use "format".)
-	variables = ["name", "fe_crates", "be_crates", "ngfec_port", "uhtr_slots", "uhtr_settings", "glib_slots", "mch_ips", "amc13_ips", "qie_slots", "control_hub"]
+	variables = {
+		"name": "s",
+		"mch_ips": "sl",
+		"amc13_ips": "sL",
+		"ngfec_port": "i", 
+		"uhtr_settings": "sl",
+		"control_hub": "s",
+		"be_crates": "il",
+		"uhtr_slots": "iL",
+		"glib_slots": "iL",
+		"fe_crates": "il",
+		"qie_slots": "iL",
+	}
 	teststand_info = {}
 	raw = ""
 	if ("/" in f):
@@ -23,85 +35,51 @@ def parse_ts_configuration(f="teststands.txt"):		# This function must be compati
 	for teststand_raw in teststands_raw:
 		lines = teststand_raw.strip().split("\n")
 		ts_name = ""
-		for variable in variables:
-#			print variable		# Not compatible...
-			for line in lines:
-				if line:		# Skip empty lines. This isn't really necessary.
-					if search("^\s*" + variable, line):		# Consider lines beginning with the variable name.
-						if (variable == "name"):
-							ts_name = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name] = {}
-						elif (variable == "fe_crates"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
-						elif (variable == "be_crates"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = [int(i) for i in value.split(",")]
-						elif (variable == "ngfec_port"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = int(value)
-						elif (variable == "uhtr_slots"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							crate_lists = value.split(";")
-							teststand_info[ts_name][variable] = []
-							for crate_list in crate_lists:
-								if crate_list:
-									teststand_info[ts_name][variable].append([int(i) for i in crate_list.split(",")])
-								else:
-									teststand_info[ts_name][variable].append([])
-							# Let a semicolon be at the end of the last list without adding an empty list:
-							if not teststand_info[ts_name][variable][-1]:
-								del teststand_info[ts_name][variable][-1]
-						elif (variable == "uhtr_settings"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = [i for i in value.split(",")]
-						elif (variable == "glib_slots"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = parse_config_list(value)
-						elif (variable == "mch_ips"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = [i.strip() for i in value.split(";")]
-						elif (variable == "amc13_ips"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							crate_lists = value.split(";")
-							teststand_info[ts_name][variable] = []
-							for crate_list in crate_lists:
-								if crate_list:
-									teststand_info[ts_name][variable].append([i.strip() for i in crate_list.split(",")])
-								else:
-									teststand_info[ts_name][variable].append([])
-							# Let a semicolon be at the end of the last list without adding an empty list:
-							if not teststand_info[ts_name][variable][-1]:
-								del teststand_info[ts_name][variable][-1]
-						elif (variable == "qie_slots"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							crate_lists = value.split(";")
-							teststand_info[ts_name][variable] = []
-							for crate_list in crate_lists:
-								if crate_list:
-									teststand_info[ts_name][variable].append([int(i) for i in crate_list.split(",")])
-								else:
-									teststand_info[ts_name][variable].append([])
-							# Let a semicolon be at the end of the last list without adding an empty list:
-							if not teststand_info[ts_name][variable][-1]:
-								del teststand_info[ts_name][variable][-1]
-						elif (variable == "control_hub"):
-							value = search(variable + "\s*=\s*([^#]+)", line).group(1).strip()
-							teststand_info[ts_name][variable] = value.strip()
+		for line in [l for l in lines if l]:
+			match_var_val = search("^\s*(\w+)\s*=\s*([^#]+)", line)
+			if match_var_val:
+				variable = match_var_val.group(1)
+				value = match_var_val.group(2).strip()
+				if variable in variables.keys():
+					if (variable == "name"):
+						ts_name = value
+						teststand_info[ts_name] = {}
+					elif ts_name:
+						teststand_info[ts_name][variable] = parse_config_var(raw=value, var_type=variables[variable])
+					else:
+						print "ERROR (install.parse_ts_configuration): The ts name isn't at the top of the variable list for at least one of the teststands! This is confusing to me. See the config below:"
+						print teststand_raw
+						return False
 	return teststand_info
 
-def parse_config_list(raw):
-	lists = raw.split(";")
-	result = []
-	for l in lists:
-		if l:
-			result.append([int(i) for i in l.split(",")])
-		else:
-			result.append([])
-#	# Let a semicolon be at the end of the last list without adding an empty list:
-#	if not result[-1]:
-#		del result[-1]
-	return result
+def parse_config_var(raw=None, var_type="s"):
+	# Parse:
+	if "l" not in var_type.lower():
+		if "s" in var_type:
+			return str(raw)
+		elif "i" in var_type:
+			return int(raw)
+	else:
+		if "l" in var_type:
+				if "s" in var_type:
+					return [str(i).strip() for i in raw.split(",")]
+				elif "i" in var_type:
+					return [int(i) for i in raw.split(",")]
+		elif "L" in var_type:
+			lists = raw.split(";")
+			result = []
+			for l in lists:
+				if l:
+					if "s" in var_type:
+						result.append([str(i) for i in l.split(",")])
+					elif "i" in var_type:
+						result.append([int(i) for i in l.split(",")])
+				else:
+					result.append([])
+		#	# Let a semicolon be at the end of the last list without adding an empty list:
+		#	if not result[-1]:
+		#		del result[-1]
+			return result
 
 def make_amc13_configs(f="teststands.txt"):		# Write configuration files for AMC13.
 	names = []
