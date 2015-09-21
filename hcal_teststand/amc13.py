@@ -54,6 +54,7 @@ class amc13:
 		print self
 	
 	def send_commands(self, ts=None, cmds=None):
+#		print self.config
 		return send_commands(ts=ts, cmds=cmds, config=self.config)
 	
 	def get_status(self, ping=True):		# This should not do anything to the AMC13 but should only be a passive assessment. See "setup".
@@ -283,6 +284,7 @@ def get_status(ts=None, crate=None, ping=True):
 def setup_all(ts=None, mode=0):		# Mode: 0 for normal, 1 for TTC generation.
 	results = {}
 	for be_crate, amc13 in ts.amc13s.iteritems():
+#		print amc13.ips
 		results[be_crate] = amc13.setup(mode=mode)
 	return results
 

@@ -24,7 +24,7 @@ class bkp:
 			return "<empty bkp object>"
 	
 	# Methods:
-	def setup(self, ts=None):
+	def setup(self, ts=None, verbose=False):
 		if ts:
 			cmds = [
 				"put HF{0}-bkp_pwr_enable 0".format(self.crate),
@@ -34,6 +34,7 @@ class bkp:
 				"get HF{0}-bkp_pwr_bad".format(self.crate),
 			]
 			ngfec_output = ngfec.send_commands(ts=ts, cmds=cmds)
+			if verbose: print ngfec_output
 			for cmd in ngfec_output[:-1]:
 				if "OK" not in cmd["result"]:
 					return False

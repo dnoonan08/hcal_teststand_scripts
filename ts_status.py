@@ -70,41 +70,41 @@ if __name__ == "__main__":
 		log += s.log()
 		log += "\n\n"
 	
-#	## uHTR:
-#	print "(2) Statusing the uHTRs ..."
-#	uhtr_statuses = uhtr.get_status(ts=ts, ping=not fast)
-#	for crate_slot, s in uhtr_statuses.iteritems():
-#		s.Print(verbose=v)
-#		log += s.log()
-#		log += "\n\n"
-#	
-#	## BKP:
-#	print "(3) Statusing the backplanes ..."
-#	bkp_statuses = bkp.get_status(ts=ts)
-#	for crate, s in bkp_statuses.iteritems():
-#		s.Print(verbose=v)
-#		log += s.log()
-#		log += "\n\n"
-#	
-#	## ngCCM:
-#	print "(4) Statusing the ngCCMs ..."
-#	ngccm_statuses = ngccm.get_status(ts=ts)
-#	for crate, s in ngccm_statuses.iteritems():
-#		s.Print(verbose=v)
-#		log += s.log()
-#		log += "\n\n"
-#	
-#	## QIE:
-#	print "(5) Statusing the QIEs ..."
-#	qie_statuses = qie.get_status(ts=ts)
-#	for crate_slot, s in qie_statuses.iteritems():
-#		s.Print(verbose=v)
-#		log += s.log()
-#		log += "\n\n"
-#	
-#	# Write out the status log:
-#	if not os.path.exists(path):
-#		os.makedirs(path)
-#	with open("{0}/{1}.log".format(path, t_string), "w") as out:
-#		out.write(log.strip())
+	## uHTR:
+	print "(2) Statusing the uHTRs ..."
+	uhtr_statuses = uhtr.get_status(ts=ts, ping=not fast)
+	for crate_slot, s in uhtr_statuses.iteritems():
+		s.Print(verbose=v)
+		log += s.log()
+		log += "\n\n"
+	
+	## BKP:
+	print "(3) Statusing the backplanes ..."
+	bkp_statuses = bkp.get_status(ts=ts)
+	for crate, s in bkp_statuses.iteritems():
+		s.Print(verbose=v)
+		log += s.log()
+		log += "\n\n"
+	
+	## ngCCM:
+	print "(4) Statusing the ngCCMs ..."
+	ngccm_statuses = ngccm.get_status(ts=ts)
+	for crate, s in ngccm_statuses.iteritems():
+		s.Print(verbose=v)
+		log += s.log()
+		log += "\n\n"
+	
+	## QIE:
+	print "(5) Statusing the QIEs ..."
+	qie_statuses = qie.get_status(ts=ts)
+	for crate_slot, s in qie_statuses.iteritems():
+		s.Print(verbose=v)
+		log += s.log()
+		log += "\n\n"
+	
+	# Write out the status log:
+	if not os.path.exists(path):
+		os.makedirs(path)
+	with open("{0}/{1}.log".format(path, t_string), "w") as out:
+		out.write(log.strip())
 # /MAIN

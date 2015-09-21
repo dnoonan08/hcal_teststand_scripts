@@ -11,12 +11,6 @@ from math import sqrt
 #import ROOT
 #ROOT.gROOT.SetBatch(True)
 
-# one big (?) issue with this whole setup, that maybe is 
-# solved somehow, is that we want to be able to run tests 
-# for individual QIE cards.  If there are multiple QIE 
-# cards per uHTR we will also need to figure out which 
-# channel of the uHTR connects to which QIE card.  
-
 xs_cid0 ,  ys_cid0 ,  xers_cid0 , yers_cid0 , xs_cid1  , ys_cid1 , xers_cid1 , yers_cid1 , xs_cid2 ,  ys_cid2 ,  xers_cid2 , yers_cid2 , xs_cid3 , ys_cid3 , xers_cid3 , yers_cid3 =array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d'), array('d')
 
 def fill(temp, th1s, qie, cid):		

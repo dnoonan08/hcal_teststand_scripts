@@ -146,6 +146,7 @@ if __name__ == "__main__":
 	
 	# Set up teststand:
 	ts = teststand(name)
+	if v: ts.Print()
 	print "\nSetting up the {0} teststand ...".format(ts.name)
 	
 	# Set up the AMC13s:
@@ -170,7 +171,7 @@ if __name__ == "__main__":
 	print "(2) Setting up the FE backplanes ..."
 	setup_results = {}		# Dictionary comprehension was only implemented in Python 2.7 ...
 	for fe_crate, b in ts.bkps.iteritems():
-		setup_results[fe_crate] = b.setup(ts=ts)
+		setup_results[fe_crate] = b.setup(ts=ts, verbose=v)
 	for fe_crate, setup_result in setup_results.iteritems():
 		if not setup_result:
 			print "\t[!!] Configuration of the backplane in FE Crate {0} failed.".format(fe_crate)

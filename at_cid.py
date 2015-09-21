@@ -18,53 +18,8 @@ from ROOT import *
 # /CLASSES
 
 # FUNCTIONS:
-def create_plots(qie_id):
-	th1 = []
-	for i in range(24):
-		histogram = TH1F("qie{0}".format(i+1), "{0}: QIE {1}".format(qie_id, i+1), 16, -0.5, 15.5)
-		histogram.GetXaxis().CenterTitle(1)
-		histogram.GetXaxis().SetTitle("Clock Phase Setting (~1.6 ns)")
-		histogram.GetYaxis().CenterTitle(1)
-		histogram.GetYaxis().SetTitle("CID Error Rate")
-		histogram.GetYaxis().SetTitleOffset(1.3)
-		histogram.SetLineColor(kRed)
-		histogram.SetFillColor(kRed)
-		th1.append(histogram)
-	return th1
-
-def check_cid_rotating(data):		# Check if the CIDs are rotating.
-	n_ch = len(data)
-        print "data whole", data 
-        print "length of data", n_ch
-	result = [0 for i in range(n_ch)]
-	n_bx = 0
-	if n_ch > 0:
-		n_bx = len(data[0])
-                print "data 0:", data[0]
-                print "n_bx:", n_bx 
-	if (n_bx > 0):
-		for ch in range(n_ch):
-                        
-			cid_start = data[ch][0].cid
-                        print "ch, cid_start:",ch, cid_start
-			for bx, datum in enumerate(data[ch]):
-#				if bx < 5:
-#					print "{0}: {1}".format(bx, datum.cid)
-			        print "bx % 4 :" ,bx % 4
-                                print "bx:",bx
-                                print "datum.cid:",datum.cid	
-				if datum.cid != ((bx % 4) + cid_start) % 4:
-                                        print "result[ch]:",result[ch]
-					result[ch] += 1
-		return result
-	else:
-		print "ERROR (check_cid_rotating): There were no bunch crosses in the data ..."
-		return False
-# /FUNCTIONS
-
-# MAIN:
-if __name__ == "__main__":
-	# Script arguments:
+def main():
+	# Commandline options:
 	parser = OptionParser()
 	parser.add_option("-t", "--teststand", dest="ts",
 		default="904",
@@ -72,7 +27,8 @@ if __name__ == "__main__":
 		metavar="STR"
 	)
 	parser.add_option("-q", "--qie", dest="qie",
-		default="0x9B32C370 0x67000000",
+#		default="0x9B32C370 0x67000000",
+		default="0xAA24DA70 0x8D000000",
 		help="The unique ID of the QIE card you're testing",
 		metavar="STR"
 	)
@@ -93,10 +49,12 @@ if __name__ == "__main__":
 		metavar="INT"
 	)
 	(options, args) = parser.parse_args()
+	
+	# Variables:
 	name = options.ts
 	v = options.verbose
 	if not options.out:
-		path = "data/at_results/{1}/at_cid".format(name, options.qie.replace(" ", "_"))
+		path = "data/at_results/{0}/at_cid".format(options.qie.replace(" ", "_"))
 	elif "/" in options.out:
 		path = options.out
 	else:
@@ -219,4 +177,58 @@ if __name__ == "__main__":
 	else:
 		print "[OK] There were no errors!"
 	print "==========================================="
+
+def create_plots(qie_id):
+	###############################################################
+	# Makes empty plots that will be filled with error data.      #
+	###############################################################
+	# Variables:
+	th1 = []
+	
+	# Make plots:
+	for i in range(24):		# One for each QIE chip on the card
+		histogram = TH1F("qie{0}".format(i+1), "{0}: QIE {1}".format(qie_id, i+1), 16, -0.5, 15.5)
+		histogram.GetXaxis().CenterTitle(1)
+		histogram.GetXaxis().SetTitle("Clock Phase Setting (~1.6 ns)")
+		histogram.GetYaxis().CenterTitle(1)
+		histogram.GetYaxis().SetTitle("CID Error Rate")
+		histogram.GetYaxis().SetTitleOffset(1.3)
+		histogram.SetLineColor(kRed)
+		histogram.SetFillColor(kRed)
+		th1.append(histogram)
+	return th1
+
+def check_cid_rotating(data):
+	###############################################################
+	# Checks if the CIDs are rotating.                            #
+	# Input: List of list of datum objects.                       #
+	###############################################################
+	n_ch = len(data)
+	result = [0 for i in range(n_ch)]
+	n_bx = 0
+	if n_ch > 0:
+		n_bx = len(data[0])
+	if (n_bx > 0):
+		for ch in range(n_ch):
+                        
+			cid_start = data[ch][0].cid
+                        print "ch, cid_start:",ch, cid_start
+			for bx, datum in enumerate(data[ch]):
+#				if bx < 5:
+#					print "{0}: {1}".format(bx, datum.cid)
+			        print "bx % 4 :" ,bx % 4
+                                print "bx:",bx
+                                print "datum.cid:",datum.cid	
+				if datum.cid != ((bx % 4) + cid_start) % 4:
+                                        print "result[ch]:",result[ch]
+					result[ch] += 1
+		return result
+	else:
+		print "ERROR (check_cid_rotating): There were no bunch crosses in the data ..."
+		return False
+# /FUNCTIONS
+
+# MAIN:
+if __name__ == "__main__":
+	main()
 # /MAIN

@@ -13,6 +13,7 @@ import meta
 import ngfec
 from ROOT import *
 from time import sleep
+import os
 
 # VARIABLES:
 cmds_default = ["0", "exit", "-1"]
@@ -27,11 +28,14 @@ class uhtr:
 		self.crate = crate
 		self.slot = slot
 		self.ip = ip
-		self.control_hub=ts.control_hub
+		self.control_hub = ts.control_hub
 		if ts:
-			links = get_links_from_map(ts=ts, crate=crate, slot=slot, end=self.end)
-			if links:
-				self.links = links
+			if "{0}_qie_map.json".format(ts.name) in os.listdir("configuration"):
+				links = get_links_from_map(ts=ts, crate=crate, slot=slot, end=self.end)
+				if links:
+					self.links = links
+				else:
+					self.links = []
 			else:
 				self.links = []
 		else:
@@ -157,7 +161,7 @@ class link:		# An object that represents a uHTR link. It contains information ab
 			return False
 	
 	def Print(self):
-		print "uHTR Info: BE Crate {0}, BE Slot {1}, Link {2}".format(self.crate, self.slot, self.n)
+		print "uHTR Info: BE Crate {0}, BE Slot {1}, Link {2}".format(self.be_crate, self.be_slot, self.n)
 		print "QIE card ID:", self.qie_unique_id
 		print "QIE card half:", self.qie_half_label
 		print "Fiber:", self.qie_fiber
@@ -471,10 +475,10 @@ def get_links(ts=None, crate=None, slot=None, ip=None, control_hub=None, port=ng
 								if data:
 #									print data
 									qie_unique_id = "0x{0}{1} 0x{2}{3}".format(
+										data[0][0].raw[4][1:5],		# This ordering is chosen to match the ngFEC tool's (MSB -> LSB)
+										data[0][0].raw[3][1:5],
 										data[0][0].raw[2][1:5],
-										data[0][0].raw[1][1:5],
-										data[0][0].raw[4][1:5],
-										data[0][0].raw[3][1:5]
+										data[0][0].raw[1][1:5]
 									)
 									qie_fiber = data[0][0].fiber
 									qie_half = data[0][0].half

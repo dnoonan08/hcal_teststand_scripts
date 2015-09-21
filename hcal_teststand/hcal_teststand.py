@@ -20,112 +20,112 @@ class teststand:
 			self.name = args[0]
 			f = "teststands.txt"
 			ts_info = {}
-			try:
-				# Extract teststand info from the teststand configuration file:
-				ts_info = install.parse_ts_configuration(f)[self.name]
+			
+			# Extract teststand info from the teststand configuration file:
+			ts_info = install.parse_ts_configuration(f)[self.name]
 #				print ts_info
-				for key, value in ts_info.iteritems():
-					setattr(self, key, value)
-				if hasattr(self, "control_hub"):
-					control_hub = self.control_hub
-				else:
-					control_hub = None
-				
-				# Assign a few other calculable attributes:
-				self.fe = {}
-				if len(self.fe_crates) <= len(self.qie_slots):
-					for i in range(len(self.fe_crates)):
-						self.fe[self.fe_crates[i]] = self.qie_slots[i]
-				self.be = {}
-				if len(self.be_crates) <= len(self.uhtr_slots):
-					for i, be_crate in enumerate(self.be_crates):
-						self.be[be_crate] = []
-						uhtr_slots = self.uhtr_slots[i]
-						for uhtr_slot in uhtr_slots:
-							self.be[be_crate].append(uhtr_slot)
-				self.uhtr_ips = {}
-				for be_crate, be_slots in self.be.iteritems():
-					for be_slot in be_slots:
-						self.uhtr_ips[(be_crate, be_slot)] = "192.168.{0}.{1}".format(be_crate, 4*be_slot)
-				
-				# AMC13:
-				self.amc13s = {}		# AMC13 objects indexed by the BE crate number.
-				for i, ips in enumerate(self.amc13_ips):
+			for key, value in ts_info.iteritems():
+				setattr(self, key, value)
+			if hasattr(self, "control_hub"):
+				control_hub = self.control_hub
+			else:
+				control_hub = None
+			
+			# Assign a few other calculable attributes:
+			self.fe = {}
+			if len(self.fe_crates) <= len(self.qie_slots):
+				for i in range(len(self.fe_crates)):
+					self.fe[self.fe_crates[i]] = self.qie_slots[i]
+			self.be = {}
+			if len(self.be_crates) <= len(self.uhtr_slots):
+				for i, be_crate in enumerate(self.be_crates):
+					self.be[be_crate] = []
+					uhtr_slots = self.uhtr_slots[i]
+					for uhtr_slot in uhtr_slots:
+						self.be[be_crate].append(uhtr_slot)
+			self.uhtr_ips = {}
+			for be_crate, be_slots in self.be.iteritems():
+				for be_slot in be_slots:
+					self.uhtr_ips[(be_crate, be_slot)] = "192.168.{0}.{1}".format(be_crate, 4*be_slot)
+			
+			# AMC13:
+			self.amc13s = {}		# AMC13 objects indexed by the BE crate number.
+			for i, ips in enumerate(self.amc13_ips):
+				be_crate = self.be_crates[i]
+				if ips:
+					self.amc13s[be_crate] = amc13.amc13(
+						ts=self,
+						crate=be_crate,
+						ip_t1=ips[0],
+						ip_t2=ips[1],
+						config="amc13_{0}_config.xml".format(self.name),
+						i_sn = i,
+					)
+			
+			# GLIB:
+			self.glibs = {}		# GLIB objects indexed by the BE crate number.
+			for i, glib_slots in enumerate(self.glib_slots):
+				if glib_slots:
 					be_crate = self.be_crates[i]
-					if ips:
-						self.amc13s[be_crate] = amc13.amc13(
+					self.glibs[be_crate] = []
+					for glib_slot in glib_slots:
+						self.glibs[be_crate].append(glib.glib(
 							ts=self,
 							crate=be_crate,
-							ip_t1=ips[0],
-							ip_t2=ips[1],
-							config="amc13_904_config.xml",
-							i_sn = i,
-						)
-				
-				# GLIB:
-				self.glibs = {}		# GLIB objects indexed by the BE crate number.
-				for i, glib_slots in enumerate(self.glib_slots):
-					if glib_slots:
-						be_crate = self.be_crates[i]
-						self.glibs[be_crate] = []
-						for glib_slot in glib_slots:
-							self.glibs[be_crate].append(glib.glib(
-								ts=self,
-								crate=be_crate,
-								slot=glib_slot,
-								ip="192.168.1.{0}".format(160 + glib_slot),
-							))
-				
-				# uHTRs:
-				self.uhtrs = {}
-				for be_crate, be_slots in self.be.iteritems():
-					for be_slot in be_slots:
-						self.uhtrs[(be_crate, be_slot)] = uhtr.uhtr(
-							ts=self,
-							crate=be_crate,
-							slot=be_slot,
-							ip="192.168.{0}.{1}".format(be_crate, 4*be_slot),
-						)
-				
-				# BKP:
-				self.bkps = {}		# Backplane objects indexed by the FE crate number.
-				for i, crate in enumerate(self.fe_crates):
-					self.bkps[crate] = bkp.bkp(
+							slot=glib_slot,
+							ip="192.168.1.{0}".format(160 + glib_slot),
+						))
+			
+			# uHTRs:
+			self.uhtrs = {}
+			for be_crate, be_slots in self.be.iteritems():
+				for be_slot in be_slots:
+					self.uhtrs[(be_crate, be_slot)] = uhtr.uhtr(
 						ts=self,
-						crate=crate,
+						crate=be_crate,
+						slot=be_slot,
+						ip="192.168.{0}.{1}".format(be_crate, 4*be_slot),
 					)
-				
-				# ngCCM:
-				self.ngccms = {}		# ngCCM objects indexed by the FE crate number.
-				for i, crate in enumerate(self.fe_crates):
-					self.ngccms[crate] = ngccm.ngccm(
+			
+			# BKP:
+			self.bkps = {}		# Backplane objects indexed by the FE crate number.
+			for i, crate in enumerate(self.fe_crates):
+				self.bkps[crate] = bkp.bkp(
+					ts=self,
+					crate=crate,
+				)
+			
+			# ngCCM:
+			self.ngccms = {}		# ngCCM objects indexed by the FE crate number.
+			for i, crate in enumerate(self.fe_crates):
+				self.ngccms[crate] = ngccm.ngccm(
+					ts=self,
+					crate=crate,
+				)
+			
+			# QIEs:
+			self.qies = {}
+			for fe_crate, fe_slots in self.fe.iteritems():
+				for fe_slot in fe_slots:
+					self.qies[(fe_crate, fe_slot)] = qie.qie(
 						ts=self,
-						crate=crate,
+						crate=fe_crate,
+						slot=fe_slot,
+						control_hub=control_hub,
 					)
-				
-				# QIEs:
-				self.qies = {}
-				for fe_crate, fe_slots in self.fe.iteritems():
-					for fe_slot in fe_slots:
-						self.qies[(fe_crate, fe_slot)] = qie.qie(
-							ts=self,
-							crate=fe_crate,
-							slot=fe_slot,
-							control_hub=control_hub,
-						)
-				
-				# The following is a temporary kludge:
+			
+			# The following is a temporary kludge:
 #				self.uhtr_ips = []
-				self.uhtr = {}
-				for slot in self.uhtr_slots[0]:
-					ip = "192.168.{0}.{1}".format(self.be_crates[0], slot*4)
+			self.uhtr = {}
+			for slot in self.uhtr_slots[0]:
+				ip = "192.168.{0}.{1}".format(self.be_crates[0], slot*4)
 #					self.uhtr_ips.append(ip)
-					self.uhtr[slot] = ip
-				
+				self.uhtr[slot] = ip
+			
 #				self.glib_ip = "192.168.1.{0}".format(160 + self.glib_slot)
-			except Exception as ex:		# The above will fail if the teststand names doesn't appear in the configuration file.
-				print "ERROR: Could not read the teststand information for {0} from the configuration file: {1}".format(self.name, f)
-				print ">> {0}".format(ex)
+#			except Exception as ex:		# The above will fail if the teststand names doesn't appear in the configuration file.
+#				print "ERROR: Could not read the teststand information for {0} from the configuration file: {1}".format(self.name, f)
+#				print ">> {0}".format(ex)
 		else:
 			print "ERROR: You need to initialize a teststand object with a name (string) from the teststand configuration file (configuration/teststands.txt)."
 	# /CONSTRUCTION
