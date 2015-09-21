@@ -163,7 +163,7 @@ if __name__ == "__main__":
 		tf = TFile(file_name, "NEW")
 	for key, histogram in th1s.iteritems():
 		histogram.Write()
-	tf.Close()
+
 	
 	## Save the plots in a PDF (and SVG):
 	gROOT.SetBatch()
@@ -171,13 +171,14 @@ if __name__ == "__main__":
 	th1s["link_pattern"].Draw()
 	th1s["link_pattern"].SetMaximum(1.0)
 	th1s["link_pattern"].SetMinimum(0.0)
-	tc.SaveAs("{0}/{1}_bit.pdf".format(path, t_string))
-	tc.SaveAs("{0}/{1}_bit.svg".format(path, t_string))
+	tc.SaveAs("{0}/{1}_bitpattern.pdf".format(path, t_string))
+	tc.SaveAs("{0}/{1}_bitpattern.svg".format(path, t_string))
 	
 	# Print a summary:
 	print "\n====== SUMMARY ============================"
 	print "Teststand: {0}".format(ts.name)
 	print "QIE card: {0} (crate {1}, slot {2})".format(options.qie, crate, slot)
+	print '\n >> bit pattern test:'
 	print "BXs read out: {0}".format(100*n_reads)
 	if len(error_record.keys()) > 0:
 #		print error_record
@@ -186,9 +187,19 @@ if __name__ == "__main__":
 			print "\t* Link {0}: error rates = {1}".format(i_link, errors/float(100*n_reads))
 	else:
 		print "[OK] There were no errors!"
-	print "==========================================="
 
 	crateslot=ts.uhtrs.keys()[0]
 	errdata=uhtr.parse_err(uhtr.get_raw_err(ts=ts,crate=crateslot[0],slot=crateslot[1]))
+	errHi=TH1F('Bad_data','Bad Data Rate',max(errdata.keys())-min(errdata.keys())+1,min(errdata.keys()),max(errdata.keys())+1)
+	print '\n >> bad data test:'
 	for a in errdata.keys():
 		print 'link {0}: BadDataRate {1}'.format(a,errdata[a])
+		errHi.Fill(a,errdata[a])
+	print "==========================================="
+	errHi.Draw()
+	errHi.SetMaximum(1.0)
+	errHi.SetMinimum(0)
+	tc.SaveAs('{0}/{1}_baddatarate.pdf'.format(path,t_string))
+	tc.SaveAs('{0}/{1}_baddatarate.svg'.format(path,t_string))
+	errHi.Write()
+	tf.Close()
