@@ -617,7 +617,7 @@ def get_raw_err(ts=None, crate=None, slot=None, ip=None, control_hub=None, scrip
 		'0',
 		'link',
 		'errors',
-		'1000',
+		'1000',		# Number of ms
 		'88000',
 		'1',
 		'1',

@@ -260,7 +260,7 @@ def setup(ts=None, crate=None, slot=None, i_qie=None, control_hub=None, port=Non
 		return False
 
 # Functions to fetch component information:
-def get_info(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default):
+def get_info(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default, script=True):
 	# Arguments and variables
 	output = []
 	raw_output = ""
@@ -315,7 +315,7 @@ def get_info(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_d
 		cmds = [d[1] for crate_slot, ds in data.iteritems() for d in ds]
 #		print cmds
 		# Send commands:
-		ngfec_out = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
+		ngfec_out = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port, script=script)
 		# Understand results:
 		for crate_slot, ds in data.iteritems():
 			results[crate_slot] = {}

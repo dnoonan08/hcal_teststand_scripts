@@ -12,6 +12,7 @@ from time import time, sleep
 from print_table import *
 import ngfec
 import meta
+import sys
 
 
 # CLASSES:
@@ -30,6 +31,16 @@ class ngccm:
 			return "<empty ngccm object>"
 	
 	# Methods:
+	def update(self, script=True):
+		info = get_info(ts=self.ts, crate=self.crate, script=script)[self.crate]
+		if info:
+			for key, value in info.iteritems():
+#				print key, value
+				setattr(self, key, value)
+			return True
+		else:
+			return False
+	
 #	def setup(self, ts=None):
 #		if ts:
 #			cmds = [
@@ -124,34 +135,64 @@ def send_commands_fast(ts, cmds):		# This executes ngccm commands in a fast way,
 		"log": log.strip(),
 	}
 
-def get_info(ts, crate):		# Returns a dictionary of information about the ngCCM, such as the FW versions.
-	log =""
-	version_fw_mez_major = -1
-	version_fw_mez_minor = -1
-#	command = "get HF{0}-mezz_reg4".format(crate)		# Deprecated
-	cmds = [
-		"get HF{0}-mezz_FPGA_MAJOR_VERSION".format(crate),
-		"get HF{0}-mezz_FPGA_MINOR_VERSION".format(crate),
-	]
-	output = ngfec.send_commands(ts=ts, cmds=cmds)
-	result = output[0]["result"]
-	if "ERROR" not in output[0]["result"]:
-#		version_str_x = "{0:#08x}".format(int(match.group(3),16))		# Deprecated
-#		version_fw_mez_major = int(version_str_x[-2:], 16)		# Deprecated
-#		version_fw_mez_minor = int(version_str_x[-4:-2], 16)		# Deprecated
-		version_fw_mez_major = int(output[0]["result"])
-	if "ERROR" not in output[1]["result"]:
-		version_fw_mez_minor = int(output[1]["result"])
-#	else:
-#		log += ">> ERROR: Failed to find FW versions. The command result follows:\n{0} -> {1}".format(cmd, result)
-	version_fw_mez = "{0:02d}.{1:02d}".format(version_fw_mez_major, version_fw_mez_minor)
-	return {
-		"version_fw_mez_major":	version_fw_mez_major,
-		"version_fw_mez_minor":	version_fw_mez_minor,
-		"version_fw_mez":	version_fw_mez,
-		"version_sw":	"?",
-		"log":			log.strip(),
-	}
+def get_info(ts=None, crate=None, control_hub=None, port=ngfec.port_default, script=True):		# Returns a dictionary of information about the ngCCM, such as the FW versions.
+	# Arguments and variables
+	output = []
+	raw_output = ""
+	## Parse crate, slot:
+	crates = meta.parse_args_crate(ts=ts, crate=crate, crate_type="fe")
+	if crates:
+		# Prepare:
+		data = {}
+		results = {}
+		for crate in crates:
+				data[crate] = []
+				## Prepare FW info:
+				data[crate].append([
+					"fw_major",
+					'get HF{0}-mezz_FPGA_MAJOR_VERSION'.format(crate),
+				])
+				data[crate].append([
+					"fw_minor",
+					'get HF{0}-mezz_FPGA_MINOR_VERSION'.format(crate),
+				])
+				## Prepare ID info:
+				data[crate].append([
+					"id",
+					'get HF{0}-mezz_BoardID'.format(crate),
+				])
+		# Compile list of commands to send:
+		cmds = [d[1] for crate, ds in data.iteritems() for d in ds]
+#		print cmds
+		# Send commands:
+		ngfec_out = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port, script=script)
+#		print ngfec_out
+		# Understand results:
+		for crate, ds in data.iteritems():
+			results[crate] = {}
+			for i, d in enumerate(ds):
+				key = d[0]
+				cmd = d[1]
+				for result in ngfec_out:
+					if result["cmd"] == cmd:
+						if "ERROR" not in result["result"]:
+							if "BoardID" not in cmd:
+								results[crate].update({
+									key: int(result["result"], 16)
+								})
+							else:
+								results[crate].update({
+									key: result["result"].split()
+								})
+						else:
+							results[crate].update({
+								key: False
+							})
+			results[crate]["fw"] = "{0:02d}.{1:02d}".format(results[crate]["fw_major"], results[crate]["fw_minor"])
+		# Return results:
+		return results
+	else:
+		return False
 
 #def setup(ts):
 #	log = []

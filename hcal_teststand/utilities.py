@@ -1,6 +1,23 @@
+# IMPORTS:
+import sys
 from time import time, sleep
 from datetime import datetime
+# /IMPORTS
 
+# CLASSES:
+class logger:		# Using http://stackoverflow.com/a/5916874 as a blueprint
+	def __init__(self, f="test.log"):
+		self.terminal = sys.stdout
+		self.log = open(f, "a")
+	
+	def write(self, message=""):
+		self.terminal.write(message)
+		self.log.write(message)
+		return message
+
+# /CLASSES
+
+# FUNCTIONS:
 def time_string():
 	return datetime.now().strftime("%y%m%d_%H%M%S.%f")[:-3]		# Chop off the last three decimal places, leaving three (not rounding).
 
@@ -26,3 +43,4 @@ def list_to_string(l=None, n=2):
 			return ""
 	else:
 		return ""
+# /FUNCTIONS

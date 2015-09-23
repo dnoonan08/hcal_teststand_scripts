@@ -140,6 +140,8 @@ class teststand:
 			results.append(amc13.update())
 		for crate_slot, uhtr in self.uhtrs.iteritems():
 			results.append(uhtr.update())
+		for crate, ngccm in self.ngccms.iteritems():
+			results.append(ngccm.update())
 		for crate_slot, qie in self.qies.iteritems():
 			results.append(qie.update())
 #		print results
