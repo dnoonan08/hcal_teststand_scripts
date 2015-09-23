@@ -29,7 +29,7 @@ def main():
 	links = at.links
 	v = at.verbose
 	th1 = create_plots(qid)
-	n_reads = 1
+	n_reads = at.n
 	error_record = {"bxs": n_reads*100}
 	
 	# Run the test:
