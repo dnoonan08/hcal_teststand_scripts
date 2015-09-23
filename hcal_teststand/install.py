@@ -123,7 +123,7 @@ source /nfshome0/hcalsw/bin/env.sh
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/ngccm/lib
 export PATH=$PATH:/opt/ngccm/bin
 				'''.strip()
-			elif name == "904":
+			elif "904" in name:
 				string = '''
 source /nfshome0/hcalsw/bin/env.sh
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/nfshome0/hcalpro/ngFEC
@@ -146,6 +146,7 @@ export PATH=$PATH:/home/hcalpro/ngFEC
 			except Exception, ex:
 				print ex
 		else:
-			print "ERROR: Didn't make an setup script for " + name + "."
+			print "[!!] ERROR: Didn't make an setup script for " + name + "."
+	print "[OK] Installation successful."
 	return names
 # /FUNCTIONS
