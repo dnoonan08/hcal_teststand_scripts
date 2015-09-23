@@ -13,17 +13,19 @@ import install
 
 # CLASSES:
 class teststand:
-	# CONSTRUCTION (attribute assignment):
-	def __init__(self, *args):
-#		if ( (len(args) == 2) and isinstance(args[0], str) and isinstance(args[1], str) ):
-		if ( (len(args) == 1) and isinstance(args[0], str) ):
-			self.name = args[0]
-			f = "teststands.txt"
+	# Construction:
+	def __init__(self, name=None, f="teststands.txt", fe_slot=None):
+		if name:
+			self.name = name
 			ts_info = {}
 			
 			# Extract teststand info from the teststand configuration file:
 			ts_info = install.parse_ts_configuration(f)[self.name]
-#				print ts_info
+			if fe_slot:
+				if isinstance(fe_slot, int):
+					fe_slot = [[fe_slot]]
+				ts_info["qie_slots"] = fe_slot
+#			print ts_info
 			for key, value in ts_info.iteritems():
 				setattr(self, key, value)
 			if hasattr(self, "control_hub"):
@@ -133,12 +135,18 @@ class teststand:
 	# METHODS:
 	## General:
 	def update(self):
+		results = []
 		for be_crate, amc13 in self.amc13s.iteritems():
-			amc13.update()
+			results.append(amc13.update())
 		for crate_slot, uhtr in self.uhtrs.iteritems():
-			uhtr.update()
+			results.append(uhtr.update())
 		for crate_slot, qie in self.qies.iteritems():
-			qie.update()
+			results.append(qie.update())
+#		print results
+		if len(results) == sum(results):
+			return True
+		else:
+			return False
 	
 	def Print(self, verbose=True):
 		result = ""
@@ -229,8 +237,8 @@ class teststand:
 	def set_fixed_range(self, enable=None, r=None, i_qie=None, crate=None, slot=None):		# Set fixed-range mode.
 		return qie.set_fixed_range(ts=self, crate=crate, slot=slot, i_qie=i_qie, enable=enable, r=r)
 	
-	def set_clk_phase(self, crate=None, slot=None, i_qie=None, phase=0):		# Set fixed-range mode.
-		return qie.set_clk_phase(ts=self, crate=crate, slot=slot, i_qie=i_qie, phase=phase)
+	def set_clk_phase(self, crate=None, slot=None, i_qie=None, phase=0, script=True):		# Set fixed-range mode.
+		return qie.set_clk_phase(ts=self, crate=crate, slot=slot, i_qie=i_qie, phase=phase, script=script)
 	
 	def set_cal_mode(self, enable=False):
 		for crate, slots in self.fe.iteritems():

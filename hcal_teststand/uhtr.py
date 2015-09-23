@@ -25,12 +25,12 @@ class uhtr:
 	def __init__(self, ts=None, crate=None, slot=None, ip=None):
 		self.ts = ts
 		self.end = "be"
-		self.crate = crate
-		self.slot = slot
+		self.be_crate = self.crate = crate
+		self.be_slot = self.slot = slot
 		self.ip = ip
 		self.control_hub = ts.control_hub
 		if ts:
-			if "{0}_qie_map.json".format(ts.name) in os.listdir("configuration"):
+			if "{0}_qie_map.json".format(ts.name) in os.listdir("configuration/maps"):
 				links = get_links_from_map(ts=ts, crate=crate, slot=slot, end=self.end)
 				if links:
 					self.links = links
@@ -479,7 +479,7 @@ def get_links(ts=None, crate=None, slot=None, ip=None, control_hub=None, port=ng
 										data[0][0].raw[3][1:5],
 										data[0][0].raw[2][1:5],
 										data[0][0].raw[1][1:5]
-									)
+									).lower()
 									qie_fiber = data[0][0].fiber
 									qie_half = data[0][0].half
 									links.append(link(

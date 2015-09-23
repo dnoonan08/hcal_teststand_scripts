@@ -14,7 +14,7 @@
 # /CLASSES
 
 # FUNCTIONS:
-def single_card(qid="0x67000000 0x9B32C370", be_crate=53, be_slot=1, fe_crate=1, fe_slot=2, link=18):
+def single_card(qid="0x67000000 0x9B32C370", be_crate=53, be_slot=1, fe_crate=2, fe_slot=2, link=18):
 	qie_map = []
 	for i_qie in range(1, 25):
 		i_link = link + (i_qie - 1)/4

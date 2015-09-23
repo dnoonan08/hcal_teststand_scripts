@@ -11,11 +11,13 @@ import meta
 # CLASSES:
 class qie:
 	# Construction:
-	def __init__(self, ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default, unique_id=None, fiber=-1, links=-1):
-		self.id = unique_id
+	def __init__(self, ts=None, crate=None, slot=None, be_crate=None, be_slot=None, control_hub=None, port=ngfec.port_default, unique_id=None, fiber=-1, links=-1):
+		self.qid = self.id = unique_id
 		self.ts = ts
-		self.crate = crate
-		self.slot = slot
+		self.crate = self.fe_crate = crate
+		self.slot  = self.fe_slot = slot
+		self.be_crate = be_crate
+		self.be_slot = be_slot
 		self.control_hub = control_hub
 		self.port = port
 		self.crate_slot = (crate, slot)
@@ -25,7 +27,7 @@ class qie:
 	# String behavior
 	def __str__(self):
 		try:
-			return "<QIE card in FE Crate {0}, FE Slot {1}>".format(self.crate, self.slot	)
+			return "<QIE card in FE Crate {0}, FE Slot {1}>".format(self.crate, self.slot)
 		except Exception as ex:
 #			print ex
 			return "<empty qie object>"
@@ -345,7 +347,7 @@ def get_info(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_d
 	else:
 		return False
 
-def get_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default):		# Reads the unique ID of a given set of crates and slots.
+def get_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.port_default, script=False):		# Reads the unique ID of a given set of crates and slots.
 	# INFO: "get HF1-1-UniqueID # '1 0x5f000000 0x9b46ce70'"
 	# Arguments:
 	## Parse "crate" and "slot"
@@ -357,7 +359,7 @@ def get_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec.p
 		for crate, slots in fe.iteritems():
 			for slot in slots:
 #				cmds=.append("get HF{0}-{1}-UniqueID".format(crate, slot))
-				output = ngfec.send_commands(ts=ts, cmds=["get HF{0}-{1}-UniqueID".format(crate, slot)], control_hub=control_hub, port=port)
+				output = ngfec.send_commands(ts=ts, cmds=["get HF{0}-{1}-UniqueID".format(crate, slot)], control_hub=control_hub, port=port, script=script)
 				if output:
 					crate_slot = (crate, slot)
 					result = output[0]["result"]
@@ -545,7 +547,7 @@ def check_unique_id(ts=None, crate=None, slot=None, control_hub=None, port=ngfec
 			for i, result in enumerate(results):
 				values = [int(j, 16) for j in result["result"].split()]
 #				values = [int(j, 16) for j in "0 0xbad".split()]
-				print values
+#				print values
 				if len(values) == 2 and 0 not in values:
 					if i%2 == 1:
 						if values == values_previous:
@@ -1005,7 +1007,7 @@ def set_cal_mode_all(ts, crate, slot, enable=False):
 ## /
 
 ## QIE clock phase:
-def set_clk_phase(ts=False, crate=None, slot=None, i_qie=None, phase=0, control_hub=None, port=ngfec.port_default):
+def set_clk_phase(ts=False, crate=None, slot=None, i_qie=None, phase=0, control_hub=None, port=ngfec.port_default, script=True):
 	# Parse "crate" and "slot":
 	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
 	if fe:
@@ -1033,7 +1035,7 @@ def set_clk_phase(ts=False, crate=None, slot=None, i_qie=None, phase=0, control_
 						])
 			
 			# Send commands:
-			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port)
+			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port, script=script)
 			results = ["ERROR" not in j for j in [i["result"] for i in output]]
 			if sum(results) == len(results):
 #				for thing in output:
