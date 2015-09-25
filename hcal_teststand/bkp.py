@@ -27,8 +27,10 @@ class bkp:
 	def setup(self, ts=None, verbose=False):
 		if ts:
 			cmds = [
+				"put HF{0}-bkp_pwr_enable 1".format(self.crate),
 				"put HF{0}-bkp_pwr_enable 0".format(self.crate),
 				"put HF{0}-bkp_pwr_enable 1".format(self.crate),
+				"put HF{0}-bkp_reset 0".format(self.crate),
 				"put HF{0}-bkp_reset 1".format(self.crate),
 				"put HF{0}-bkp_reset 0".format(self.crate),
 				"get HF{0}-bkp_pwr_bad".format(self.crate),

@@ -120,11 +120,13 @@ class datum:
 	# String behavior
 	def __str__(self):
 		if self.adc != -1:
-			return "<qie.datum object: CID = {0}, ADC = {1}, LE TDC = {2}>".format(self.cid, self.adc, self.tdc_le)
+			return "<qie.datum object: CID = {0}, ADC = {1}, LE TDC = {2} (CH{3})>".format(self.cid, self.adc, self.tdc_le, self.ch)
 		else:
 			return "<empty qie.datum object>"
 	
 	# Methods:
+	def Print(self):
+		print self
 	# /Methods
 
 class status:

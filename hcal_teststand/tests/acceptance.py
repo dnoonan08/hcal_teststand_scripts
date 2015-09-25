@@ -124,16 +124,16 @@ class acceptance:
 		self.fe_slot = self.qie.fe_slot
 		self.links = self.uhtr.links[self.be_crate, self.be_slot]
 		
+		# ROOT setup:
+		ROOT.gROOT.SetStyle("Plain")
+		ROOT.gROOT.SetBatch()
+		
 		## ROOT output:
 		self.out = ROOT.TFile("{0}/{1}.root".format(self.path, self.file_name), "RECREATE")
 		ROOT.SetOwnership(self.out, 0)
 		self.canvas = ROOT.TCanvas("c0", "c0", 500, 500)
 		self.canvas.SetFillColor(ROOT.kWhite)
 		ROOT.SetOwnership(self.canvas, 0)
-		
-		# ROOT settings:
-		ROOT.gROOT.SetStyle("Plain")
-		ROOT.gROOT.SetBatch()
 	# /Construction
 	
 	# Methods:
@@ -155,6 +155,7 @@ class acceptance:
 			result = self.ts.update()
 			if result:
 				print "\t[OK] QIE card: FW = {0}".format(self.qie.fws)
+				print "\t[OK] uHTR: FW = {0}".format(self.uhtr.fws)
 				print "\t[OK] ngCCM: FW = {0}, ID = {1}".format(self.ngccm.fw, " ".join(self.ngccm.id))
 				print "Checking the unique ID ..."
 				if self.qie.check_unique_id():

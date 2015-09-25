@@ -206,6 +206,7 @@ def send_commands(ts=None, crate=None, slot=None, ip=None, control_hub=None, cmd
 			if script:
 				with open("uhtr_script.cmd", "w") as out:
 					out.write(cmds_str)
+#				print uhtr_cmd
 				raw_output = Popen(['{0} < uhtr_script.cmd'.format(uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()
 			else:
 				raw_output = Popen(['printf "{0}" | {1}'.format(cmds_str, uhtr_cmd)], shell = True, stdout = PIPE, stderr = PIPE).communicate()		# This puts the output of the command into a list called "raw_output" the first element of the list is stdout, the second is stderr.
@@ -683,36 +684,115 @@ def get_raw_status(ts=None, crate=None, slot=None, ip=None, control_hub=None, sc
 		return False
 
 ### get triggered data -
-def get_triggered_data(ts, uhtr_slot , n , outputFile="testTriggeredData"):
-	log = ""
-
+def get_triggered_data(ts=None, crate=None, slot=None, n_events=10, f="triggered_data", i_link=12, script=False):
 	commands = [
 		'0',
 		'link',
-		'init',
-		'1',
-		'59',
-		'0',
-		'0',
-		'status',
+#		'init',
+#		'1',
+#		'59',
+#		'0',
+#		'0',
+#		'status',
 		'l1acapture',
 		'autorun',
-		'{0}'.format(n),
+		'{0}'.format(n_events),
 		'5',
-		'50',
+		'10',
 		'0',
-		'{0}'.format(outputFile),
-		'6,7,8,9',
+		'{0}'.format(f),
+		'{0}'.format(i_link),
 		'quit',
 		'quit',
 		'exit',
 		'-1',
 	]
 
-	uhtr_out = send_commands(ts, uhtr_slot, commands)
-#	raw_output = uhtr_out
+	uhtr_out = send_commands(ts=ts, crate=crate, slot=slot, cmds=commands, script=script)
+	return uhtr_out
 
-# Parse uHTRTool.exe SPY data:
+# Parse uHTR output:
+def parse_bxs(bxs=None):
+	bxs_parsed = []
+	for i_bx, bx in enumerate(bxs):
+		# Not used: ['BCF8', '5508', '0901', '0BFF', 'FFFF', '0000']
+		# Used: ['F8BC', '0855', '0109', 'FF0B', 'FFFF', '0000']
+		# Set defaults:
+		cid = [-1]*4
+		adc = [-1]*4
+		tdc_le = [-1]*4
+		tdc_te = [-1]*4
+		
+		# Decode CID:
+		cid[0] = int(bx[1][3], 16)%4
+		cid[1] = int(bx[1][3], 16)/4
+		cid[2] = int(bx[1][2], 16)%4
+		cid[3] = int(bx[1][2], 16)/4
+		
+		# Decode ADC:
+		adc[0] = int(bx[1][:2], 16)
+		adc[1] = int(bx[2][2:], 16)
+		adc[2] = int(bx[2][:2], 16)
+		adc[3] = int(bx[3][2:], 16)
+		
+		# Decode LE TDC:
+		tdc_le[0] = int(bx[3][1], 16) + (int(bx[3][0], 16)%4)*2**4
+		tdc_le[1] = int(bx[3][0], 16)/4 + (int(bx[4][3], 16))*2**2
+		tdc_le[2] = int(bx[4][2], 16) + (int(bx[4][1], 16)%4)*2**4
+		tdc_le[3] = int(bx[4][1], 16)/4 + (int(bx[4][0], 16))*2**2
+		
+		# Decode TE TDC:
+		tdc_te[0] = int(bx[5][0], 16)
+		tdc_te[1] = int(bx[5][1], 16)
+		tdc_te[2] = int(bx[5][2], 16)
+		tdc_te[3] = int(bx[5][3], 16)
+		
+		bx_parsed = []
+		for ch in range(4):
+			bx_parsed.append(qie.datum(
+				ch=ch,
+				bx=i_bx,
+				raw=bx,
+				cid=cid[ch],
+				adc=adc[ch],
+				tdc_le=tdc_le[ch],
+				tdc_te=tdc_te[ch],
+			))
+		bxs_parsed.append(bx_parsed)
+	return bxs_parsed
+
+def parse_l1a(raw=None):
+	# Parse something like this:
+	#   0026 0F8BC 00000  CAP2   (<--- Triggered BX!)
+	#   0028 00000 0FF00 ADC:   0   0   0   0   0 255
+	#   0030 0FFFF 00000 TDC:  63  63  63   3   0   0
+	#   0032 0F8BC 00855  CAP2   
+	#   0034 00109 0FF0B ADC:  85   8   9   1  11 255
+	#   0036 0FFFF 00000 TDC:  63  63  63   3   0   0
+	#   0038 0F8BC 008AA  CAP2   
+	#   0040 00000 0FF00 ADC: 170   8   0   0   0 255
+	#   0042 0FFFF 00000 TDC:  63  63  63   3   0   0
+	#   0044 0F8BC 000FF  CAP2   
+	#   0046 00000 0FF00 ADC: 255   0   0   0   0 255
+	#   0048 0FFFF 00000 TDC:  63  63  63   3   0   0
+
+	# Get the words:
+	lines = raw.split("\n")
+	lines_stripped = [[i[1:] for i in line.split()[1:3]] for line in lines]
+	words_raw = [i for two_words in lines_stripped for i in two_words]
+#	words = [word[2:] + word[:2] for word in words_raw]		# This just adds confusion, I think.
+	words = words_raw
+	
+	# Parse the words:
+	if words[0][2:] == "BC":		# Must start at the beginning of a BX
+		bxs = [words[i:i+6] for i in range(0, len(words), 6)]
+		if len(bxs[-1]) != 6:		# Remove trailing incomplete BXs
+			del bxs[-1]
+		return parse_bxs(bxs=bxs)
+	else:
+		print "ERROR (uhtr.parse_l1a): The data doesn't begin with a \"BC\", so it's hard to know where it starts."
+		return False
+
 def parse_err(raw):
 	bdr=[]
 	raw=raw.values()[0].split('\n')
