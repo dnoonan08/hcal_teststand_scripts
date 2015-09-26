@@ -790,7 +790,7 @@ def set_mode(ts=None, crate=None, slot=None, mode=0, control_hub=None, port=ngfe
 ## /
 
 ## Set charge inject (CI) mode:
-def set_ci(ts=None, crate=None, slot=None, enable=False):
+def set_ci(ts=None, crate=None, slot=None, enable=False, control_hub=None, script=False):
 	# Parse "crate" and "slot":
 	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
 	if fe:
@@ -810,10 +810,10 @@ def set_ci(ts=None, crate=None, slot=None, enable=False):
 				])
 		
 		# Send commands:
-		output = ngfec.send_commands(ts, cmds)
+		output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, script=script)
 		results = ["ERROR" not in j for j in [i["result"] for i in output]]
 		if sum(results) == len(results):
-			return True
+			return output
 		else:
 			print "ERROR (qie.set_ci): Setting the mode resulted in the following:"
 			for thing in output:

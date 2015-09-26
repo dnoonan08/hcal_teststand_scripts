@@ -47,14 +47,29 @@ class acceptance:
 #			help="The unique ID of the QIE card you're testing (default is \"0x67000000 0x9b32c370\")",
 #			metavar="STR"
 #		)
-		parser.add_option("-c", "--crate", dest="c",
+		parser.add_option("-c", "--fecrate", dest="c",
 			default=2,
 			help="FE crate (default is 2)",
 			metavar="INT"
 		)
-		parser.add_option("-s", "--slot", dest="s",
+		parser.add_option("-s", "--feslot", dest="s",
 			default=2,
-			help="FE slot (default is 0)",
+			help="FE slot (default is 2)",
+			metavar="INT"
+		)
+		parser.add_option("-C", "--becrate", dest="C",
+			default=53,
+			help="BE crate (default is 53)",
+			metavar="INT"
+		)
+		parser.add_option("-S", "--beslot", dest="S",
+			default=1,
+			help="BE slot (default is 1)",
+			metavar="INT"
+		)
+		parser.add_option("-l", "--link", dest="l",
+			default=18,
+			help="Starting link number (default is 18).",
 			metavar="INT"
 		)
 		### Verbose mode:
@@ -81,6 +96,9 @@ class acceptance:
 		self.ts_name = options.ts
 		self.fe_crate = int(options.c)
 		self.fe_slot = int(options.s)
+		self.be_crate = int(options.C)
+		self.be_slot = int(options.S)
+		self.i_link = int(options.l)
 #		self.qid = options.qid
 		self.verbose = self.v = options.v
 		self.n = int(options.n)
@@ -109,12 +127,16 @@ class acceptance:
 		self.chart = chart(name=self.ts_name)
 		self.chart.add_map(mapping.single_card(
 			qid=self.qid,
+			fe_crate=self.fe_crate,
 			fe_slot=self.fe_slot,
+			be_crate=self.be_crate,
+			be_slot=self.be_slot,
+			link=self.i_link,
 		))
 		self.chart.write()
 		
 		## Teststand objects:
-		self.ts = teststand(self.ts_name, fe_slot=self.fe_slot)
+		self.ts = teststand(self.ts_name, fe_crate=self.fe_crate, fe_slot=self.fe_slot, be_slot=self.be_slot)
 		self.qie = self.ts.qies.values()[0]
 		self.uhtr = self.ts.uhtrs.values()[0]
 		self.ngccm = self.ts.ngccms.values()[0]

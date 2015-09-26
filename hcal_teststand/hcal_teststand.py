@@ -7,6 +7,7 @@ import uhtr
 import ngccm
 import qie
 import bkp
+import meta
 import json
 import os
 import install
@@ -14,17 +15,28 @@ import install
 # CLASSES:
 class teststand:
 	# Construction:
-	def __init__(self, name=None, f="teststands.txt", fe_slot=None):
+	def __init__(self, name=None, f="teststands.txt", fe_crate=None, fe_slot=None, be_slot=None):
 		if name:
 			self.name = name
 			ts_info = {}
 			
 			# Extract teststand info from the teststand configuration file:
 			ts_info = install.parse_ts_configuration(f)[self.name]
+			# Make any custom changes:
+#			fe = meta.parse_args_crate_slot(crate=fe_crate, slot=fe_slot, crate_type="fe")
+#			print fe
+			if fe_crate:
+				if isinstance(fe_crate, int):
+					fe_crate = [fe_crate]
+				ts_info["fe_crates"] = fe_crate
 			if fe_slot:
 				if isinstance(fe_slot, int):
 					fe_slot = [[fe_slot]]
 				ts_info["qie_slots"] = fe_slot
+			if be_slot:
+				if isinstance(be_slot, int):
+					be_slot = [[be_slot]]
+				ts_info["uhtr_slots"] = be_slot
 #			print ts_info
 			for key, value in ts_info.iteritems():
 				setattr(self, key, value)
@@ -239,8 +251,11 @@ class teststand:
 	def set_fixed_range(self, enable=None, r=None, i_qie=None, crate=None, slot=None):		# Set fixed-range mode.
 		return qie.set_fixed_range(ts=self, crate=crate, slot=slot, i_qie=i_qie, enable=enable, r=r)
 	
-	def set_clk_phase(self, crate=None, slot=None, i_qie=None, phase=0, script=True):		# Set fixed-range mode.
+	def set_clk_phase(self, crate=None, slot=None, i_qie=None, phase=0, script=True):		# Set QIE clock phase.
 		return qie.set_clk_phase(ts=self, crate=crate, slot=slot, i_qie=i_qie, phase=phase, script=script)
+	
+	def set_ci(self, crate=None, slot=None, enable=False, script=True):		# Set charge-injection mode.
+		return qie.set_ci(ts=self, crate=crate, slot=slot, enable=enable, script=script)
 	
 	def set_cal_mode(self, enable=False):
 		for crate, slots in self.fe.iteritems():

@@ -777,21 +777,34 @@ def parse_l1a(raw=None):
 	#   0048 0FFFF 00000 TDC:  63  63  63   3   0   0
 
 	# Get the words:
-	lines = raw.split("\n")
-	lines_stripped = [[i[1:] for i in line.split()[1:3]] for line in lines]
-	words_raw = [i for two_words in lines_stripped for i in two_words]
-#	words = [word[2:] + word[:2] for word in words_raw]		# This just adds confusion, I think.
-	words = words_raw
+	events = []
+	for raw_event in raw.split("N  RAW0  RAW1"):
+#		print "-----"
+#		print raw_event
+		lines = raw_event.split("\n")
+		lines_stripped = []
+		for line in lines:
+#			print line
+			match = search("^\s*\d{4}\s+([0-9A-F]{5})\s+([0-9A-F]{5})", line)
+#			print bool(match)
+			if match:
+				lines_stripped.append([match.group(1)[1:], match.group(2)[1:]])
+		if lines_stripped:
+#			print lines_stripped
+			words_raw = [i for two_words in lines_stripped for i in two_words]
+		#	words = [word[2:] + word[:2] for word in words_raw]		# This just adds confusion, I think.
+			words = words_raw
 	
-	# Parse the words:
-	if words[0][2:] == "BC":		# Must start at the beginning of a BX
-		bxs = [words[i:i+6] for i in range(0, len(words), 6)]
-		if len(bxs[-1]) != 6:		# Remove trailing incomplete BXs
-			del bxs[-1]
-		return parse_bxs(bxs=bxs)
-	else:
-		print "ERROR (uhtr.parse_l1a): The data doesn't begin with a \"BC\", so it's hard to know where it starts."
-		return False
+			# Parse the words:
+			if words[0][2:] == "BC":		# Must start at the beginning of a BX
+				bxs = [words[i:i+6] for i in range(0, len(words), 6)]
+				if len(bxs[-1]) != 6:		# Remove trailing incomplete BXs
+					del bxs[-1]
+				events.append(parse_bxs(bxs=bxs))
+#			else:
+#				print "ERROR (uhtr.parse_l1a): The data doesn't begin with a \"BC\", so it's hard to know where it starts."
+#				return False
+	return events
 
 def parse_err(raw):
 	bdr=[]
