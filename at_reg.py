@@ -222,7 +222,7 @@ if __name__ == "__main__":
 #		register(ts, "HF{0}-{1}-iTop_fifo_data_2".format(fe_crate, fe_slot), ?),	# Seems r/o
 #		register(ts, "HF{0}-{1}-iTop_fifo_data_3".format(fe_crate, fe_slot), ?),	# Seems r/o
 		register(ts, "HF{0}-{1}-iTop_scratch".format(fe_crate, fe_slot), 32),			# 32 bits
-		register(ts, "HF{0}-{1}-iTop_UniqueID".format(fe_crate, fe_slot), 30)			# 64 bits
+		register(ts, "HF{0}-{1}-iTop_UniqueID".format(fe_crate, fe_slot), 64)			# 64 bits
         ])
 
 #	result = [0]*24

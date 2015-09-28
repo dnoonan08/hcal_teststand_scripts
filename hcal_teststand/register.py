@@ -80,9 +80,7 @@ class register :
             elif value != check : 
                 self.elist.append([value, check])
                 errors = errors + 1
-                totalTests = totalTests + 1
-            else : 
-                totalTests = totalTests + 1
+            totalTests = totalTests + 1
 
 #            if self.verbosity >= 1 :
 #                print "check:",check
@@ -114,10 +112,10 @@ class register :
 		print "--------------------------------"
 		print "errors:",errors
 		print "execution errors:",executeErrors
-		if bool(totalTests):
-			print "Success rate:", 100. * ( 1. - ( float( errors ) ) / float( totalTests ) ),"%"
-		else:
-			print "Execution error - No tests performed"
+#		if bool(totalTests):
+		print "Success rate:", 100. * ( 1. - ( float( errors ) ) / float( totalTests ) ),"%"
+#		else:
+#			print "Execution error - No tests performed"
 		print "Execution error rate:", 100. * float( executeErrors ) / ( float( executeErrors ) + float( totalTests ) ),"%"
 		print
 	self.tex = {self.name: [totalTests, errors, executeErrors]}
