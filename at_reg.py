@@ -15,8 +15,20 @@ def getRandomValue( regSize=1 ) :
 	# be done carefully so taht the bits are divided up
 	# into 24 bit chunks correctly...
 	###
-	randomInt = str(hex(random.randint(0,2**regSize-1)))
-	return randomInt
+
+	output = ""
+
+	if regSize % 32:
+		output += str(hex(random.randint(0, 2**(regSize % 32-1))) + " ")
+
+	for i in range(int(regSize/32)):
+		output += str(hex(random.randint(0, 2**32-1))) + " "
+	output = output[:-1]
+
+	return output
+
+#	randomInt = str(hex(random.randint(0,2**regSize-1)))
+#	return randomInt
 	
 def format_random_value(d):
         ab=[]
@@ -87,7 +99,7 @@ def testRandomValue( register ):
 		return False 
 
 
-def create_plots(names = None, n = 1):
+def create_plots(names = None, dic = None, n = 1):
 	tf = TFile("AT_REG.root", "RECREATE")
 	gROOT.SetStyle("Plain")
 	gStyle.SetOptStat(0)
@@ -99,7 +111,7 @@ def create_plots(names = None, n = 1):
 	execs = []
 	stacks = []
 	for i in range(n):
-		namespart = names[i*len(names)/n:(i+1)*len(names)/n]	# On (i+1)*len(names)/n, first i*len(names) is done, then the division by n. By that way, i = 1 => (i+1)*len(names)/n = len(names). So we don't lose any bins because of integer division.
+		namespart = names[i*len(names)/n:(i+1)*len(names)/n]	# On (i+1)*len(names)/n, first i*len(names) is done, then the division by n. By that way, i = n - 1 => (i+1)*len(names)/n = len(names). So we don't lose any bins because of integer division.
 		totals.append(TH1F("Total_{0}".format(i+1), "", len(namespart), -0.5, len(namespart)-0.5))
 		errs.append(TH1F("Err_{0}".format(i+1), "", len(namespart), -0.5, len(namespart)-0.5))
 		execs.append(TH1F("Exec_{0}".format(i+1), "", len(namespart), -0.5, len(namespart)-0.5))
@@ -108,20 +120,22 @@ def create_plots(names = None, n = 1):
 		errs[i].SetFillColor(kRed)
 		execs[i].SetFillColor(kOrange)
 		for j, name in enumerate(namespart):
-			totals[i].GetXaxis().SetBinLabel(j+1, name)
-			totals[i].Fill(j, 100)
+			totals[i].GetXaxis().SetBinLabel(j+1, name) 
 			errs[i].GetXaxis().SetBinLabel(j+1, name)
 			execs[i].GetXaxis().SetBinLabel(j+1, name)
+			totals[i].Fill(j, dic[name][0])
+			errs[i].Fill(j, dic[name][1])
+			execs[i].Fill(j, dic[name][2])
 		totals[i].GetXaxis().LabelsOption("vd")
 		errs[i].GetXaxis().LabelsOption("vd")
 		execs[i].GetXaxis().LabelsOption("vd")
-		errs[i].Fill(random.randint(0, len(namespart)-1))
-		execs[i].Fill(random.randint(0, len(namespart)-1))
-		errs[i].Fill(0)
-		execs[i].Fill(2)
-		errs[i].Fill(len(namespart)-4)
-		errs[i].Fill(len(namespart)-3)
-		execs[i].Fill(len(namespart)-1)
+#		errs[i].Fill(random.randint(0, len(namespart)-1))
+#		execs[i].Fill(random.randint(0, len(namespart)-1))
+#		errs[i].Fill(0)
+#		execs[i].Fill(2)
+#		errs[i].Fill(len(namespart)-4)
+#		errs[i].Fill(len(namespart)-3)
+#		execs[i].Fill(len(namespart)-1)
 		c1.cd(i+1)
 		c1.SetTitle("")
 #		gPad.SetBottomMargin(-10)
@@ -143,7 +157,7 @@ def create_plots(names = None, n = 1):
 # MAIN:
 if __name__ == "__main__":
 
-	qieid="0x9B32C370 0x67000000"
+	qieid="0x67000000 0x9B32C370"
 #	qieid="0xAA24DA70 0x8D000000"
 
 	ts = teststand("904")		# Initialize a teststand object. This object stores the teststand configuration and has a number of useful methods.
@@ -208,10 +222,10 @@ if __name__ == "__main__":
 #		register(ts, "HF{0}-{1}-iTop_fifo_data_2".format(fe_crate, fe_slot), ?),	# Seems r/o
 #		register(ts, "HF{0}-{1}-iTop_fifo_data_3".format(fe_crate, fe_slot), ?),	# Seems r/o
 		register(ts, "HF{0}-{1}-iTop_scratch".format(fe_crate, fe_slot), 32),			# 32 bits
-		register(ts, "HF{0}-{1}-iTop_UniqueID".format(fe_crate, fe_slot), 64)			# 64 bits
+		register(ts, "HF{0}-{1}-iTop_UniqueID".format(fe_crate, fe_slot), 30)			# 64 bits
         ])
 
-	result = [0]*24
+#	result = [0]*24
 #	registers = []
 #	for name in register_names:
 #		registers.append(register(ts, name, 1))		# HERE on "48"
@@ -219,28 +233,39 @@ if __name__ == "__main__":
 	names = []
 	for r in registers:
 		names.append(r.name)
-		print r.name
-	print len(names)
-
-	create_plots(names, 8)
-
-	print "Done!"
-	sys.exit()
-
 
 	for i in range( 5 ) :
 		#print "test",i
 		for r in registers :
-			#print r.name
-			value = getRandomValue( r.size )
-			values = [ value[0:32]] #, '0x'+value[8:16] ]
-			r.addTestToCache( values[0]) #+" "+values[1] )
-			print values[0]
+#			print r.name
+#			value = getRandomValue( r.size )
+#			values = [value[0:32]] #, '0x'+value[8:16] ]
+			r.addTestToCache( getRandomValue( r.size ) ) #+" "+values[1]
 			#if not testRandomValue( r ) :
 			#	result[q] = result[q] + 1
 		#print "ERRORS: ",result
-
-	for r in registers : 
+	tex = {}
+	errd = {}
+	for r in registers :
+		r.setVerbosity(1)   # 0: not verbose, 1: verbose, 2: extra verbose
 		r.testCache()
+		errd.update({r.name: r.elist})
+#		print r.tex[r.name]
+		tex.update(r.tex)
+#	print tex
+
+
+#---------------Last report of errors------------------
+	print "SUMMARY:"	
+	for r in registers:
+		if errd[r.name] != []:
+			print "Error: " + r.name,
+			for i in range(len(errd[r.name])):
+				print str(tuple(errd[r.name][i])) + ",",
+			print "\b\b",
+			print ""
+	print
+#---------------Create histogram-----------------------
+	create_plots(names, tex, 8)
 
 # /MAIN
