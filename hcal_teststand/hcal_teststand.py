@@ -15,7 +15,7 @@ import install
 # CLASSES:
 class teststand:
 	# Construction:
-	def __init__(self, name=None, f="teststands.txt", fe_crate=None, fe_slot=None, be_slot=None):
+	def __init__(self, name=None, f="teststands.txt", fe_crate=None, fe_slot=None, be_crate=None, be_slot=None):
 		if name:
 			self.name = name
 			ts_info = {}
@@ -33,6 +33,10 @@ class teststand:
 				if isinstance(fe_slot, int):
 					fe_slot = [[fe_slot]]
 				ts_info["qie_slots"] = fe_slot
+			if be_crate:
+				if isinstance(be_crate, int):
+					be_crate = [be_crate]
+				ts_info["be_crates"] = be_crate
 			if be_slot:
 				if isinstance(be_slot, int):
 					be_slot = [[be_slot]]
@@ -65,7 +69,10 @@ class teststand:
 			# AMC13:
 			self.amc13s = {}		# AMC13 objects indexed by the BE crate number.
 			for i, ips in enumerate(self.amc13_ips):
-				be_crate = self.be_crates[i]
+				try:
+					be_crate = self.be_crates[i]
+				except:
+					be_crate = self.be_crates[0]
 				if ips:
 					self.amc13s[be_crate] = amc13.amc13(
 						ts=self,
@@ -80,7 +87,10 @@ class teststand:
 			self.glibs = {}		# GLIB objects indexed by the BE crate number.
 			for i, glib_slots in enumerate(self.glib_slots):
 				if glib_slots:
-					be_crate = self.be_crates[i]
+					try:
+						be_crate = self.be_crates[i]
+					except:
+						be_crate = self.be_crates[0]
 					self.glibs[be_crate] = []
 					for glib_slot in glib_slots:
 						self.glibs[be_crate].append(glib.glib(

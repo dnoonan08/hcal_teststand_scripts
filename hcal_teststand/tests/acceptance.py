@@ -68,7 +68,7 @@ class acceptance:
 			metavar="INT"
 		)
 		parser.add_option("-l", "--link", dest="l",
-			default=18,
+			default=12,
 			help="Starting link number (default is 18).",
 			metavar="INT"
 		)
@@ -79,11 +79,6 @@ class acceptance:
 			help="Turn on verbose mode (default is off)",
 			metavar="BOOL"
 		)
-#		parser.add_option("-o", "--fileName", dest="out",
-#			default="",
-#			help="The name of the directory you want to output plots to (default is \"data/at_results/[QIE_CARD_ID]\").",
-#			metavar="STR"
-#		)
 		### N values:
 		parser.add_option("-n", "--n", dest="n",
 			default=10,
@@ -100,7 +95,7 @@ class acceptance:
 		self.be_slot = int(options.S)
 		self.i_link = int(options.l)
 #		self.qid = options.qid
-		self.verbose = self.v = options.v
+		self.verbose = self.v = int(options.v)
 		self.n = int(options.n)
 		
 		# Other variables:
@@ -117,7 +112,7 @@ class acceptance:
 		
 		## Output location:
 		self.time_string = time_string()[:-4]
-		self.path = "data/at_results/{0}/at_{1}/{2}".format(self.qid.replace(" ", "_"), self.name, self.time_string)
+		self.path = "/nfshome0/elhughes/public/data/at_results/{0}/at_{1}/{2}".format(self.qid.replace(" ", "_"), self.name, self.time_string)
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 		self.file_name = "{0}_{1}".format(self.time_string, self.name)
@@ -136,7 +131,7 @@ class acceptance:
 		self.chart.write()
 		
 		## Teststand objects:
-		self.ts = teststand(self.ts_name, fe_crate=self.fe_crate, fe_slot=self.fe_slot, be_slot=[[],[self.be_slot]])
+		self.ts = teststand(self.ts_name, fe_crate=self.fe_crate, fe_slot=self.fe_slot, be_crate=self.be_crate, be_slot=self.be_slot)
 #		print self.ts.uhtrs
 		self.qie = self.ts.qies.values()[0]
 		self.uhtr = self.ts.uhtrs.values()[0]

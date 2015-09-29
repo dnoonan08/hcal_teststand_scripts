@@ -40,7 +40,7 @@ class register :
         executeErrors = 0 
         totalTests = 0 
 
-	output = ngfec.send_commands(ts = self.ts ,cmds= self.commandCache )
+        output = ngfec.send_commands(ts = self.ts, cmds= self.commandCache, script=False)
 #	print output
 
         if self.verbosity >= 2 :
@@ -132,7 +132,7 @@ class register :
         
     def read( self ) :
         
-        output = ngfec.send_commands( self.ts, ["get {0}".format(self.name)] )
+        output = ngfec.send_commands( self.ts, ["get {0}".format(self.name)], script=False)
         if self.verbosity >= 1 : 
             print "REGISTER::READ() --"
             print output
@@ -141,7 +141,7 @@ class register :
 
     def write( self , value = '') :
         
-        output = ngfec.send_commands(self.ts, ["put {0} {1}".format(self.name,value)] )
+        output = ngfec.send_commands(self.ts, ["put {0} {1}".format(self.name,value)], script=False)
         if self.verbosity >= 1 : 
             print "REGISTER::WRITE() --"
             print output
