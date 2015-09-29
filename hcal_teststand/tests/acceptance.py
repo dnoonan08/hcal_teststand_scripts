@@ -136,7 +136,8 @@ class acceptance:
 		self.chart.write()
 		
 		## Teststand objects:
-		self.ts = teststand(self.ts_name, fe_crate=self.fe_crate, fe_slot=self.fe_slot, be_slot=self.be_slot)
+		self.ts = teststand(self.ts_name, fe_crate=self.fe_crate, fe_slot=self.fe_slot, be_slot=[[],[self.be_slot]])
+#		print self.ts.uhtrs
 		self.qie = self.ts.qies.values()[0]
 		self.uhtr = self.ts.uhtrs.values()[0]
 		self.ngccm = self.ts.ngccms.values()[0]
