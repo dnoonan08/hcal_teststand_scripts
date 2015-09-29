@@ -114,7 +114,8 @@ class acceptance:
 		self.time_string = time_string()[:-4]
 		self.path = "/nfshome0/elhughes/public/data/at_results/{0}/at_{1}/{2}".format(self.qid.replace(" ", "_"), self.name, self.time_string)
 		if not os.path.exists(self.path):
-			os.makedirs(self.path)
+			os.makedirs(self.path)		# Sometimes the "umask" prevents setting the permissions here, so I do it on the next line.
+			os.chmod(self.path, 0777)
 		self.file_name = "{0}_{1}".format(self.time_string, self.name)
 		sys.stdout = logger(f="{0}/{1}.log".format(self.path, self.file_name))
 		
