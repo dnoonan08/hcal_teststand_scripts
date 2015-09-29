@@ -712,7 +712,7 @@ def get_triggered_data(ts=None, crate=None, slot=None, n_events=10, f="triggered
 	return uhtr_out
 
 # Parse uHTR output:
-def parse_bxs(bxs=None):
+def parse_bxs(bxs=None):		# Decode using this format: https://svnweb.cern.ch/trac/cms-firmwsrc/browser/hcal/HF_RM_igloo2/trunk/HF_RM_igloo2/docs/HF_RM_DataFormat.txt#L25
 	bxs_parsed = []
 	for i_bx, bx in enumerate(bxs):
 		# Not used: ['BCF8', '5508', '0901', '0BFF', 'FFFF', '0000']
@@ -723,29 +723,35 @@ def parse_bxs(bxs=None):
 		tdc_le = [-1]*4
 		tdc_te = [-1]*4
 		
+		words = [word[2:] + word[:2] for word in bx]
+		bytes = []
+		for word in words:
+			bytes.extend([word[:2], word[2:]])
+#		print bytes		# ['BC', 'F4', '55', '03', '03', '02', '04', 'FF', 'FF', 'FF', '00', '00']
+		
 		# Decode CID:
-		cid[0] = int(bx[1][3], 16)%4
-		cid[1] = int(bx[1][3], 16)/4
-		cid[2] = int(bx[1][2], 16)%4
-		cid[3] = int(bx[1][2], 16)/4
+		cid[0] = int(bytes[2][1], 16)%4
+		cid[1] = int(bytes[2][1], 16)/4
+		cid[2] = int(bytes[2][0], 16)%4
+		cid[3] = int(bytes[2][0], 16)/4
 		
 		# Decode ADC:
-		adc[0] = int(bx[1][:2], 16)
-		adc[1] = int(bx[2][2:], 16)
-		adc[2] = int(bx[2][:2], 16)
-		adc[3] = int(bx[3][2:], 16)
+		adc[0] = int(bytes[3], 16)
+		adc[1] = int(bytes[4], 16)
+		adc[2] = int(bytes[5], 16)
+		adc[3] = int(bytes[6], 16)
 		
 		# Decode LE TDC:
-		tdc_le[0] = int(bx[3][1], 16) + (int(bx[3][0], 16)%4)*2**4
-		tdc_le[1] = int(bx[3][0], 16)/4 + (int(bx[4][3], 16))*2**2
-		tdc_le[2] = int(bx[4][2], 16) + (int(bx[4][1], 16)%4)*2**4
-		tdc_le[3] = int(bx[4][1], 16)/4 + (int(bx[4][0], 16))*2**2
+		tdc_le[0] = int(bytes[9][1], 16)%4 + (int(bytes[8][1], 16)%4)*2**2 + (int(bytes[7][1], 16)%4)*2**4
+		tdc_le[1] = int(bytes[9][1], 16)/4 + (int(bytes[8][1], 16)/4)*2**2 + (int(bytes[7][1], 16)/4)*2**4
+		tdc_le[2] = int(bytes[9][0], 16)%4 + (int(bytes[8][0], 16)%4)*2**2 + (int(bytes[7][0], 16)%4)*2**4
+		tdc_le[3] = int(bytes[9][0], 16)/4 + (int(bytes[8][0], 16)/4)*2**2 + (int(bytes[7][0], 16)/4)*2**4
 		
 		# Decode TE TDC:
-		tdc_te[0] = int(bx[5][0], 16)
-		tdc_te[1] = int(bx[5][1], 16)
-		tdc_te[2] = int(bx[5][2], 16)
-		tdc_te[3] = int(bx[5][3], 16)
+		tdc_te[0] = int(bytes[10], 16)%8
+		tdc_te[1] = int(bytes[10], 16)/8
+		tdc_te[2] = int(bytes[11], 16)%8
+		tdc_te[3] = int(bytes[11], 16)/8
 		
 		bx_parsed = []
 		for ch in range(4):
@@ -801,8 +807,8 @@ def parse_l1a(raw=None):
 				if len(bxs[-1]) != 6:		# Remove trailing incomplete BXs
 					del bxs[-1]
 				events.append(parse_bxs(bxs=bxs))
-#			else:
-#				print "ERROR (uhtr.parse_l1a): The data doesn't begin with a \"BC\", so it's hard to know where it starts."
+			else:
+				print "ERROR (uhtr.parse_l1a): The data doesn't begin with a \"BC\", so it's hard to know where it starts."
 #				return False
 	return events
 

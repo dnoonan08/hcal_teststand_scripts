@@ -17,7 +17,7 @@ from ROOT import *
 def main():
 	# Make an acceptance test object:
 	at = tests.acceptance(name="lnk")		# Create an acceptance test.
-	at.start(False)		# Start the acceptance test by printing some basic things.
+	at.start()		# Start the acceptance test by printing some basic things.
 	
 	# Variables and simple set up:
 	ts = at.ts

@@ -106,7 +106,7 @@ class datum:
 	def __init__(self, adc=-1, cid=-1, tdc_le=-1, tdc_te=-1, raw=[], raw_uhtr="", bx=-1, ch=-1, half=-1, fiber=-1):
 		self.adc = adc
 		self.cid = cid
-		self.tdc_le = tdc_le
+		self.tdc = self.tdc_le = tdc_le
 		self.tdc_te = tdc_te
 		if not raw:
 			raw = []
