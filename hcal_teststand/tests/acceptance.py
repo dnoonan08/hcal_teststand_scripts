@@ -117,7 +117,7 @@ class acceptance:
 			os.makedirs(self.path)		# Sometimes the "umask" prevents setting the permissions here, so I do it on the next line.
 			os.chmod(self.path, 0777)
 		self.file_name = "{0}_{1}".format(self.time_string, self.name)
-		sys.stdout = logger(f="{0}/{1}.log".format(self.path, self.file_name))
+		sys.stdout = logger(f="{0}/{1}.txt".format(self.path, self.file_name))
 		
 		## Mapping:
 		self.chart = chart(name=self.ts_name)
