@@ -127,6 +127,7 @@ def create_plots(qie_id):
 	th2 = []
 	
 	# Make plots:
+	gStyle.SetOptStat(0)
 	for i in range(24):		# One for each QIE chip on the card
 		histogram = TH1F("qie{0}".format(i+1), "{0}: QIE {1}".format(qie_id, i+1), 16, -0.5, 15.5)
 		histogram.GetXaxis().CenterTitle(1)
