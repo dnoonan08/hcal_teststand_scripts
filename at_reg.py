@@ -104,25 +104,32 @@ def main():
 		#print "ERRORS: ",result
 	tex = {}
 	errd = {}
+	noerr = []
 	for r in registers:
 		r.setVerbosity(v)		# 0: not verbose, 1: verbose, 2: extra verbose
 		r.testCache()
 		errd.update({r.name: r.elist})
-#		print r.tex[r.name]
+		noerr.extend(r.elist)
 		tex.update(r.tex)
 #	print tex
 
 
 #---------------Last report of errors------------------
-	print "SUMMARY:"	
-	for r in registers:
-		if errd[r.name] != []:
-			print "Error: " + r.name,
-			for i in range(len(errd[r.name])):
-				print str(tuple(errd[r.name][i])) + ",",
-			print "\b\b",
-			print ""
-	print
+	print "\n====== SUMMARY ============================"
+	print "Teststand: {0}".format(ts.name)
+	print "QIE card: {0} (FE Crate {1}, Slot {2})".format(qid, at.fe_crate, at.fe_slot)
+	if noerr == []:
+		print "[OK] There were no errors!"
+	else:
+		print "[!!] Errors:"
+		for r in registers:
+			if errd[r.name] != []:
+				print "\t*Register:", str(r.name) + ";", "Data:",
+				for i in range(len(errd[r.name])):
+					print str(tuple(errd[r.name][i])) + ";",
+				print "\b\b",
+				print ""
+	print "==========================================="
 #---------------Create histogram-----------------------
 	create_plots(at, names, tex, 8)
 
