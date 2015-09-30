@@ -39,6 +39,7 @@ if __name__ == "__main__":
 	
 	# Variables:
 	ts = at.ts
+	qid = at.qid
 	be_crate = at.be_crate
 	be_slot = at.be_slot
 	links = [l.n for l in at.links]
@@ -49,18 +50,14 @@ if __name__ == "__main__":
 	inputFile = TFile(f_in, "READ")
 	
 	# Analyze the data:
-#	can = TCanvas("Histograms from the uHTR tool","Histograms from the uHTR tool",800,600)
-#	can1 = TCanvas("CID","CID",800,600)
-#	can2 = TCanvas("QIE","QIE",800,600)
 	at.canvas.SetCanvasSize(1280, 460)
 	at.canvas.Divide(3, 1)
-#	at.canvas.cd(1)
-#	h0 = TH1F("test", "TEST", 10, 0, 10)
-#	h0.Draw()
 	
 	means = TH1F('mean','mean',20,0,20)
+	means_err = TH1F('means_err','means_err',20,0,20)
 	rmss = TH1F('rms','rms',24,0,6)
 	th1s={}
+	errlist=[]
 	
 	for link  in links:
 		print "---------------------------"
@@ -87,18 +84,11 @@ if __name__ == "__main__":
 			temp.GetXaxis().SetLabelOffset(0.01)
 			temp.GetXaxis().SetLabelSize(0.04)
 			h.append(temp)
-#			can.cd()
-#			can.SetLogy()
-#			temp.Draw()
 			at.out.WriteTObject(temp)
-#			can.SaveAs(fdnm+"/h{0}_{1}.png".format(4*link+ch,d))
 			for i_cid in range(4):
 				name = 'QIE{0}_CapID{1}'.format(i_qie,i_cid)
 				th1s[i_qie,i_cid]=TH1F(name,name,64,0,63)
 				fill(temp, th1s, i_qie, i_cid)
-#				can1.cd()
-#				can1.SetLogy()
-#				th1s[i_qie,i_cid].Draw()
 				if i_cid == 0 :
 					xs_cid0.append(((i_qie-1)*4+i_cid)+1) 
 					ys_cid0.append(th1s[i_qie,i_cid].GetMean())
@@ -119,16 +109,16 @@ if __name__ == "__main__":
 					ys_cid3.append(th1s[i_qie,i_cid].GetMean())
 					xers_cid3.append(0)
 					yers_cid3.append(th1s[i_qie,i_cid].GetRMS())
-			        means.Fill(th1s[i_qie,i_cid].GetMean())
+				means.SetLineColor(kGreen)
+				means.SetFillColor(kGreen)
+				means.Fill(th1s[i_qie,i_cid].GetMean())
 			        rmss.Fill(th1s[i_qie,i_cid].GetRMS())
-#				can1.SaveAs(fdnm+"/link{0}_qie{1}_CapID{2}_{3}.png".format(link,i_qie,i_cid,d))		
-#			can2.cd()
-#			if len(h) == 1 :
-#				h[-1].Draw()
-#			else :
-#				h[-1].Draw("SAME")
-#			leg.Draw("SAME")
-#		can2.Print(fdnm+"/pedestalTest_{0}_link{1}.png".format(d,link))
+				if th1s[i_qie,i_cid].GetMean() < 1.0 or th1s[i_qie,i_cid].GetMean() > 6.0:
+					means_err.SetLineColor(kRed)
+					means_err.SetFillColor(kRed)
+					means_err.Fill(th1s[i_qie,i_cid].GetMean())
+					errlist.append([link, i_qie, i_cid, th1s[i_qie,i_cid].GetMean()])
+
 	for key, plot in th1s.iteritems():
        		at.out.WriteTObject(plot)
 	# Write and Draw Mean, RMS, Pedestal vs Channel distribution 
@@ -141,6 +131,7 @@ if __name__ == "__main__":
 	at.canvas.cd(1)
 	means.SetTitle('pedestal mean distribution;mean;channels')
 	means.Draw()
+	means_err.Draw("SAME")
 	at.out.WriteTObject(means)
 	at.canvas.cd(2)
 	rmss.SetTitle('pedestal RMS distribution;RMS;channels')
@@ -169,4 +160,15 @@ if __name__ == "__main__":
 	
 #	# Save output:
 	at.write()		# Save the "at.canvas" canvas and close the "at.out" ROOT file.
-
+			
+      #Print a summary:
+	print "\n====== SUMMARY ============================"
+	print "Teststand: {0}".format(ts.name)
+	print "QIE card: {0} (FE Crate {1}, Slot {2})".format(qid, at.fe_crate, at.fe_slot)
+	if errlist == []:
+		print "[OK] There were no errors!"
+	else:
+		print "[!!] Errors:"
+		for err in errlist:
+			print "\t* Link:", err[0], "Channel:", err[1], "Cap ID:", err[2], "Mean:", err[3]
+	print "==========================================="
