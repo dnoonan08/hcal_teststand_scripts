@@ -145,6 +145,7 @@ class acceptance:
 		
 		# ROOT setup:
 		ROOT.gROOT.SetStyle("Plain")
+		ROOT.gStyle.SetTitleBorderSize(0)
 		ROOT.gStyle.SetPalette(1)
 		ROOT.gROOT.SetBatch()
 		
