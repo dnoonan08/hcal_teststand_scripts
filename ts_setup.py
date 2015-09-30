@@ -123,7 +123,7 @@ if __name__ == "__main__":
 	# Script arguments:
 	parser = OptionParser()
 	parser.add_option("-t", "--teststand", dest="ts",
-		default="904",
+		default="904at",
 		help="The name of the teststand you want to use (default is \"157\").",
 		metavar="STR"
 	)

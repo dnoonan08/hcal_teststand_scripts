@@ -235,8 +235,8 @@ def setup(ts=None, crate=None, slot=None, i_qie=None, control_hub=None, port=Non
 					cmds.extend([
 						"put HF{0}-{1}-iTop_CntrReg_CImode 0x0".format(fe_crate, fe_slot),
 						"put HF{0}-{1}-iBot_CntrReg_CImode 0x0".format(fe_crate, fe_slot),
-						"put HF{0}-{1}-iTop_LinkTestMode 0x0".format(fe_crate, fe_slot),
-						"put HF{0}-{1}-iBot_LinkTestMode 0x0".format(fe_crate, fe_slot),
+#						"put HF{0}-{1}-iTop_LinkTestMode 0x0".format(fe_crate, fe_slot),
+#						"put HF{0}-{1}-iBot_LinkTestMode 0x0".format(fe_crate, fe_slot),
 						"put HF{0}-{1}-iTop_UniqueID 0x0 0x0".format(fe_crate, fe_slot),
 						"put HF{0}-{1}-iBot_UniqueID 0x0 0x0".format(fe_crate, fe_slot),
 					])
