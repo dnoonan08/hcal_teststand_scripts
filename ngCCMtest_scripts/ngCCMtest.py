@@ -1,11 +1,12 @@
 ####################################################################
 # Type: SCRIPT                                                     #
 #                                                                  #
-# Description: This is a script skeleton.                          #
+# Description: ngCCM test script                                   #
 ####################################################################
 
 import sys
 sys.path.append('..')
+
 
 from hcal_teststand import *
 from hcal_teststand.hcal_teststand import teststand
@@ -32,26 +33,12 @@ stdo_def = sys.stdout
 # FUNCTIONS:
 # /FUNCTIONS
 
-# MAIN:
 
 start_dir = os.getcwd()
 os.chdir('..')
 
-if __name__ == "__main__":
-	name = '904'
-#	name = ""
-#	if len(sys.argv) == 1:
-#		name = "904"
-#	elif len(sys.argv) == 2:
-#		name = sys.argv[1]
-#	else:
-#		name = "904"
-	ts = teststand(name)		# Initialize a teststand object. This object stores the teststand configuration and has a number of useful methods.
-	#print "\nYou've just run a script that's a skeleton for making your own script."
-	# Print out some information about the teststand:
-	#print ">> The teststand you're using is named {0}.".format(ts.name)
-	#print ">> The crate and QIE card organization for the teststand is below:\n{0}".format(ts.fe)
-# /MAIN
+name = '904'
+ts = teststand(name)		# Initialize a teststand object. This object stores the teststand configuration and has a number of useful methods.
 
 parser = optparse.OptionParser()
 parser.add_option('-v','--verbose', help = 'Display full test output', dest = 'verbose', default = False, action = 'store_true')
@@ -62,6 +49,8 @@ os.system("clear")
 
 log = options.log
 verbose = options.verbose
+
+# Start working on the ngCCM:
 
 if log == 1:
 	SN = get_SN()
@@ -80,10 +69,17 @@ m_s = mezz_scratch(m_s_num,0,ts)
 power_status = 0
 power_status = check_power(ts)
 
+# Start working on the QIE cards:
+
 qie_s = 0
 qie_r = 0
 qie_num = 10
 if power_status == 0:
+	rst_results = ngccm.send_commands_parsed( ts, ["put HF2-bkp_reset 0", "put HF2-bkp_reset 1", "put HF2-bkp_reset 0"])  # Added by Tote.
+        if verbose :
+		print "Backplane reset issued as follows:"
+		for c in rst_results["output"]:
+			print c["cmd"] + " -> " + c["result"]
 	qie_s = QIE(qie_num,0,ts)
 	a,b,c,d = TestAll(ts,0,1,2)
 	qie_r = a + b + c
@@ -93,11 +89,17 @@ else:
 	print "Backplane power not enabled. Skipping QIE test."
 	print "***********************************************"
 
+# Continue work with the ngCCM:
+
 adcs = 0
 adcs = ADCs(verbose,ts)
 
 sw = 0
 sw = Check_SW(verbose,ts)
+
+
+###################################
+##   Prepare summary of results:
 
 if m_r + m_s + qie_r + qie_s + adcs + sw == 0:
 	print "*********************************"
