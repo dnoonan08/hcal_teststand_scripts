@@ -125,7 +125,7 @@ def log_links(ts, scale=0):
 		orbits = []
 		for link in active_links:
 			orbits.append(link_results[cs]["orbit"][link])
-		log += "crate,slot{0}\torbit:{1}\n".format(cs,orbits)
+		log += "crate,slot{0}\torbit:{1}\n".format(cs,list2f(orbits))
 		adc_avg = []
 		data_full = ""
 		for i in active_links:
