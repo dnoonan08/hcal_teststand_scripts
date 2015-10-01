@@ -970,7 +970,7 @@ def get_linkdtc(ts, crate,uhtr_slot):
 		"-1"
 	]
 	
-	uhtr_out = send_commands(ts,crate, uhtr_slot, commands)
+	uhtr_out = send_commands(ts=ts,crate=crate,slot=uhtr_slot, cmds=commands)
 	return uhtr_out[crate,uhtr_slot]
 
 
