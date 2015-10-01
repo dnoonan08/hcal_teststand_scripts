@@ -131,10 +131,11 @@ def log_links(ts, scale=0):
 		for i in active_links:
 			uhtr_read = uhtr.get_raw_spy(ts=ts,crate=cs[0],slot=cs[1],n_bx=50,i_link=i)[cs][i]
 			if scale == 1:
-				log += uhtr_read
+				data_full += uhtr_read
 			adc_avg.append(list2f([numpy.mean([qad.adc for qad in item]) for item in uhtr.parse_spy(uhtr_read)]))
-		log += "crate,slot{0}\tmeanADC:{1}".format(cs,adc_avg)
+		log += "crate,slot{0}\tmeanADC:{1}\n".format(cs,adc_avg)
 		if scale == 1:
+			log += data_full
 			log += uhtr.get_linkdtc(ts,cs[0],cs[1])
 	return log
 
