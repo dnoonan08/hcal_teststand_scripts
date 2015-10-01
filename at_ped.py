@@ -171,4 +171,4 @@ if __name__ == "__main__":
 		print "[!!] Errors:"
 		for err in errlist:
 			print "\t* Link:", err[0], "Channel:", err[1], "Cap ID:", err[2], "Mean:", err[3]
-	print "==========================================="
+	print "===========================================\n"
