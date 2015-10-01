@@ -955,6 +955,24 @@ def get_dump(ts=None, crate=None, slot=None, ip=None, control_hub=None):
 			uhtr_out = send_commands(ip=ips.keys(), cmds=cmds, control_hub=control_hub)
 		return uhtr_out
 # /FUNCTIONS
+def get_linkdtc(ts, crate,uhtr_slot):
+	log = ""
+	
+	commands = [
+		"0",
+		"LINK",
+		"STATUS",
+		"QUIT",
+		"DTC",
+		"STATUS",
+		"QUIT",
+		"EXIT",
+		"-1"
+	]
+	
+	uhtr_out = send_commands(ts,crate, uhtr_slot, commands)
+	return uhtr_out[crate,uhtr_slot]
+
 
 if __name__ == "__main__":
 	print "Hang on."

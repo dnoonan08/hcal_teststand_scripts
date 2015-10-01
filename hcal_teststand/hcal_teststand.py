@@ -5,6 +5,7 @@ import amc13
 import glib
 import uhtr
 import ngccm
+import ngfec
 import qie
 import bkp
 import meta
@@ -448,7 +449,7 @@ def get_temps(ts=False):		# It's more flexible to not have the input be a testst
 				cmds = [
 					"get HF{0}-{1}-bkp_temp_f".format(crate, slot),		# The temperature sensor on the QIE card, near the bottom, labeled "U40".
 				]
-				output[crate] += ngccm.send_commands_parsed(ts, cmds)["output"]
+				output[crate] += ngfec.send_commands(ts=ts, cmds=cmds)
 		return output
 	else:
 		return output
