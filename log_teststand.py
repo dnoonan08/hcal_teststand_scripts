@@ -88,6 +88,11 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 			cmds.append("get HF{0}-{1}-iTop_RST_QIE_count".format(crate,i))
 			cmds.append("get HF{0}-{1}-iBot_RST_QIE_count".format(crate,i))
 			cmds.append("get HF{0}-{1}-iBot_RST_QIE_count".format(crate,i))
+			cmds.append("get HF{0}-{1}-iTop_LinkTestMode".format(crate,i))
+			cmds.append("get HF{0}-{1}-iBot_LinkTestMode".format(crate,i))
+			cmds.append("get HF{0}-{1}-iTop_CntrReg_CImode".format(crate,i))
+			cmds.append("get HF{0}-{1}-iBot_CntrReg_CImode".format(crate,i))
+			
 	elif scale == 1:
 		cmds=[]
 		for i in nslot:
