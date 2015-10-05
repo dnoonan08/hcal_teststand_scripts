@@ -973,7 +973,7 @@ def get_linkdtc(ts, crate,uhtr_slot):
 	uhtr_out = send_commands(ts=ts,crate=crate,slot=uhtr_slot, cmds=commands)[crsl]
 	linkstatus=uhtr_out.split('> STATUS\n')[1].split(' \n\n\n   INIT')[0]
 	dtcstatus=uhtr_out.split('================================================ ')[-1].split('\n\n   STATUS')[0]
-	return (linkstatus+dtcstatus).replace('\n','\n{0}'.format(crsl))
+	return (linkstatus+dtcstatus).replace('\n','\n{0}'.format(crsl))+'\n'
 
 if __name__ == "__main__":
 	print "Hang on."
