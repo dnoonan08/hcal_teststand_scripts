@@ -7,7 +7,7 @@
 # '%%'. The first teststand is an educational example.             #
 ####################################################################
 
-name = example              # Define the name of the teststand. Keep it simpleand unique.
+name = example              # Define the name of the teststand. Keep it simple and unique.
 fe_crates = 1, 3, 5         # List of the FE crate numbers of the crates you're using.
 be_crates = 100             # List of the BE (uTCA) crate numbers.
 ngccm_port = 4242           # The ngCCM server port.
