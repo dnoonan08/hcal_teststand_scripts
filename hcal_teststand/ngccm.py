@@ -1062,7 +1062,6 @@ def get_commands(crate,slot):
 	"get HF{0}-{1}-vttxTop3-PRE_F".format(crate,slot),
 	"get HF{0}-{1}-QIE16_ChargeInjectDAC".format(crate,slot),
 	"get HF{0}-{1}-QIE24_Trim".format(crate,slot),
-	"get HF{0}-{1}-bkp_pwr_bad".format(crate,slot),
 	"get HF{0}-{1}-vttxTop3-PRE_R".format(crate,slot),
 	"get HF{0}-{1}-QIE16_DiscOn".format(crate,slot),
 	"get HF{0}-{1}-QIE2_CalMode".format(crate,slot),
