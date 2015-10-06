@@ -95,13 +95,14 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 				cmds.append("get HF{0}-{1}-iBot_LinkTestMode".format(crate,i))
 				cmds.append("get HF{0}-{1}-iTop_CntrReg_CImode".format(crate,i))
 				cmds.append("get HF{0}-{1}-iBot_CntrReg_CImode".format(crate,i))
-			cmds.extend(["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(6)])
 		elif scale == 1:
 			cmds=[]
 			for i in nslot:
 				cmds.extend(ngccm.get_commands(crate,i))
 		else:
 			cmds = []
+		cmds.extend(["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(6)])
+		cmds.extend(["get fec2-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(2)])
 		output = ngfec.send_commands(ts=ts, cmds=cmds)
 		for result in output:
 			log += "{0} -> {1}\n".format(result["cmd"], result["result"])
