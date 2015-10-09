@@ -64,11 +64,12 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 	log += "%% REGISTERS\n"
 	nslots=ts.qie_slots
 	crates=ts.fe_crates
+	cmds=[]
 	for n in range(len(crates)):
 		crate=crates[n]
 		nslot=nslots[n]
 		if scale == 0:
-			cmds = [
+			cmds.extend( [
 				"get fec1-LHC_clk_freq",		# Check that this is > 400776 and < 400788.
 				"get HF{0}-mezz_ONES".format(crate),		# Check that this is all 1s.
 				"get HF{0}-mezz_ZEROES".format(crate),		# Check that is is all 0s.
@@ -82,7 +83,7 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 				"get fec1-firmware_yy",
 				"get fec1-sfp1_status.RxLOS",
 				"get HF{0}-ngccm_rev_ids".format(crate),
-				]
+				])
 			
 			for i in nslot:
 				cmds.append("get HF{0}-{1}-B_RESQIECOUNTER".format(crate,i))
@@ -96,16 +97,13 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 				cmds.append("get HF{0}-{1}-iTop_CntrReg_CImode".format(crate,i))
 				cmds.append("get HF{0}-{1}-iBot_CntrReg_CImode".format(crate,i))
 		elif scale == 1:
-			cmds=[]
 			for i in nslot:
 				cmds.extend(ngccm.get_commands(crate,i))
-		else:
-			cmds = []
-		cmds.extend(["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(6)])
-		cmds.extend(["get fec2-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(2)])
-		output = ngfec.send_commands(ts=ts, cmds=cmds)
-		for result in output:
-			log += "{0} -> {1}\n".format(result["cmd"], result["result"])
+	cmds.extend(["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(6)])
+	cmds.extend(["get fec2-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(2)])
+	output = ngfec.send_commands(ts=ts, cmds=cmds)
+	for result in output:
+		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 	return log
 
 def list2f(List):
