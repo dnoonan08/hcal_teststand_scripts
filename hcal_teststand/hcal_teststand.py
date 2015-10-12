@@ -265,6 +265,12 @@ class teststand:
 	def set_clk_phase(self, crate=None, slot=None, i_qie=None, phase=0, script=True):		# Set QIE clock phase.
 		return qie.set_clk_phase(ts=self, crate=crate, slot=slot, i_qie=i_qie, phase=phase, script=script)
 	
+	def set_ici_magnitude(self, crate=None, slot=None, i_qie=None, magnitude=0, script=True, verbose=False):		# Set QIE clock phase.
+		return qie.set_ici_magnitude(ts=self, crate=crate, slot=slot, i_qie=i_qie, magnitude=magnitude, script=script, verbose=verbose)
+	
+	def set_tdc_threshold(self, crate=None, slot=None, i_qie=None, threshold=0, script=True, verbose=False):		# Set QIE clock phase.
+		return qie.set_tdc_threshold(ts=self, crate=crate, slot=slot, i_qie=i_qie, threshold=threshold, script=script, verbose=verbose)
+	
 	def set_ci(self, crate=None, slot=None, enable=False, script=True):		# Set charge-injection mode.
 		return qie.set_ci(ts=self, crate=crate, slot=slot, enable=enable, script=script)
 	

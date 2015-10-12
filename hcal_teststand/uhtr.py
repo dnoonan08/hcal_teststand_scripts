@@ -70,8 +70,8 @@ class uhtr:
 	def send_commands(self, cmds=cmds_default, script=False):
 		return send_commands(control_hub=self.control_hub, ip=self.ip, cmds=cmds, script=script)
 	
-	def setup(self):
-		return setup(ip=self.ip, control_hub=self.control_hub)
+	def setup(self, orbit_delay=3500):
+		return setup(ip=self.ip, control_hub=self.control_hub, orbit_delay=orbit_delay)
 	# /Methods
 
 class status:

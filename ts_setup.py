@@ -184,7 +184,7 @@ if __name__ == "__main__":
 	
 	# Set up the uHTRs:
 	print "(3) Setting up the uHTRs ..."
-	setup_results = uhtr.setup(ts=ts)
+	setup_results = uhtr.setup(ts=ts, orbit_delay=3501)
 	for crate_slot, setup_result in setup_results.iteritems():
 		be_crate, be_slot = crate_slot
 		if not setup_result:

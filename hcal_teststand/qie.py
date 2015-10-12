@@ -1008,6 +1008,103 @@ def set_cal_mode_all(ts, crate, slot, enable=False):
 	return raw_output
 ## /
 
+def set_tdc_threshold(ts=False, crate=None, slot=None, i_qie=None, threshold=0, control_hub=None, port=ngfec.port_default, script=True, verbose=False):
+	# Parse "crate" and "slot":
+	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
+	if fe:
+		# Parse "i_qie":
+		i_qie = meta.parse_args_qie(i_qie=i_qie)		# The default is range(1, 25)
+		if i_qie:
+			# Parse "phase":
+			if isinstance(threshold, int):
+				threshold = int(threshold)
+				if threshold not in range(256):		# The setting is eight bits.
+					print "ERROR (qie.set_tdc_threshold): The TDC threshold you selected with \"threshold\" must be an element of [0, 1, ..., 255]."
+					return False
+			else:
+				print "ERROR (qie.set_tdc_threshold): The TDC threshold you selected with \"threshold\" must be an integer (between 0 and 255)."
+				return False
+			
+			# Build list of commands:
+			cmds = []
+			for crate, slots in fe.iteritems():
+				for slot in slots:
+					for i in i_qie:
+						cmds.extend([
+							"put HF{0}-{1}-QIE{2}_TimingThresholdDAC {3:#04x}".format(crate, slot, i, threshold),
+							"get HF{0}-{1}-QIE{2}_TimingThresholdDAC".format(crate, slot, i),
+						])
+			
+			# Send commands:
+			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port, script=script)
+			results = ["ERROR" not in j for j in [i["result"] for i in output]]
+			if sum(results) == len(results):
+				if verbose:
+					print "[vv] Set the TDC threshold:"
+					for thing in output:
+						print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+				return True
+			else:
+				print "ERROR (qie.set_tdc_threshold): Setting TDC threshold resulted in the following:"
+				for thing in output:
+					print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+				return False
+		else:
+			print "ERROR (qie.set_tdc_threshold): The \"i_qie\" argument was not good."
+			return False
+	else:
+		print "ERROR (qie.set_tdc_threshold): The crate, slot arguments were not good."
+		return False
+
+
+def set_ici_magnitude(ts=False, crate=None, slot=None, i_qie=None, magnitude=0, control_hub=None, port=ngfec.port_default, script=True, verbose=False):
+	# Parse "crate" and "slot":
+	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
+	if fe:
+		# Parse "i_qie":
+		i_qie = meta.parse_args_qie(i_qie=i_qie)		# The default is range(1, 25)
+		if i_qie:
+			# Parse "phase":
+			if isinstance(magnitude, int):
+				magnitude = int(magnitude)
+				if magnitude not in range(7):		# The setting is three bits.
+					print "ERROR (qie.set_ici_magnitude): The ICI magnitude you selected with \"magnitude\" must be an element of [0, 1, ..., 7]."
+					return False
+			else:
+				print "ERROR (qie.set_ici_magnitude): The ICI magnitude you selected with \"magnitude\" must be an integer (between 0 and 7)."
+				return False
+			
+			# Build list of commands:
+			cmds = []
+			for crate, slots in fe.iteritems():
+				for slot in slots:
+					for i in i_qie:
+						cmds.extend([
+							"put HF{0}-{1}-QIE{2}_ChargeInjectDAC {3:#03x}".format(crate, slot, i, magnitude),
+							"get HF{0}-{1}-QIE{2}_ChargeInjectDAC".format(crate, slot, i),
+						])
+			
+			# Send commands:
+			output = ngfec.send_commands(ts=ts, cmds=cmds, control_hub=control_hub, port=port, script=script)
+			results = ["ERROR" not in j for j in [i["result"] for i in output]]
+			if sum(results) == len(results):
+				if verbose:
+					print "[vv] Set the ICI magnitude:"
+					for thing in output:
+						print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+				return True
+			else:
+				print "ERROR (qie.set_ici_magnitude): Setting ICI magnitude resulted in the following:"
+				for thing in output:
+					print "\t{0} -> {1}".format(thing["cmd"], thing["result"])
+				return False
+		else:
+			print "ERROR (qie.set_ici_magnitude): The \"i_qie\" argument was not good."
+			return False
+	else:
+		print "ERROR (qie.set_ici_magnitude): The crate, slot arguments were not good."
+		return False
+
 ## QIE clock phase:
 def set_clk_phase(ts=False, crate=None, slot=None, i_qie=None, phase=0, control_hub=None, port=ngfec.port_default, script=True):
 	# Parse "crate" and "slot":
