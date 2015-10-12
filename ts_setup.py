@@ -139,16 +139,24 @@ if __name__ == "__main__":
 		help="Turn on fast mode (default is off)",
 		metavar="BOOL"
 	)
+	parser.add_option("-d", "--uhtrdelay", dest="delay",
+		default=3501,
+		type = int,
+		help="Turn on uhtrdelay mode (default is 3501)",
+		metavar="BOOL"
+	)
+
 	(options, args) = parser.parse_args()
 	name = options.ts
 	v = options.verbose
 	fast = options.fast
+	delay = options.delay
 	
 	# Set up teststand:
 	ts = teststand(name)
 	if v: ts.Print()
 	print "\nSetting up the {0} teststand ...".format(ts.name)
-	
+	'''
 	# Set up the AMC13s:
 	print "(1) Setting up the AMC13s ..."
 	if check_status_amc13(ts=ts, v=v, fast=fast):
@@ -166,7 +174,7 @@ if __name__ == "__main__":
 		print "\t[!!] Statusing the AMC13s failed."
 		print "Aborting setup ..."
 		sys.exit()
-	
+	'''
 	# Set up the FE backplanes:
 	print "(2) Setting up the FE backplanes ..."
 	setup_results = {}		# Dictionary comprehension was only implemented in Python 2.7 ...
@@ -184,7 +192,7 @@ if __name__ == "__main__":
 	
 	# Set up the uHTRs:
 	print "(3) Setting up the uHTRs ..."
-	setup_results = uhtr.setup(ts=ts, orbit_delay=3501)
+	setup_results = uhtr.setup(ts=ts, orbit_delay=delay)
 	for crate_slot, setup_result in setup_results.iteritems():
 		be_crate, be_slot = crate_slot
 		if not setup_result:
@@ -199,7 +207,7 @@ if __name__ == "__main__":
 		print "\t[!!] Statusing the uHTRs failed."
 		print "Aborting setup ..."
 		sys.exit()
-	
+	'''
 	# Set up the QIEs:
 	print "(4) Setting up the QIE cards ..."
 	setup_result = qie.setup(ts=ts, verbose=v)
@@ -216,7 +224,7 @@ if __name__ == "__main__":
 		sys.exit()
 	else:
 		print "\t[OK] All of the QIE cards appear to be functioning."
-	
+	'''
 	# Conclusion:
 	print "[OK] Teststand set up successfully."
 # /MAIN
