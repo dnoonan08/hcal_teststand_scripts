@@ -137,6 +137,7 @@ class acceptance:
 		self.qie = self.ts.qies.values()[0]
 		self.uhtr = self.ts.uhtrs.values()[0]
 		self.ngccm = self.ts.ngccms.values()[0]
+		self.amc13 = self.ts.amc13s.values()[0]
 		self.be_crate = self.uhtr.be_crate
 		self.be_slot = self.uhtr.be_slot
 		self.fe_crate = self.qie.fe_crate
@@ -178,6 +179,7 @@ class acceptance:
 				print "\t[OK] QIE card: FW = {0}".format(self.qie.fws)
 				print "\t[OK] uHTR: FW = {0}".format(self.uhtr.fws)
 				print "\t[OK] ngCCM: FW = {0}, ID = {1}".format(self.ngccm.fw, " ".join(self.ngccm.id))
+				print "\t[OK] AMC13: FW = {0}".format(self.amc13.fws)
 				print "Checking the unique ID ..."
 				if self.qie.check_unique_id():
 					print "\t[OK]"
