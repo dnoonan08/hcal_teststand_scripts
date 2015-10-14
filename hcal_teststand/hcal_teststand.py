@@ -2,7 +2,7 @@ from re import search, split
 from subprocess import Popen, PIPE
 import mch
 import amc13
-import glib
+import glib, fc7
 import uhtr
 import ngccm
 import ngfec
@@ -101,6 +101,16 @@ class teststand:
 							ip="192.168.1.{0}".format(160 + glib_slot),
 						))
 			
+			# FC7s:
+			self.fc7s = {}		# FC7 objects indexed by FEC number.
+			if hasattr(self, "fecs"):
+				for i in range(self.fecs):
+					n = i + 1
+					self.fc7s[n] = fc7.fc7(
+						ts=self,
+						n=n,
+					)
+			
 			# uHTRs:
 			self.uhtrs = {}
 			for be_crate, be_slots in self.be.iteritems():
@@ -161,6 +171,8 @@ class teststand:
 		results = []
 		for be_crate, amc13 in self.amc13s.iteritems():
 			results.append(amc13.update())
+		for n, fc7 in self.fc7s.iteritems():
+			results.append(fc7.update())
 		for crate_slot, uhtr in self.uhtrs.iteritems():
 			results.append(uhtr.update())
 		for crate, ngccm in self.ngccms.iteritems():

@@ -59,6 +59,7 @@ mch_ips = 192.168.1.51		# This is in Crate 50, I don't know what the MCH for Cra
 amc13_ips = 192.168.2.139, 192.168.2.138 # Crate 53, the IPs for Crate 50 are 192.168.2.137, 192.168.2.136
 qie_slots = 2
 control_hub = hcal904daq01
+fecs = 1
 
 %%
 

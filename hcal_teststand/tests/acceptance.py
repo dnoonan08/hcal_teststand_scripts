@@ -138,6 +138,10 @@ class acceptance:
 		self.uhtr = self.ts.uhtrs.values()[0]
 		self.ngccm = self.ts.ngccms.values()[0]
 		self.amc13 = self.ts.amc13s.values()[0]
+		if self.ts.fc7s:
+			self.fc7 = self.ts.fc7s.values()[0]
+		else:
+			self.fc7 = False
 		self.be_crate = self.uhtr.be_crate
 		self.be_slot = self.uhtr.be_slot
 		self.fe_crate = self.qie.fe_crate
@@ -183,7 +187,9 @@ class acceptance:
 				else:
 					ngccm_id = "?"
 				print "\t[OK] ngCCM: FW = {0}, ID = {1}".format(self.ngccm.fw, ngccm_id)
-				print "\t[OK] AMC13: FW = {0}".format(self.amc13.fw)
+				print "\t[OK] AMC13: FW = {0}, SW = {1}".format(self.amc13.fw, self.amc13.sw)
+				if self.fc7:
+					print "\t[OK] FC7: FW = {0} {1}".format(".".join(["{0:02d}".format(i) for i in self.fc7.fw[0]]), self.fc7.fw[1])
 				print "Checking the unique ID ..."
 				if self.qie.check_unique_id():
 					print "\t[OK]"
