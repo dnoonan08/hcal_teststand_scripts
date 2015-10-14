@@ -178,7 +178,11 @@ class acceptance:
 			if result:
 				print "\t[OK] QIE card: FW = {0}".format(self.qie.fws)
 				print "\t[OK] uHTR: FW = {0}".format(self.uhtr.fws)
-				print "\t[OK] ngCCM: FW = {0}, ID = {1}".format(self.ngccm.fw, " ".join(self.ngccm.id))
+				if isinstance(self.ngccm.id, list):
+					ngccm_id = " ".join(self.ngccm.id)
+				else:
+					ngccm_id = "?"
+				print "\t[OK] ngCCM: FW = {0}, ID = {1}".format(self.ngccm.fw, ngccm_id)
 				print "\t[OK] AMC13: FW = {0}".format(self.amc13.fws)
 				print "Checking the unique ID ..."
 				if self.qie.check_unique_id():

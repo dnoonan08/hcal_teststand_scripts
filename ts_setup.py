@@ -156,7 +156,7 @@ if __name__ == "__main__":
 	ts = teststand(name)
 	if v: ts.Print()
 	print "\nSetting up the {0} teststand ...".format(ts.name)
-
+	
 	# Set up the AMC13s:
 	print "(1) Setting up the AMC13s ..."
 	if check_status_amc13(ts=ts, v=v, fast=fast):
@@ -174,7 +174,7 @@ if __name__ == "__main__":
 		print "\t[!!] Statusing the AMC13s failed."
 		print "Aborting setup ..."
 		sys.exit()
-
+	
 	# Set up the FE backplanes:
 	print "(2) Setting up the FE backplanes ..."
 	setup_results = {}		# Dictionary comprehension was only implemented in Python 2.7 ...
@@ -207,7 +207,7 @@ if __name__ == "__main__":
 		print "\t[!!] Statusing the uHTRs failed."
 		print "Aborting setup ..."
 		sys.exit()
-
+	
 	# Set up the QIEs:
 	print "(4) Setting up the QIE cards ..."
 	setup_result = qie.setup(ts=ts, verbose=v)
@@ -224,7 +224,7 @@ if __name__ == "__main__":
 		sys.exit()
 	else:
 		print "\t[OK] All of the QIE cards appear to be functioning."
-
+	
 	# Conclusion:
 	print "[OK] Teststand set up successfully."
 # /MAIN
