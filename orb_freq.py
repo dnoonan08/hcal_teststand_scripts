@@ -10,4 +10,4 @@ time.sleep(10)
 outputf = ngfec.send_commands(ts, cmds = commands, script = False)
 print 'Orbit frequencies from various components:'
 for i, j in zip(outputi, outputf):
-	print '\t{0}: \t{1:.2f}Hz'.format(i['cmd'], (int(j['result'], 16)-int(i['result'], 16))/(j['times'][0]-i['times'][0]))
+	print '\t{0}: \t{1:.3f} kHz'.format(i['cmd'], (int(j['result'], 16)-int(i['result'], 16))/((j['times'][0]-i['times'][0])*1000.))
