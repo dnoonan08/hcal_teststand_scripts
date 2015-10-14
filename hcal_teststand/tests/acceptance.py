@@ -183,7 +183,7 @@ class acceptance:
 				else:
 					ngccm_id = "?"
 				print "\t[OK] ngCCM: FW = {0}, ID = {1}".format(self.ngccm.fw, ngccm_id)
-				print "\t[OK] AMC13: FW = {0}".format(self.amc13.fws)
+				print "\t[OK] AMC13: FW = {0}".format(self.amc13.fw)
 				print "Checking the unique ID ..."
 				if self.qie.check_unique_id():
 					print "\t[OK]"
