@@ -58,7 +58,7 @@ class uhtr:
 			self.fw_front = info["fw_front"]
 			self.fw_type_back = info["fw_type_back"]
 			self.fw_back = info["fw_back"]
-			self.fws = ["fws"]
+			self.fws = info["fws"]
 			return True
 		except Exception as ex:
 			print ex
