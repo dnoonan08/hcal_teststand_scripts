@@ -40,6 +40,7 @@ if __name__ == "__main__":
 	# Variables:
 	ts = at.ts
 	qid = at.qid
+	v = at.verbose
 	be_crate = at.be_crate
 	be_slot = at.be_slot
 	links = [l.n for l in at.links]
@@ -58,11 +59,9 @@ if __name__ == "__main__":
 	rmss = TH1F('rms','rms',24,0,6)
 	th1s={}
 	errlist=[]
-	
+	if v:
+		print "Performing a pedestal distribution test for each CID of each QIE chip ..."
 	for link  in links:
-		print "---------------------------"
-		print 'link:', link
-		print "---------------------------"
 		h = []
 		leg = TLegend(0.4773869,0.9405594,0.5552764,0.9755245)
 		leg.SetHeader("link{0}".format(link))
@@ -117,7 +116,9 @@ if __name__ == "__main__":
 					means_err.SetLineColor(kRed)
 					means_err.SetFillColor(kRed)
 					means_err.Fill(th1s[i_qie,i_cid].GetMean())
-					errlist.append([link, i_qie, i_cid, th1s[i_qie,i_cid].GetMean()])
+					errlist.append([link, ch, i_qie, i_cid, th1s[i_qie,i_cid].GetMean()])
+				if v:
+					print "\tLink {0}, Channel {1}, QIE {2}, Cap ID {3}: Mean {4}".format(link, ch, i_qie, i_cid, th1s[i_qie,i_cid].GetMean())
 
 	for key, plot in th1s.iteritems():
        		at.out.WriteTObject(plot)
@@ -170,5 +171,5 @@ if __name__ == "__main__":
 	else:
 		print "[!!] Errors:"
 		for err in errlist:
-			print "\t* Link:", err[0], "Channel:", err[1], "Cap ID:", err[2], "Mean:", err[3]
+			print "\t* Link {0}, Channel {1}, QIE {2}, Cap ID {3}: Mean {4}".format(err[0], err[1], err[2], err[3], err[4])
 	print "===========================================\n"
