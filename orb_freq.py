@@ -3,7 +3,11 @@ from hcal_teststand import ngfec
 from hcal_teststand.hcal_teststand import teststand
 ts = teststand("904at")
 
-commands = ['get HF1-2-iTop_RST_QIE_count', 'get HF1-2-iBot_RST_QIE_count', 'get HF1-2-B_RESQIECOUNTER', 'get HF1-5-iTop_RST_QIE_count', 'get HF1-5-iBot_RST_QIE_count', 'get HF1-5-B_RESQIECOUNTER', 'get HF2-2-iTop_RST_QIE_count', 'get HF2-2-iBot_RST_QIE_count', 'get HF2-2-B_RESQIECOUNTER', 'get fec1-qie_reset_cnt']
+commands = []
+crsl = {2: [2, 3, 4, 5, 6]}	# crate/slot dict. keys: crates, values: slots
+for crate, slots in crsl.iteritems():
+	for slot in slots:
+		commands.extend(['get HF{0}-{1}-iTop_RST_QIE_count'.format(crate, slot), 'get HF{0}-{1}-iBot_RST_QIE_count'.format(crate, slot), 'get HF{0}-{1}-B_RESQIECOUNTER'.format(crate, slot), 'get fec1-qie_reset_cnt'])
 
 outputi = ngfec.send_commands(ts, cmds = commands, script = False)
 time.sleep(10)
