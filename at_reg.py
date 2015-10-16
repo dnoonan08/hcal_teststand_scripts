@@ -117,7 +117,8 @@ def main():
 		errd.update({r.name: r.elist})
 		noerr.extend(r.elist)
 		tex.update(r.tex)
-	progress()
+	if v == 0:
+		progress()
 #	print tex
 
 
