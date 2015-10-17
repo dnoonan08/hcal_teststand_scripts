@@ -5,11 +5,72 @@
 # of the components in a teststand.                                #
 ####################################################################
 
+from optparse import OptionParser
 from hcal_teststand import *
 from hcal_teststand.hcal_teststand import *
 import sys
 
+
 # FUNCTIONS:
+def main():
+	# Arguments and variables:
+	parser = OptionParser()
+	parser.add_option("-t", "--teststand", dest="ts",
+		default="904",
+		help="The name of the teststand you want to use (default is \"904at\")",
+		metavar="STR"
+	)
+	(options, args) = parser.parse_args()
+	name = options.ts
+	ts = teststand(name)
+	
+	# Get information:
+	print "\nFinding the versions of the {0} teststand...".format(name)
+	result = ts.update()
+	if result:
+		# Print information:
+		print_versions(ts)
+	else:
+		print "\tERROR (versions): Couldn't update the teststand object."
+		print "\t[!!] Script aborted."
+#	print_amc13_info(ts)
+#	print_glib_info(ts)
+#	print_uhtr_info(ts)
+#	print_ngccm_info(ts)
+#	print_qie_info(ts)
+##	print_bridge_info(ts, 1, 2)
+##	print_igloo_info(ts, 1, 1)
+
+def print_versions(ts=None):
+	# AMC13s:
+	print "* AMC13s:"
+	for crate, amc13 in ts.amc13s.iteritems():
+		print "\t[OK] BE Crate {0}: FW = {1}, SW = {2}".format(crate, amc13.fw, amc13.sw)
+	
+	# FC7s:
+	print "* FC7s:"
+	for n, fc7 in ts.fc7s.iteritems():
+		print "\t[OK] FEC{0}: FW = {1} {2}".format(n, ".".join(["{0:02d}".format(i) for i in fc7.fw[0]]), fc7.fw[1])
+	
+	# ngCCMs:
+	print "* ngCCMs:"
+	for crate, ngccm in ts.ngccms.iteritems():
+		if isinstance(ngccm.id, list):
+			ngccm_id = " ".join(ngccm.id)
+		else:
+			ngccm_id = "?"
+		print "\t[OK] FE Crate {0}: FW = {1}, ID = {2}".format(crate, ngccm.fw, ngccm_id)
+	
+	# uHTRs:
+	print "* uHTRs:"
+	for crate_slot, uhtr in ts.uhtrs.iteritems():
+		print "\t[OK] BE Crate {0}, Slot {1}: FW = {2}".format(crate_slot[0], crate_slot[1], uhtr.fws)
+	
+	# QIEs:
+	print "* QIEs:"
+	for crate_slot, qie in ts.qies.iteritems():
+		print "\t[OK] FE Crate {0}, Slot {1}: FW = {2}, ID = {3}".format(crate_slot[0], crate_slot[1], qie.fws, qie.id)
+
 def print_amc13_info(ts):		# Fetches and prints AMC13 version information.
 	amc_info = amc13.get_info(ts=ts)
 	print "* AMC13  ================================="
@@ -105,20 +166,5 @@ def print_qie_info(ts):
 
 # MAIN:
 if __name__ == "__main__":
-	name = ""
-	if len(sys.argv) == 1:
-		name = "904"
-	elif len(sys.argv) == 2:
-		name = sys.argv[1]
-	else:
-		name = "904"
-	ts = teststand(name)
-	print "\n>> Finding the versions of the {0} teststand...".format(name)
-	print_amc13_info(ts)
-	print_glib_info(ts)
-	print_uhtr_info(ts)
-	print_ngccm_info(ts)
-	print_qie_info(ts)
-##	print_bridge_info(ts, 1, 2)
-##	print_igloo_info(ts, 1, 1)
+	main()
 # /MAIN
