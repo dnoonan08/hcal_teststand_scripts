@@ -4,6 +4,7 @@ from hcal_teststand.hcal_teststand import teststand
 import sys
 import random
 from ROOT import *
+from hcal_teststand.utilities import progress
 
 
 # FUNCTIONS:
@@ -23,6 +24,7 @@ def main():
 	# Prepare register list:
 	registers = []
 	## QIE registers:
+
 	for i_qie in range(1, 25):
 		registers.extend([
 			register(ts, "HF{0}-{1}-QIE{2}_Lvds".format(fe_crate, fe_slot, i_qie), 1),		# 1 bit
@@ -46,7 +48,7 @@ def main():
 			register(ts, "HF{0}-{1}-QIE{2}_TDCMode".format(fe_crate, fe_slot, i_qie), 1),		# 1 bit
 			register(ts, "HF{0}-{1}-Qie{2}_ck_ph".format(fe_crate, fe_slot, i_qie), 4),		# 4 bits
 		])
-	
+
 	## IGLOO2 registers:
 	registers.extend([
 		### Top:
@@ -66,7 +68,7 @@ def main():
 #		register(ts, "HF{0}-{1}-iTop_fifo_data_3".format(fe_crate, fe_slot), ?),	# Seems r/o
 		register(ts, "HF{0}-{1}-iTop_scratch".format(fe_crate, fe_slot), 32),			# 32 bits
 		register(ts, "HF{0}-{1}-iTop_UniqueID".format(fe_crate, fe_slot), 64),			# 64 bits
-		
+
 		### Bottom:
 		register(ts, "HF{0}-{1}-iBot_CntrReg_CImode".format(fe_crate, fe_slot), 1),		# 1 bit
 		register(ts, "HF{0}-{1}-iBot_CntrReg_InternalQIER".format(fe_crate, fe_slot), 1),	# 1 bit
@@ -105,12 +107,18 @@ def main():
 	tex = {}
 	errd = {}
 	noerr = []
+	if v == 0:
+		print "\nProgress:"
 	for r in registers:
+		if v == 0:
+			progress(registers.index(r), len(registers), r.name)
 		r.setVerbosity(v)		# 0: not verbose, 1: verbose, 2: extra verbose
 		r.testCache()
 		errd.update({r.name: r.elist})
 		noerr.extend(r.elist)
 		tex.update(r.tex)
+	if v == 0:
+		progress()
 #	print tex
 
 
@@ -256,18 +264,12 @@ def create_plots(at=None, names = None, dic = None, n = 1):
 		totals[i].GetXaxis().LabelsOption("vd")
 		errs[i].GetXaxis().LabelsOption("vd")
 		execs[i].GetXaxis().LabelsOption("vd")
-#		errs[i].Fill(random.randint(0, len(namespart)-1))
-#		execs[i].Fill(random.randint(0, len(namespart)-1))
-#		errs[i].Fill(0)
-#		execs[i].Fill(2)
-#		errs[i].Fill(len(namespart)-4)
-#		errs[i].Fill(len(namespart)-3)
-#		execs[i].Fill(len(namespart)-1)
 #		c1.cd(i+1)
 #		c1.SetTitle("")
 		at.canvas.cd(i + 1)
 #		gPad.SetBottomMargin(-10)
 		gPad.SetLogy(1)
+		totals[i].GetXaxis().SetLabelOffset(0.02)
 		totals[i].Write()
 		errs[i].Write()
 		execs[i].Write()

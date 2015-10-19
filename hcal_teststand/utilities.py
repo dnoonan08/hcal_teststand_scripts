@@ -13,7 +13,6 @@ class logger:		# Using http://stackoverflow.com/a/5916874 as a blueprint
 	def write(self, message=""):
 		self.terminal.write(message)
 		self.log.write(message)
-		return message
 
 # /CLASSES
 
@@ -43,4 +42,27 @@ def list_to_string(l=None, n=2):
 			return ""
 	else:
 		return ""
+
+def progress(i = 0, n = 0, name = None, k = 50): # i: iterator, k: total length of progress bar, n: total number of events
+	stdstore = sys.stdout
+	sys.stdout = sys.__stdout__
+	if i == n:
+		print " \t[" + "="*k + "]" + "\t{0:.2f}%".format(100)
+		print "\033[J\033[F"
+		sys.stdout = stdstore
+	else:
+		if i%4 == 0:
+			print " \t[" + "="*(i*k/n) + "-" + " "*(k-1-i*k/n) + "]" + "\t{0:.2f}%".format(100.*i/n)
+		if (i+1)%4 == 0:
+			print " \t[" + "="*(i*k/n) + "/" + " "*(k-1-i*k/n) + "]" + "\t{0:.2f}%".format(100.*i/n)
+		if (i+2)%4 == 0:
+			print " \t[" + "="*(i*k/n) + "|" + " "*(k-1-i*k/n) + "]" + "\t{0:.2f}%".format(100.*i/n)
+		if (i+3)%4 == 0:
+			print " \t[" + "="*(i*k/n) + "\\" + " "*(k-1-i*k/n) + "]" + "\t{0:.2f}%".format(100.*i/n)
+		print "\033[J",
+		sys.stdout = stdstore
+		print "\t\t" + str(name)
+		sys.stdout = sys.__stdout__
+		print "\033[F"*2,
+		sys.stdout = stdstore
 # /FUNCTIONS

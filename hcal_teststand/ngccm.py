@@ -18,9 +18,15 @@ import sys
 # CLASSES:
 class ngccm:
 	# Construction:
-	def __init__(self, ts=None, crate=None):
+	def __init__(self, ts=None, crate=None, fw=[], id=[]):
 		self.ts = ts
 		self.crate = crate
+		if not fw:
+			fw = []
+		self.fw = fw
+		if not id:
+			id = []
+		self.id = id
 	
 	# String behavior
 	def __str__(self):

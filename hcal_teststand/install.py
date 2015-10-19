@@ -24,6 +24,7 @@ def parse_ts_configuration(f="teststands.txt"):		# This function must be compati
 		"glib_slots": "iL",
 		"fe_crates": "il",
 		"qie_slots": "iL",
+		"fecs": "i",
 	}
 	teststand_info = {}
 	raw = ""

@@ -30,8 +30,20 @@ def main():
 	at.canvas.Divide(2, 1)
 	gStyle.SetOptStat(0)
 	
-	# (1) Verify link pattern test:
-	print "(1) Performing a link pattern test ..."
+	# (1) Read link error rates from the uHTR:
+	print "(1) Reading link error rates from the uHTR ..."
+	errdata = uhtr.parse_err(uhtr.get_raw_err(ts=ts, crate=at.be_crate, slot=at.be_slot))
+#	print errdata
+#	print '\n >> bad data test:'
+	for i_link, value in errdata.iteritems():
+#		print 'Link {0}: BadDataRate {1}'.format(i_link, value)
+		th1s["uhtr"].Fill(i_link%6, 1)
+		th1s["uhtr_error"].Fill(i_link%6, value)
+#	print "==========================================="
+	# /(1)
+
+	# (2) Verify link pattern test:
+	print "(2) Performing a link pattern test ..."
 	# Get the teststand ready:
 	mode_result = ts.set_mode(mode=1)		# Turn on link pattern test mode.
 	if not mode_result:
@@ -75,19 +87,8 @@ def main():
 	th1s["link"].Scale(1/float(n_reads))
 	th1s["link_pattern"].Scale(1/float(n_reads))
 	th1s["link_counter"].Scale(1/float(n_reads))
-	# /(1)
-	
-	# (2) Read link error rates from the uHTR:
-	print "(2) Reading link error rates from the uHTR ..."
-	errdata = uhtr.parse_err(uhtr.get_raw_err(ts=ts, crate=at.be_crate, slot=at.be_slot))
-#	print errdata
-#	print '\n >> bad data test:'
-	for i_link, value in errdata.iteritems():
-#		print 'Link {0}: BadDataRate {1}'.format(i_link, value)
-		th1s["uhtr"].Fill(i_link%6, 1)
-		th1s["uhtr_error"].Fill(i_link%6, value)
-#	print "==========================================="
 	# /(2)
+	
 	
 	# Write output:
 	## Write to the output ROOT file:
@@ -95,7 +96,7 @@ def main():
 		histogram.Write()
 	
 	## Save the plots:
-	### (1):
+	### (2):
 	at.canvas.cd(1)
 	th1s["link"].Draw()
 	th1s["link_pattern"].Draw("same")
@@ -105,7 +106,7 @@ def main():
 	th1s["link"].SetMaximum(1.0)
 	th1s["link"].SetMinimum(1e-12)
 	
-	### (2):
+	### (1):
 	at.canvas.cd(2)
 	th1s["uhtr"].Draw()
 	th1s["uhtr_error"].Draw("same")
@@ -122,23 +123,23 @@ def main():
 	print "Teststand: {0}".format(ts.name)
 	print "QIE card: {0} (crate {1}, slot {2})".format(qid, at.fe_crate, at.fe_slot)
 	print ""
-	print '(1) Link pattern test:'
-	print "BXs read out: {0}".format(100*n_reads)
-	if len(error_record.keys()) > 0:
-#		print error_record
-		print "[!!] Errors:"
-		for i_link, errors in error_record.iteritems():
-			print "\t* Link {0}: error rate = {1}".format(i_link, list_to_string([e/float(100*n_reads) for e in errors]))
-	else:
-		print "[OK] There were no errors!"
-	print ""
-	print '(2) uHTR link test:'
+	print '(1) uHTR link test:'
 	print "BXs read out: {0}".format(100*n_reads)
 	if sum(errdata.values()) > 0:
 		print "[!!] Errors:"
 		for i_link, errors in errdata.iteritems():
 			if errors > 0:
 				print "\t* Link {0}: error rate = {1}".format(i_link, errors)
+	else:
+		print "[OK] There were no errors!"
+	print ""
+	print '(2) Link pattern test:'
+	print "BXs read out: {0}".format(100*n_reads)
+	if len(error_record.keys()) > 0:
+#		print error_record
+		print "[!!] Errors:"
+		for i_link, errors in error_record.iteritems():
+			print "\t* Link {0}: error rate = {1}".format(i_link, list_to_string([e/float(100*n_reads) for e in errors]))
 	else:
 		print "[OK] There were no errors!"
 	print "==========================================="

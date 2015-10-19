@@ -23,7 +23,7 @@ class amc13:
 		self.sn = sn		# This isn't entirely implemented. Until commandline control hub address specification is added, I can rely on the ordering of the IP addresses for finding the SN when I do "fv" (i_sn).
 		self.fw_t1 = fw_t1
 		self.fw_t2 = fw_t2
-		self.fws = self.fw = [self.fw_t1, self.fw_t2]
+		self.fw = [self.fw_t1, self.fw_t2]
 		self.sw = sw
 		self.config = config
 	

@@ -139,10 +139,18 @@ if __name__ == "__main__":
 		help="Turn on fast mode (default is off)",
 		metavar="BOOL"
 	)
+	parser.add_option("-d", "--uhtrdelay", dest="delay",
+		default=3501,
+		type = int,
+		help="Turn on uhtrdelay mode (default is 3501)",
+		metavar="BOOL"
+	)
+
 	(options, args) = parser.parse_args()
 	name = options.ts
 	v = options.verbose
 	fast = options.fast
+	delay = options.delay
 	
 	# Set up teststand:
 	ts = teststand(name)
@@ -184,7 +192,7 @@ if __name__ == "__main__":
 	
 	# Set up the uHTRs:
 	print "(3) Setting up the uHTRs ..."
-	setup_results = uhtr.setup(ts=ts)
+	setup_results = uhtr.setup(ts=ts, orbit_delay=delay)
 	for crate_slot, setup_result in setup_results.iteritems():
 		be_crate, be_slot = crate_slot
 		if not setup_result:
