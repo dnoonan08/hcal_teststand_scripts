@@ -70,18 +70,12 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 		nslot=nslots[n]
 		if scale == 0:
 			cmds.extend( [
-				"get fec1-LHC_clk_freq",		# Check that this is > 400776 and < 400788.
 				"get HF{0}-mezz_ONES".format(crate),		# Check that this is all 1s.
 				"get HF{0}-mezz_ZEROES".format(crate),		# Check that is is all 0s.
 				"get HF{0}-bkp_pwr_bad".format(crate),
-				"get fec1-qie_reset_cnt",
 				"get HF{0}-mezz_TMR_ERROR_COUNT".format(crate),
 				"get HF{0}-mezz_FPGA_MAJOR_VERSION".format(crate),
 				"get HF{0}-mezz_FPGA_MINOR_VERSION".format(crate),
-				"get fec1-firmware_dd",
-				"get fec1-firmware_mm",
-				"get fec1-firmware_yy",
-				"get fec1-sfp1_status.RxLOS",
 				"get HF{0}-ngccm_rev_ids".format(crate),
 				])
 			
@@ -101,6 +95,15 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 				cmds.extend(ngccm.get_commands(crate,i))
 	cmds.extend(["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(6)])
 	cmds.extend(["get fec2-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(2)])
+	if scale == 0:
+		cmds.extend([
+				"get fec1-LHC_clk_freq",		# Check that this is > 400776 and < 400788.
+				"get fec1-qie_reset_cnt",
+				"get fec1-firmware_dd",
+				"get fec1-firmware_mm",
+				"get fec1-firmware_yy",
+				"get fec1-sfp1_status.RxLOS",
+				])
 	output = ngfec.send_commands(ts=ts, cmds=cmds)
 	for result in output:
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
