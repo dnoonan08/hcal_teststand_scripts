@@ -1008,7 +1008,7 @@ def set_cal_mode_all(ts, crate, slot, enable=False):
 	return raw_output
 ## /
 
-def set_tdc_threshold(ts=False, crate=None, slot=None, i_qie=None, threshold=0, control_hub=None, port=ngfec.port_default, script=True, verbose=False):
+def set_tdc_threshold(ts=False, crate=None, slot=None, i_qie=None, threshold=0, control_hub=None, port=ngfec.port_default, script=False, verbose=False):
 	# Parse "crate" and "slot":
 	fe = meta.parse_args_crate_slot(ts=ts, crate=crate, slot=slot)
 	if fe:
