@@ -35,27 +35,15 @@ qie_slots = 1
 %%
 
 name = 904
-<<<<<<< HEAD
 fe_crates = 1, 2, 3, 4, 5, 6, 7, 8
 be_crates = 53
 ngfec_port = 4342
 uhtr_slots = 1
-=======
-fe_crates = 2
-be_crates = 53
-ngfec_port = 4342
-uhtr_slots = 2
->>>>>>> 6755266bda6c88597964f8d849476715717e1e36
 uhtr_settings = 1, 55		# This isn't implemented, yet!
 glib_slots = 10
 mch_ips = 192.168.1.28, 192.168.1.28		# This is in Crate 50, I don't know what the MCH for Crate 53 is
-<<<<<<< HEAD
 amc13_ips = 192.168.2.139, 192.168.2.138; 192.168.2.137, 192.168.2.136 # Crate 53, the IPs for Crate 50 are 192.168.2.137, 192.168.2.136
 qie_slots = ; 2;;;;;;
-=======
-amc13_ips = 192.168.2.139, 192.168.2.138		# Crate 53, the IPs for Crate 50 are 192.168.2.137, 192.168.2.136
-qie_slots = 12
->>>>>>> 6755266bda6c88597964f8d849476715717e1e36
 control_hub = hcal904daq01
 fecs = 1
 
