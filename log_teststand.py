@@ -104,6 +104,7 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 				"get fec1-firmware_yy",
 				"get fec1-sfp1_status.RxLOS",
 				])
+	cmds=list(set(cmds))
 	output = ngfec.send_commands(ts=ts, cmds=cmds)
 	for result in output:
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
