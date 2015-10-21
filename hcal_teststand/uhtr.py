@@ -70,7 +70,7 @@ class uhtr:
 	def send_commands(self, cmds=cmds_default, script=False):
 		return send_commands(control_hub=self.control_hub, ip=self.ip, cmds=cmds, script=script)
 	
-	def setup(self, orbit_delay=3500):
+	def setup(self, orbit_delay=3502):
 		return setup(ip=self.ip, control_hub=self.control_hub, orbit_delay=orbit_delay)
 	# /Methods
 
@@ -553,7 +553,7 @@ def get_links_from_map(ts=None, crate=None, slot=None, end="be", i_link=None, f=
 							qies=[i["qie_n"] for i in qies]
 						))
 					elif len(qies) > 1:
-						print "ERROR (get_link_from_map): More than one QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(be_crate, be_slot, i_link)
+						print "ERROR (get_link_from_map): More than one QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(crate, slot, i_link)
 						return False
 #					else:
 #						print "WARNING (get_link_from_map): No QIE in the map matches your criterion of crate = {0}, slot = {1}, and i_link = {2}.".format(crate, slot, i_link)

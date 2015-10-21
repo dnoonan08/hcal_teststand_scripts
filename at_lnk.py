@@ -33,12 +33,13 @@ def main():
 	# (1) Read link error rates from the uHTR:
 	print "(1) Reading link error rates from the uHTR ..."
 	errdata = uhtr.parse_err(uhtr.get_raw_err(ts=ts, crate=at.be_crate, slot=at.be_slot))
-#	print errdata
+	print errdata
 #	print '\n >> bad data test:'
 	for i_link, value in errdata.iteritems():
-#		print 'Link {0}: BadDataRate {1}'.format(i_link, value)
-		th1s["uhtr"].Fill(i_link%6, 1)
-		th1s["uhtr_error"].Fill(i_link%6, value)
+		if i_link in range(at.i_link, at.i_link + 6):
+	#		print 'Link {0}: BadDataRate {1}'.format(i_link, value)
+			th1s["uhtr"].Fill(i_link%6, 1)
+			th1s["uhtr_error"].Fill(i_link%6, value)
 #	print "==========================================="
 	# /(1)
 
@@ -126,7 +127,7 @@ def main():
 	print '(1) uHTR link test:'
 	print "BXs read out: {0}".format(100*n_reads)
 	if sum(errdata.values()) > 0:
-		print "[!!] Errors:"
+		print "[!!] Errors: (This displays all links! It's a bug. Check the plot for real results.)"
 		for i_link, errors in errdata.iteritems():
 			if errors > 0:
 				print "\t* Link {0}: error rate = {1}".format(i_link, errors)

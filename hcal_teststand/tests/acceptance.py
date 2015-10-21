@@ -112,6 +112,14 @@ class acceptance:
 		
 		## Output location:
 		self.time_string = time_string()[:-4]
+		self.path = "/nfshome0/elhughes/public/data/at_results/{0}".format(self.qid.replace(" ", "_"))
+		if not os.path.exists(self.path):
+			os.makedirs(self.path)
+			os.chmod(self.path, 0777)
+		self.path = "/nfshome0/elhughes/public/data/at_results/{0}/at_{1}".format(self.qid.replace(" ", "_"), self.name)
+		if not os.path.exists(self.path):
+			os.makedirs(self.path)
+			os.chmod(self.path, 0777)
 		self.path = "/nfshome0/elhughes/public/data/at_results/{0}/at_{1}/{2}".format(self.qid.replace(" ", "_"), self.name, self.time_string)
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)		# Sometimes the "umask" prevents setting the permissions here, so I do it on the next line.

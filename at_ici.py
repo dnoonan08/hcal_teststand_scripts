@@ -21,7 +21,7 @@ import numpy
 def main():
 	# Make an acceptance test object:
 	at = tests.acceptance(name="ici")		# Create an acceptance test.
-	at.start(False)		# Start the acceptance test by printing some basic things.
+	at.start()		# Start the acceptance test by printing some basic things.
 	
 	# Variables and simple set up:
 	v = at.verbose
@@ -37,7 +37,7 @@ def main():
 	# Set up:
 	print "Setting CI mode and TDC threshold ..."
 	ci_result = ts.set_ci(enable=True, script=False)		# Turn on internal charge-injection mode.
-	threshold_result = ts.set_tdc_threshold(threshold=1, script=True, verbose=False)		# Set the TDC threshold to its lowest value.
+	threshold_result = ts.set_tdc_threshold(threshold=1, script=False, verbose=False)		# Set the TDC threshold to its lowest value.
 	
 	# Do the test:
 	if ci_result:
