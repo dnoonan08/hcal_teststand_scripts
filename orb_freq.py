@@ -7,10 +7,11 @@ commands = []			# List of commands to be sent to ngFEC tool
 crsl = {}			# Crate/Slot dict. keys: crates, values: slots
 
 crates = [2, 3, 4, 5]		# Crates to be used
+#crates = range(1, 7)		# ALL CRATES!!
 FC7s = [1, 2]			# FC7s to be used
 
 for crate in crates:
-	crsl.update({crate: range(1, 14)})
+	crsl.update({crate: range(1, 15)})
 for crate, slots in crsl.iteritems():
 	for slot in slots:
 		commands.extend(['get HF{0}-{1}-iTop_RST_QIE_count'.format(crate, slot), 'get HF{0}-{1}-iBot_RST_QIE_count'.format(crate, slot), 'get HF{0}-{1}-B_RESQIECOUNTER'.format(crate, slot)])
