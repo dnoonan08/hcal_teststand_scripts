@@ -39,12 +39,8 @@ def main():
 	for c in commands:
 		errint.update({c: 0})
 	outputi = ngfec.send_commands(ts=ts, cmds=commands)
-#	print outputi
 	times.append([sum(out["times"])/len(out["times"]) for out in outputi])
-#	print times
-
 	print "\nThe PRBS error counters(Now):"
-#	counters = [int(i["result"], 16) for i in outputi]
 	for result in outputi:
 		print "\t{0} -> {1}".format(result["cmd"], int(result["result"], 16))
 
@@ -66,7 +62,7 @@ def main():
 
 		times.append([sum(out["times"])/len(out["times"]) for out in outputf])
 		print "\nThe PRBS error counters(+{0:.3f}s):".format((sum(times[j+1])-sum(times[0]))/len(times[0]))
-#		counters = [int(i["result"], 16) for i in outputf]
+
 		for result in outputf:
 			print "\t{0} -> {1}".format(result["cmd"], int(result["result"], 16))
 
