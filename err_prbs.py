@@ -24,11 +24,18 @@ def main():
 	errint = {}
 	times = []
 	sfp = int(raw_input("Pick the FC7 slot number to be tested (0 for all slots): "))
-
-	if sfp:
-		commands = ["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(sfp)]
+	d = bool(raw_input("Choose the error counter (0: FC7, 1: ngCCM): "))
+	
+	if d:
+		if sfp:
+			commands = ["get HF{0}-mezz_ERROR_COUNT".format(sfp)]
+		else:
+			commands = ["get HF{0}-mezz_ERROR_COUNT".format(i) for i in range(1, 7)]
 	else:
-		commands = ["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(i) for i in range(1, 7)]
+		if sfp:
+			commands = ["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(sfp)]
+		else:
+			commands = ["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(i) for i in range(1, 7)]
 	for c in commands:
 		errint.update({c: 0})
 	outputi = ngfec.send_commands(ts=ts, cmds=commands)
@@ -44,10 +51,17 @@ def main():
 	for j in range(k):
 
 		sleep(t)
-		if sfp:
-			commands = ["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(sfp)]
+
+		if d:
+			if sfp:
+				commands = ["get HF{0}-mezz_ERROR_COUNT".format(sfp)]
+			else:
+				commands = ["get HF{0}-mezz_ERROR_COUNT".format(i) for i in range(1, 7)]
 		else:
-			commands = ["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(i) for i in range(1, 7)]
+			if sfp:
+				commands = ["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(sfp)]
+			else:
+				commands = ["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(i) for i in range(1, 7)]
 		outputf = ngfec.send_commands(ts=ts, cmds=commands)
 
 		times.append([sum(out["times"])/len(out["times"]) for out in outputf])
@@ -68,7 +82,13 @@ def main():
 	if log:
 		sno = raw_input("Enter the S/N of the ngCCM: ")
 		att = raw_input("Enter the attenuation value (dB): ")
-		f = open("prbs_log_{0}.csv".format(sno), "a")
+		if d:
+			f = open("prbs_log_ngccm_{0}.csv".format(sno), "a")
+		elif de == 0 and "ERROR" in ngfec.send_commands(ts=ts, cmds=["get HF{0}-mezz_ERROR_COUNT".format(sfp)])[0]["result"]:
+			de = -dt
+			f = open("prbs_log_fc7_{0}.csv".format(sno), "a")
+		else:
+			f = open("prbs_log_fc7_{0}.csv".format(sno), "a")
 		sys.stdout = f
 		print sno + ", " + att + ", " + "{0}, {1}".format(de/float(dt), dt)
 		sys.stdout = sys.__stdout__
