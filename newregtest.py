@@ -181,18 +181,17 @@ def main():
 		for name in names:
 			for error in errdic[name][0]:
 				if (error[0] != error[1] and not 'ERROR' in error[1]):
-					print '\t*Register:' + name + ': \tData: 0x' + error[0].replace(' ', ' 0x') + ' != 0x' + error[1].replace(' ', ' 0x')
+					print '\t*Register: ' + name + ' -> Data: 0x' + error[0].replace(' ', ' 0x') + ' != 0x' + error[1].replace(' ', ' 0x')
 	
 		print '\nExecution errors:'
 		for name in names:
 			for error in errdic[name][0]:
 				if 'ERROR' in error[1]:
-					print '\t* ' + error[0] + ' -> ' + error[1]
+					print '\t*Command: ' + error[0] + ' -> Result: ' + error[1]
 	print "\n===========================================\n"
 
 #---------------Create histogram-----------------------
 	create_plots(at, names, errdic, 8)
-
 
 	if v:
 		for put, get in zip(output[::2], output[1::2]):
