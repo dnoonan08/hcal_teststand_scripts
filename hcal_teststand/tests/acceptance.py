@@ -178,6 +178,12 @@ class acceptance:
 	def log(self, s="[empty line]"):
 		sys.stdout.log.write("{0}\n".format(s))
 		return s
+
+	def silentlog(self, s=""):
+		sys.stdout = open("/dev/null", "a")
+		k = open("{0}/{1}.txt".format(self.path, self.file_name), "a")
+		k.write(s)
+		sys.stdout = sys.__stdout__
 	
 	def start(self, update=True):
 		print "\nRunning the {0} acceptance test ...".format(self.name)
