@@ -1,12 +1,14 @@
 #!/bin/bash
-#processes="$(ps o pid=,cmd= -C ngccm)"
 pids="$(pgrep -u `whoami` ngccm)"
 for pid in $pids
 do
 t="$(ps -p $pid -o etime=)"
-t="$(echo $t | awk -F: '{ print ($1 * 60) + $2 }')"
+t="$(echo $t | tr '-' ':' | awk -F: '{ total=0; m=1; } { for (i=0; i < NF; i++) {total += $(NF-i)*m; m *= i >= 2 ? 24 : 60 }} {print total}')"
 if [ "$t" -gt 3600 ]
 then
 kill -9 $pid &> /dev/null
+#echo $pid: $t '->' Kill
+#else
+#echo $pid: $t '->' Mercy
 fi
 done
