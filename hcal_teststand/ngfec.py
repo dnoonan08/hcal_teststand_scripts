@@ -6,10 +6,13 @@
 
 # IMPORTS:
 from re import search, escape
+import os
+import subprocess
 import pexpect
 from time import time, sleep
 ## hcal_teststand_scripts imports:
 import meta
+from utilities import progress
 # /IMPORTS
 
 # VARIABLES:
@@ -21,7 +24,7 @@ port_default = 4342
 # /CLASSES
 
 # FUNCTIONS:
-def send_commands(ts=None, control_hub=None, port=port_default, cmds=cmds_default, script=False, raw=False):
+def send_commands(ts=None, control_hub=None, port=port_default, cmds=cmds_default, script=False, raw=False, progbar=False):
 	# Arguments and variables
 	output = []
 	raw_output = ""
@@ -59,6 +62,8 @@ def send_commands(ts=None, control_hub=None, port=port_default, cmds=cmds_defaul
 #				print c
 				p.sendline(c)
 				if c != "quit":
+					if progbar:
+						progress(i, len(cmds), cmds[i].split()[1])
 					t0 = time()
 					p.expect("{0}\s?#((\s|E)[^\r^\n]*)".format(escape(c)))
 					t1 = time()
@@ -82,6 +87,8 @@ def send_commands(ts=None, control_hub=None, port=port_default, cmds=cmds_defaul
 #				print i, c, timeout
 				
 				# Send commands:
+				if progbar:
+					progress(i, len(cmds), cmds[i].split()[1])
 				t0 = time()
 				p.expect("{0}\s?#((\s|E)[^\r^\n]*)".format(escape(c)), timeout=timeout)
 				t1 = time()
@@ -93,6 +100,8 @@ def send_commands(ts=None, control_hub=None, port=port_default, cmds=cmds_defaul
 				})
 				raw_output += p.before + p.after
 			p.sendline("quit")
+		if progbar:
+			progress()
 		p.expect(pexpect.EOF)
 		raw_output += p.before
 #		sleep(1)		# I need to make sure the ngccm process is killed.
@@ -105,8 +114,9 @@ def send_commands(ts=None, control_hub=None, port=port_default, cmds=cmds_defaul
 			return output
 
 def killall():
-	p = pexpect.spawn('killall ngccm')		# Run script.
-	p.expect(pexpect.EOF)		# Wait for the script to finish.
-	raw_output = p.before.strip()		# Collect all of the script's output.
-	return raw_output
+	process = subprocess.call(['./killccm.sh'])
+#	p = pexpect.spawn('killall ngccm')		# Run script.
+#	p.expect(pexpect.EOF)		# Wait for the script to finish.
+#	raw_output = p.before.strip()		# Collect all of the script's output.
+	return 0
 # /FUNCTIONS
