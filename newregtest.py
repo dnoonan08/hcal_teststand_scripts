@@ -24,17 +24,14 @@ numdic = {}
 errdic = {}
 
 def rand(size = 1):
-
-	output = ""
+	output = ''
 
 	if size % 32:
-		output += hex(randint(0, 2**(size % 32-1))) + " "
-
+		output += hex(randint(0, 2**(size % 32-1))) + ' '
 	for i in range(int(size/32)):
-		output += hex(randint(0, 2**32-1)) + " "
-	output.strip(' ')
+		output += hex(randint(0, 2**32-1)) + ' '
 
-	return output
+	return output[:-1]
 
 def register(name = None, size = 1, n = 5):
 	cmds = []
@@ -72,7 +69,7 @@ def create_plots(at = None, names = None, dic = None, k = 1):
 		xhist[i].GetXaxis().LabelsOption("vd")
 		at.canvas.cd(i + 1)
 #		gPad.SetBottomMargin(-10)
-		gPad.SetLogy(1)
+#		gPad.SetLogy(1)
 		tothist[i].GetXaxis().SetLabelOffset(0.02)
 		tothist[i].Write()
 		rwhist[i].Write()
@@ -80,6 +77,10 @@ def create_plots(at = None, names = None, dic = None, k = 1):
 		stacks[i].Add(rwhist[i])
 		stacks[i].Add(xhist[i])
 		stacks[i].Write()
+		tothist[i].SetMaximum(1.15*n)
+		tothist[i].SetMinimum(0)
+		stacks[i].SetMaximum(1.15*n)
+		stacks[i].SetMinimum(0)
 		tothist[i].Draw()
 		stacks[i].Draw("SAME")
 	at.write()
@@ -161,10 +162,10 @@ def main():
 		elif ' '.join(put['cmd'].split()[2:]).replace('0x', '') != get['result'].replace('0x', ''):
 			rwerr += 1
 			errlist.append([' '.join(put['cmd'].split()[2:]).replace('0x', ''), get['result'].replace('0x', '')])
-                if 'ERROR' in put['result']:
-                        errlist.append([put['cmd'], put['result']])
-                if 'ERROR' in get['result']:
-                        errlist.append([get['cmd'], get['result']])
+		if 'ERROR' in put['result']:
+			errlist.append([put['cmd'], put['result']])
+		if 'ERROR' in get['result']:
+			errlist.append([get['cmd'], get['result']])
 		if not (i+1) % n:
 			errdic.update({get['cmd'][4:]: [errlist, [totaltests, rwerr, xerr]]})
 			errlist = []
@@ -182,7 +183,7 @@ def main():
 			for error in errdic[name][0]:
 				if (error[0] != error[1] and not 'ERROR' in error[1]):
 					print '\t*Register: ' + name + ' -> Data: 0x' + error[0].replace(' ', ' 0x') + ' != 0x' + error[1].replace(' ', ' 0x')
-	
+
 		print '\nExecution errors:'
 		for name in names:
 			for error in errdic[name][0]:
@@ -196,9 +197,9 @@ def main():
 	if v:
 		for put, get in zip(output[::2], output[1::2]):
 			if ' '.join(put['cmd'].split()[2:]).replace('0x', '') == get['result'].replace('0x', ''):
-				at.silentlog('[OK] :: {0}: {1} == {2}: {3}\n'.format(put['cmd'].split()[1], ' '.join(put['cmd'].split()[2:]).replace('0x', ''), get['cmd'].split()[1], get['result'].replace('0x', '')))
+				at.silentlog('[OK] :: {0} -> {1} == {2} -> {3}\n'.format(put['cmd'], put['result'].replace('0x', ''), get['cmd'], get['result'].replace('0x', '')))
 			else:
-				at.silentlog('[!!] :: {0}: {1} != {2}: {3}\n'.format(put['cmd'].split()[1], ' '.join(put['cmd'].split()[2:]).replace('0x', ''), get['cmd'].split()[1], get['result'].replace('0x', '')))
+				at.silentlog('[!!] :: {0} -> {1} != {2} -> {3}\n'.format(put['cmd'], put['result'].replace('0x', ''), get['cmd'], get['result'].replace('0x', '')))
 		print '\nPrinting raw comparisons into file: [OK]'
 	else:
 		print

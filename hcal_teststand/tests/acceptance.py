@@ -1,8 +1,8 @@
-####################################################################
-# Type: MODULE                                                     #
-#                                                                  #
-# Description: [description]                                       #
-####################################################################
+#####################################################################
+# Type: MODULE                                                      #
+#                                                                   #
+# Description: [description]                                        #
+#####################################################################
 
 # IMPORTS:
 import sys
@@ -185,7 +185,7 @@ class acceptance:
 		k.write(s)
 		sys.stdout = sys.__stdout__
 	
-	def start(self, update=True):
+	def start(self, update=True, nouid=False):
 		print "\nRunning the {0} acceptance test ...".format(self.name)
 		print "\tQIE card: ID = {0} (FE Crate {1}, Slot {2})".format(self.qid, self.fe_crate, self.fe_slot)
 		print "\tuHTR: Links = {0} (BE Crate {1}, Slot {2})".format([l.n for l in self.links], self.be_crate, self.be_slot)
