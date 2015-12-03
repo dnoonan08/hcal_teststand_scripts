@@ -76,7 +76,7 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 				"get HF{0}-mezz_TMR_ERROR_COUNT".format(crate),
 				"get HF{0}-mezz_FPGA_MAJOR_VERSION".format(crate),
 				"get HF{0}-mezz_FPGA_MINOR_VERSION".format(crate),
-				"get HF{0}-ngccm_rev_ids".format(crate),
+#				"get HF{0}-ngccm_rev_ids".format(crate),
 				])
 			
 			for i in nslot:
@@ -86,15 +86,15 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 				cmds.append("get HF{0}-{1}-iTop_RST_QIE_count".format(crate,i))
 				cmds.append("get HF{0}-{1}-iBot_RST_QIE_count".format(crate,i))
 				cmds.append("get HF{0}-{1}-iBot_RST_QIE_count".format(crate,i))
-				cmds.append("get HF{0}-{1}-iTop_LinkTestMode".format(crate,i))
-				cmds.append("get HF{0}-{1}-iBot_LinkTestMode".format(crate,i))
-				cmds.append("get HF{0}-{1}-iTop_CntrReg_CImode".format(crate,i))
-				cmds.append("get HF{0}-{1}-iBot_CntrReg_CImode".format(crate,i))
+#				cmds.append("get HF{0}-{1}-iTop_LinkTestMode".format(crate,i))
+#				cmds.append("get HF{0}-{1}-iBot_LinkTestMode".format(crate,i))
+#				cmds.append("get HF{0}-{1}-iTop_CntrReg_CImode".format(crate,i))
+#				cmds.append("get HF{0}-{1}-iBot_CntrReg_CImode".format(crate,i))
 		elif scale == 1:
 			for i in nslot:
 				cmds.extend(ngccm.get_commands(crate,i))
-	cmds.extend(["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(6)])
-	cmds.extend(["get fec2-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(2)])
+#	cmds.extend(["get fec1-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(6)])
+#	cmds.extend(["get fec2-sfp{0}_prbs_rx_pattern_error_cnt".format(m+1) for m in range(2)])
 	if scale == 0:
 		cmds.extend([
 				"get fec1-LHC_clk_freq",		# Check that this is > 400776 and < 400788.
@@ -104,7 +104,7 @@ def log_registers(ts=False, scale=0):		# Scale 0 is the sparse set of registers,
 				"get fec1-firmware_yy",
 				"get fec1-sfp1_status.RxLOS",
 				])
-	cmds=list(set(cmds))
+#	cmds=list(set(cmds))
 	output = ngfec.send_commands(ts=ts, cmds=cmds)
 	for result in output:
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
@@ -115,6 +115,7 @@ def list2f(List):
 	
 def log_links(ts, scale=0):
 	log = "%% LINKS\n"
+	if ts.be_crates==[0]:	return log
 	link_results = uhtr.get_info_links(ts)
 	for cs in link_results.keys():
 		active_links = [i for i, active in enumerate(link_results[cs]["active"]) if active]
