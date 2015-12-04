@@ -224,8 +224,10 @@ def record(ts=False,c=False,path="data/unsorted", scale=0):
 	# Time:
 	t1 = time_string()
 	log = "%% TIMES\n{0}\n{1}\n\n".format(t0, t1) + log
-	if not [line for line in log.split('\n') if '->' in line and not 'ERROR!!' in line]:
-		os.system("ssh cms904usr echo logger on hcal904daq01 cannot read registers\|mail -s 'logger information' yw5mj@virginia.edu joseph.mariano@cern.ch")
+	isreg=[line for line in log.split('\n') if '->' in line]
+	badrate=len([line for line in isreg if 'ERROR!!' in line])*100/len(isreg)
+	if badrate>50:
+		os.system("ssh cms904usr echo \'logger on hcal904daq01 cannot read registers, bad register rate: {0}% in log file: {1}.log \'\|mail -s 'logger_information' yw5mj@virginia.edu joseph.mariano@cern.ch".format(badrate,t_string))
 	# Write log:
 	path += "/{0}".format(t_string[:-7])
 	scale_string = ""
