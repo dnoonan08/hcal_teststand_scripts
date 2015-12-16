@@ -68,6 +68,29 @@ def log_power(ts,c=False):
 			if c: c.execute("INSERT INTO power VALUES ('{0}','{1}',{2})".format(tm,result['cmd'][4:],result['result'] if 'ERROR!' not in result['result'] else -1))
 	return log
 
+def log_link(ts):
+	log = "%% LINK\n"
+	err=''
+	css=[]
+	for c in range(len(ts.be_crates)): css.extend([(ts.be_crates[c],s) for s in ts.uhtr_slots[c]])
+	for cs in css:
+		raw=uhtr.get_raw_status(ts,cs[0],cs[1]).values()[0].split('\n')
+		links=[]
+		baddata=[]
+		rollc=[]
+		for l in raw:
+			if 'BadCounter' in l: links.extend(l.split('BadCounter')[-1].split())
+			if 'Bad Data' in l: baddata.extend(l.split('Bad Data')[-1].split())
+			if 'Rollover Count' in l: rollc.extend(l.split('Rollover Count')[-1].split())
+		if links != ['ON']*24: err+='link status: {0} for BE{1}\n'.format(links,cs)
+#		if baddata != ['0']*24: err+='Bad data: {0} for BE{1}\n'.format(baddata,cs)
+		log+='link status: {0} for BE{1}\n'.format(links,cs)
+		log+='Bad data: {0} for BE{1}\n'.format(baddata,cs)
+		log+='Rollover Count: {0} for BE{1}\n'.format(rollc,cs)
+	if err: os.system("ssh cms904usr mail -s 'logger_information' yw5mj@virginia.edu joseph.mariano@cern.ch whitbeck.andrew@gmail.com<<EOF\n{0}\nEOF".format(err))
+	return log
+		
+		
 def bkp_reset(ts):
 	cmds=[]
 	crates=ts.fe_crates
@@ -160,7 +183,8 @@ def log_registers(ts,c=False, scale=0):		# Scale 0 is the sparse set of register
 				"get HF{0}-mezz_TMR_ERROR_COUNT".format(crate),
 				"get HF{0}-mezz_FPGA_MAJOR_VERSION".format(crate),
 				"get HF{0}-mezz_FPGA_MINOR_VERSION".format(crate),
-#				"get HF{0}-ngccm_rev_ids".format(crate),
+				"get HF{0}-mezz_rx_prbs_error_cnt".format(crate),
+				"get HF{0}-fec_rx_prbs_bitwise_error_cnt HF{0}-fec_rx_prbs_error_cnt".format(crate),
 				])
 			
 			for i in nslot:
@@ -214,6 +238,10 @@ def record(ts=False,c=False,path="data/unsorted", scale=0):
 	log += log_registers(ts=ts, c=c, scale=scale,)
 	log += "\n"
 	
+	# Log link:
+	log += log_link(ts)
+	log += "\n"
+
 	# Log igloo:
 	log += log_igloo(ts,c)
 	log += "\n"
@@ -224,10 +252,9 @@ def record(ts=False,c=False,path="data/unsorted", scale=0):
 	# Time:
 	t1 = time_string()
 	log = "%% TIMES\n{0}\n{1}\n\n".format(t0, t1) + log
-	isreg=[line for line in log.split('\n') if '->' in line]
+	isreg=[line for line in log.split('%% IGLOOSPY\n')[0].split('\n') if '->' in line]
 	badrate=len([line for line in isreg if 'ERROR!!' in line])*100/len(isreg)
-	if badrate>50:
-		os.system("ssh cms904usr echo \'logger on hcal904daq01 cannot read registers, bad register rate: {0}% in log file: {1}.log \'\|mail -s 'logger_information' yw5mj@virginia.edu joseph.mariano@cern.ch".format(badrate,t_string))
+	if badrate>50:	os.system("ssh cms904usr echo \'logger on hcal904daq01 cannot read registers, bad register rate: {0}% in log file: {1}.log \'\|mail -s 'logger_information' yw5mj@virginia.edu joseph.mariano@cern.ch whitbeck.andrew@gmail.com".format(badrate,t_string))
 	# Write log:
 	path += "/{0}".format(t_string[:-7])
 	scale_string = ""
@@ -264,8 +291,8 @@ if __name__ == "__main__":
 		metavar="FLOAT"
 	)
 	parser.add_option("-f", "--full", dest="full",
-		default=1,
-		help="The bkp_reset period in days (default is 1).",
+		default=0,
+		help="The bkp_reset period in days (default is 0).",
 		metavar="FLOAT"
 	)
 	parser.add_option("-T", "--time", dest="ptime",
@@ -288,6 +315,7 @@ if __name__ == "__main__":
 		path = "data/" + options.out
 	c=False
 	if options.db:
+		os.system('mkdir -p '+path)
 		conn=connect(path+'/logger.db')
 		c=conn.cursor()
 
