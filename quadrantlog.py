@@ -44,7 +44,7 @@ def log_temp(ts,c=False):
 				"get HF{0}-1wA_f".format(crate),
 				"get HF{0}-1wB_f".format(crate),
 				])
-  	output = ngfec.send_commands(ts=ts, cmds=cmds)
+  	output = ngfec.send_commands(ts=ts,control_hub=ts.control_hub, cmds=cmds)
 	for result in output:
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 		if c: c.execute("INSERT INTO temperature VALUES ('{0}','{1}',{2})".format(tm,result['cmd'][4:],result['result'] if 'ERROR!' not in result['result'] else -1))
@@ -68,13 +68,12 @@ def log_power(ts,c=False):
 			if c: c.execute("INSERT INTO power VALUES ('{0}','{1}',{2})".format(tm,result['cmd'][4:],result['result'] if 'ERROR!' not in result['result'] else -1))
 	return log
 
-def log_link(ts):
+def log_link(ts,erro):
 	log = "%% LINK\n"
 	err=''
-	css=[]
-	for c in range(len(ts.be_crates)): css.extend([(ts.be_crates[c],s) for s in ts.uhtr_slots[c]])
-	for cs in css:
-		raw=uhtr.get_raw_status(ts,cs[0],cs[1]).values()[0].split('\n')
+	uips=ts.uhtr_ips
+	for cs in uips:
+		raw=uhtr.get_raw_status(ip=uips[cs]).values()[0].split('\n')
 		links=[]
 		baddata=[]
 		rollc=[]
@@ -87,7 +86,7 @@ def log_link(ts):
 		log+='link status: {0} for BE{1}\n'.format(links,cs)
 		log+='Bad data: {0} for BE{1}\n'.format(baddata,cs)
 		log+='Rollover Count: {0} for BE{1}\n'.format(rollc,cs)
-	if err: os.system("ssh cms904usr mail -s 'logger_information' yw5mj@virginia.edu joseph.mariano@cern.ch whitbeck.andrew@gmail.com<<EOF\n{0}\nEOF".format(err))
+#	if err: erro['link']=err
 	return log
 		
 		
@@ -97,7 +96,7 @@ def bkp_reset(ts):
 	for crate in crates:
 		cmds.append('put HF{0}-bkp_reset 1'.format(crate))
 		cmds.append('put HF{0}-bkp_reset 0'.format(crate))
-	output=ngfec.send_commands(ts=ts, cmds=cmds)
+	output=ngfec.send_commands(ts=ts,control_hub=ts.control_hub, cmds=cmds)
 	for result in output:
 		print ">> {0} -> {1}".format(result["cmd"], result["result"])
 	
@@ -122,7 +121,7 @@ def log_igloo(ts,c=False):
 			      ]
 			cmds.extend(["get HF{0}-{1}-iTop_inputSpy".format(crate,i)]*12)
 			cmds.extend(["get HF{0}-{1}-iBot_inputSpy".format(crate,i)]*12)
-			output = ngfec.send_commands(ts=ts, cmds=cmds)
+			output = ngfec.send_commands(ts=ts,control_hub=ts.control_hub, cmds=cmds)
 			ind=0
 			for result in output:
 				if result["cmd"][:3]=='put':
@@ -213,7 +212,7 @@ def log_registers(ts,c=False, scale=0):		# Scale 0 is the sparse set of register
 				"get fec1-sfp1_status.RxLOS",
 				])
 #	cmds=list(set(cmds))
-	output = ngfec.send_commands(ts=ts, cmds=cmds)
+	output = ngfec.send_commands(ts=ts,control_hub=ts.control_hub, cmds=cmds)
 	for result in output:
 		log += "{0} -> {1}\n".format(result["cmd"], result["result"])
 		if c: c.execute("INSERT INTO power VALUES ('{0}','{1}','{2}')".format(tm,result['cmd'][4:],result['result']))
@@ -221,6 +220,7 @@ def log_registers(ts,c=False, scale=0):		# Scale 0 is the sparse set of register
 	
 def record(ts=False,c=False,path="data/unsorted", scale=0):
 	log = ""
+	err={}
 	t_string = time_string()[:-4]
 	t0 = time_string()
 
@@ -239,7 +239,7 @@ def record(ts=False,c=False,path="data/unsorted", scale=0):
 	log += "\n"
 	
 	# Log link:
-	log += log_link(ts)
+	log += log_link(ts,err)
 	log += "\n"
 
 	# Log igloo:
@@ -254,7 +254,9 @@ def record(ts=False,c=False,path="data/unsorted", scale=0):
 	log = "%% TIMES\n{0}\n{1}\n\n".format(t0, t1) + log
 	isreg=[line for line in log.split('%% IGLOOSPY\n')[0].split('\n') if '->' in line]
 	badrate=len([line for line in isreg if 'ERROR!!' in line])*100/len(isreg)
-	if badrate>50:	os.system("ssh cms904usr echo \'logger on hcal904daq01 cannot read registers, bad register rate: {0}% in log file: {1}.log \'\|mail -s 'logger_information' yw5mj@virginia.edu joseph.mariano@cern.ch whitbeck.andrew@gmail.com".format(badrate,t_string))
+	if badrate>50:err['register']='logger on hcal904daq01 cannot read registers, bad register rate: {0}%'.format(badrate)
+	errs='\n'.join(err.values())
+	if errs:	os.system("ssh cms904usr mail -s 'logger_information' yw5mj@virginia.edu jmariano@terpmail.umd.edu whitbeck.andrew@gmail.com<<EOF\nERROR in {0}.log:\n\n{1}\nEOF".format(t_string,errs))
 	# Write log:
 	path += "/{0}".format(t_string[:-7])
 	scale_string = ""
