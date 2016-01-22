@@ -46,12 +46,11 @@ def main():
 	# (2) Verify link pattern test:
 	print "(2) Performing a link pattern test ..."
 	# Get the teststand ready:
-	mode_result = ts.set_mode(mode=1)		# Turn on link pattern test mode.
+	mode_result = ts.set_mode(mode=2)		# Turn on link pattern test mode.
 	if not mode_result:
 		print "\tERROR (at_lnk.main): Could not turn link pattern test mode on."
 		print "\t[!!] Acceptance test aborted."
 		sys.exit()
-	
 	# Read data out and check for errors:
 	error_record = {}
 	for n_read in range(n_reads):
@@ -62,9 +61,9 @@ def main():
 			n_bx = len(data[0])
 			th1s["link"].Fill(l, 1)
 			if v:
-				for i in range(10):
+				for i in range(10):	# Max. range(51)
 					print "\t\t{0}".format(data[0][i].raw)
-			errors = check(data)
+			errors = check(data, l, v)
 			if errors:
 				if errors["pattern"] or errors["counter"]:
 					if link.n not in error_record:
@@ -78,12 +77,14 @@ def main():
 				at.exit()
 	
 	# Return the teststand to normal:
-#	mode_result = ts.set_mode(mode=0)		# Turn off link pattern test mode.
+	mode_result = ts.set_mode(mode=0)		# Turn off link pattern test mode.
 	if not mode_result:
 		print "\tWARNING (at_lnk.main): Could not turn link pattern test mode off."
 		print "\t[!!] Acceptance test aborted."
 		sys.exit()
-		
+#	ngfec.send_commands(ts, cmds = [HF, script = False)
+#	uhtr.setup(ts=ts, crate=at.be_crate, slot=at.be_slot) #, orbit_delay=32)
+
 	# Normalize histograms:
 	th1s["link"].Scale(1/float(n_reads))
 	th1s["link_pattern"].Scale(1/float(n_reads))
@@ -127,9 +128,9 @@ def main():
 	print '(1) uHTR link test:'
 	print "BXs read out: {0}".format(100*n_reads)
 	if sum(errdata.values()) > 0:
-		print "[!!] Errors: (This displays all links! It's a bug. Check the plot for real results.)"
+		print "[!!] Errors:"
 		for i_link, errors in errdata.iteritems():
-			if errors > 0:
+			if errors > 0 and i_link in range(at.i_link, at.i_link + 6):
 				print "\t* Link {0}: error rate = {1}".format(i_link, errors)
 	else:
 		print "[OK] There were no errors!"
@@ -186,24 +187,34 @@ def create_plots(qie_id):
 	
 	return th1s
 
-def check_pattern_raw(raw, link_pattern="feed beef"):
+def check_pattern_raw(raw, link, link_pattern="0000 ffff "):
+	h = 2*(link % 3)
+	if link < 3:
+		h += 8
 	if len(raw) == 6:
-		string_true = link_pattern
-		string = raw[4][1:].lower() + " " + raw[2][1:].lower()		# Chop the leading "0" off and combine into one string.
-		return string == string_true
+		string_true1 = "bc " + link_pattern + hex(h)[2:] + "000"
+		string_true2 = "bc " + link_pattern + hex(h+1)[2:] + "000"	# "bc " might be changed to "5c " one day.
+		string = raw[0][3:].lower() + " " + raw[1][1:].lower() + " " + raw[3][1:].lower() + " " + raw[5][1:].lower()		# Chop the leading "0" off and combine into one string.
+		if string == string_true1:
+			return 1
+		elif string == string_true2:
+			return 2
+		else:
+			return False
 	else:
 		print "ERROR (at_lnk.check_pattern_raw): The raw data had a length of {0}, not 6.".format(len(raw))
 		return False
 
+
 def check_counter_raw(raw):
 	if len(raw) == 6:
-		counters = [int(raw[1], 16), int(raw[3], 16), int(raw[5], 16)]
-		return (list(set(counters))[0], False)[len(set(counters)) != 1]
+		counters = [int(raw[0][:-2], 16), int(raw[2][:-2], 16), int(raw[2][3:], 16), int(raw[4][:-2], 16), int(raw[2][3:], 16)]
+		return (list(set(counters))[0], "False")[len(set(counters)) != 1]	# Counter can take the value 0, which is also equivalent to False.
 	else:
 		print "ERROR (at_lnk.check_counter_raw): The raw data had a length of {0}, not 6.".format(len(raw))
 		return False
 
-def check(data):		# Check link pattern test data.
+def check(data, link, verbose):		# Check link pattern test data.
 	errors = {
 		"pattern": 0,
 		"counter": 0,
@@ -212,18 +223,33 @@ def check(data):		# Check link pattern test data.
 		d = data[0]
 		nbx = len(d)
 		if nbx > 0:
-			counter = False
+			counter = "counter"
 			for i_bx in range(nbx):
-				result_pattern = check_pattern_raw(d[i_bx].raw)
+				result_pattern = check_pattern_raw(d[i_bx].raw, link=link)
 				result_counter = check_counter_raw(d[i_bx].raw)
 				if not result_pattern:
 					errors["pattern"] += 1
-				if not result_counter:
+					if verbose:	##################
+						print result_pattern	############
+				if result_counter == "False":
 					errors["counter"] += 1
+					counter = "counter"	#####??????????????????????
+					if verbose:	##########
+						print result_counter	############
+					pass
 				else:
-					if counter:
-						if result_counter != counter + 1:
+					if counter != "counter":
+						if result_pattern == 2:
+							if result_counter:
+								errors["counter"] += 1
+							else:
+								if verbose:
+									print "[BC0]"
+						elif result_counter != (counter + 1) % 256:
 							errors["counter"] += 1
+							if verbose:		##############
+								print "[!!]", (counter + 1) % 256, result_counter		#########
+							pass
 						counter = result_counter
 					else:
 						counter = result_counter
