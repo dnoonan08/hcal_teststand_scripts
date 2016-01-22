@@ -1,292 +1,211 @@
-from hcal_teststand import *
-from hcal_teststand.register import *
-from hcal_teststand.hcal_teststand import teststand
+##############################################
+# at_reg.py -
+#    A script to test the registers of a QIE card.
+#
+# Author: O. Kamer Koseyan - Novemer 11 - 12, 2015
+##############################################
+
 import sys
-import random
+from random import randint
+from hcal_teststand import *
+from hcal_teststand.utilities import logger
+from hcal_teststand.hcal_teststand import teststand
 from ROOT import *
-from hcal_teststand.utilities import progress
 
+at = tests.acceptance(name="reg")
+v = at.verbose
+ts = at.ts			# Create teststand object for ngfec.send_commands()
+registers = []			# List of commands to be sent to ngFEC tool
+names = []			# List of names ordered as in registers list.
+fe_crate = at.fe_crate
+fe_slot = at.fe_slot
+n = at.n
+numdic = {}
+errdic = {}
 
-# FUNCTIONS:
-def main():
-	# Make an acceptance test object:
-	at = tests.acceptance(name="reg")		# Create an acceptance test.
-	at.start()		# Start the acceptance test by printing some basic things.
-	
-	# Variables and simple set up:
-	v = at.verbose
-	ts = at.ts
-	qid = at.qid
-	n_wr = at.n		# The number of write/reads to perform per register.
-	fe_crate = at.fe_crate
-	fe_slot = at.fe_slot
+def rand(size = 1):
+	output = ''
 
-	# Prepare register list:
-	registers = []
-	## QIE registers:
+	if size % 32:
+		output += hex(randint(0, 2**(size % 32-1))) + ' '
+	for i in range(int(size/32)):
+		output += hex(randint(0, 2**32-1)) + ' '
 
-	for i_qie in range(1, 25):
-		registers.extend([
-			register(ts, "HF{0}-{1}-QIE{2}_Lvds".format(fe_crate, fe_slot, i_qie), 1),		# 1 bit
-			register(ts, "HF{0}-{1}-QIE{2}_Trim".format(fe_crate, fe_slot, i_qie), 2),		# 2 bits
-			register(ts, "HF{0}-{1}-QIE{2}_DiscOn".format(fe_crate, fe_slot, i_qie), 1),		# 1 bit
-			register(ts, "HF{0}-{1}-QIE{2}_TGain".format(fe_crate, fe_slot, i_qie), 1),		# 1 bit
-			register(ts, "HF{0}-{1}-QIE{2}_TimingThresholdDAC".format(fe_crate, fe_slot, i_qie), 8),		# 8 bits
-			register(ts, "HF{0}-{1}-QIE{2}_TimingIref".format(fe_crate, fe_slot, i_qie), 3),	# 3 bits
-			register(ts, "HF{0}-{1}-QIE{2}_PedestalDAC".format(fe_crate, fe_slot, i_qie), 6),	# 6 bits
-			register(ts, "HF{0}-{1}-QIE{2}_CapID0pedestal".format(fe_crate, fe_slot, i_qie), 4),	# 4 bits
-			register(ts, "HF{0}-{1}-QIE{2}_CapID1pedestal".format(fe_crate, fe_slot, i_qie), 4),	# 4 bits
-			register(ts, "HF{0}-{1}-QIE{2}_CapID2pedestal".format(fe_crate, fe_slot, i_qie), 4),	# 4 bits
-			register(ts, "HF{0}-{1}-QIE{2}_CapID3pedestal".format(fe_crate, fe_slot, i_qie), 4),	# 4 bits
-			register(ts, "HF{0}-{1}-QIE{2}_FixRange".format(fe_crate, fe_slot, i_qie), 1),		# 1 bit
-			register(ts, "HF{0}-{1}-QIE{2}_RangeSet".format(fe_crate, fe_slot, i_qie), 2),		# 2 bits
-			register(ts, "HF{0}-{1}-QIE{2}_ChargeInjectDAC".format(fe_crate, fe_slot, i_qie), 3),	# 3 bits
-			register(ts, "HF{0}-{1}-QIE{2}_RinSel".format(fe_crate, fe_slot, i_qie), 4),		# 4 bits
-			register(ts, "HF{0}-{1}-QIE{2}_Idcset".format(fe_crate, fe_slot, i_qie), 5),		# 5 bits
-			register(ts, "HF{0}-{1}-QIE{2}_CalMode".format(fe_crate, fe_slot, i_qie), 1),		# 1 bit
-			register(ts, "HF{0}-{1}-QIE{2}_CkOutEn".format(fe_crate, fe_slot, i_qie), 1),		# 1 bit
-			register(ts, "HF{0}-{1}-QIE{2}_TDCMode".format(fe_crate, fe_slot, i_qie), 1),		# 1 bit
-			register(ts, "HF{0}-{1}-Qie{2}_ck_ph".format(fe_crate, fe_slot, i_qie), 4),		# 4 bits
-		])
+	return output[:-1]
 
-	## IGLOO2 registers:
-	registers.extend([
-		### Top:
-		register(ts, "HF{0}-{1}-iTop_CntrReg_CImode".format(fe_crate, fe_slot), 1),		# 1 bit
-		register(ts, "HF{0}-{1}-iTop_CntrReg_InternalQIER".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iTop_CntrReg_OrbHistoClear".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iTop_CntrReg_OrbHistoRun".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iTop_CntrReg_WrEn_InputSpy".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iTop_AddrToSERDES".format(fe_crate, fe_slot), 16),		# 16 bits
-		register(ts, "HF{0}-{1}-iTop_CtrlToSERDES_i2c_go".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iTop_CtrlToSERDES_i2c_write".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iTop_DataToSERDES".format(fe_crate, fe_slot), 32),		# 32 bits
-		register(ts, "HF{0}-{1}-iTop_LinkTestMode".format(fe_crate, fe_slot), 8),		# 8 bit
-		register(ts, "HF{0}-{1}-iTop_LinkTestPattern".format(fe_crate, fe_slot), 32),		# 32 bits
-#		register(ts, "HF{0}-{1}-iTop_fifo_data_1".format(fe_crate, fe_slot), ?),	# Seems r/o
-#		register(ts, "HF{0}-{1}-iTop_fifo_data_2".format(fe_crate, fe_slot), ?),	# Seems r/o
-#		register(ts, "HF{0}-{1}-iTop_fifo_data_3".format(fe_crate, fe_slot), ?),	# Seems r/o
-		register(ts, "HF{0}-{1}-iTop_scratch".format(fe_crate, fe_slot), 32),			# 32 bits
-		register(ts, "HF{0}-{1}-iTop_UniqueID".format(fe_crate, fe_slot), 64),			# 64 bits
+def register(name = None, size = 1, n = 5):
+	cmds = []
+	for i in range(n):
+		r = rand(size)
+		cmds += ['put {0} {1}'.format(name, r), 'get {0}'.format(name)]
+	return cmds
 
-		### Bottom:
-		register(ts, "HF{0}-{1}-iBot_CntrReg_CImode".format(fe_crate, fe_slot), 1),		# 1 bit
-		register(ts, "HF{0}-{1}-iBot_CntrReg_InternalQIER".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iBot_CntrReg_OrbHistoClear".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iBot_CntrReg_OrbHistoRun".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iBot_CntrReg_WrEn_InputSpy".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iBot_AddrToSERDES".format(fe_crate, fe_slot), 16),		# 16 bits
-		register(ts, "HF{0}-{1}-iBot_CtrlToSERDES_i2c_go".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iBot_CtrlToSERDES_i2c_write".format(fe_crate, fe_slot), 1),	# 1 bit
-		register(ts, "HF{0}-{1}-iBot_DataToSERDES".format(fe_crate, fe_slot), 32),		# 32 bits
-		register(ts, "HF{0}-{1}-iBot_LinkTestMode".format(fe_crate, fe_slot), 8),		# 8 bits
-		register(ts, "HF{0}-{1}-iBot_LinkTestPattern".format(fe_crate, fe_slot), 32),		# 32 bits
-#		register(ts, "HF{0}-{1}-iBot_fifo_data_1".format(fe_crate, fe_slot), ?),	# Seems r/o
-#		register(ts, "HF{0}-{1}-iBot_fifo_data_2".format(fe_crate, fe_slot), ?),	# Seems r/o
-#		register(ts, "HF{0}-{1}-iBot_fifo_data_3".format(fe_crate, fe_slot), ?),	# Seems r/o
-		register(ts, "HF{0}-{1}-iBot_scratch".format(fe_crate, fe_slot), 32),			# 32 bits
-		register(ts, "HF{0}-{1}-iBot_UniqueID".format(fe_crate, fe_slot), 64),			# 64 bits
-	])
-
-#	result = [0]*24
-#	registers = []
-#	for name in register_names:
-#		registers.append(register(ts, name, 1))		# HERE on "48"
-
-	names = [r.name for r in registers]
-	for i in range(n_wr):
-		#print "test",i
-		for r in registers:
-#			print r.name
-#			value = getRandomValue( r.size )
-#			values = [value[0:32]] #, '0x'+value[8:16] ]
-			r.addTestToCache( getRandomValue( r.size ) ) #+" "+values[1]
-			#if not testRandomValue( r ) :
-			#	result[q] = result[q] + 1
-		#print "ERRORS: ",result
-	tex = {}
-	errd = {}
-	noerr = []
-	if v == 0:
-		print "\nProgress:"
-	for r in registers:
-		if v == 0:
-			progress(registers.index(r), len(registers), r.name)
-		r.setVerbosity(v)		# 0: not verbose, 1: verbose, 2: extra verbose
-		r.testCache()
-		errd.update({r.name: r.elist})
-		noerr.extend(r.elist)
-		tex.update(r.tex)
-	if v == 0:
-		progress()
-#	print tex
-
-
-#---------------Last report of errors------------------
-	print "\n====== SUMMARY ============================"
-	print "Teststand: {0}".format(ts.name)
-	print "QIE card: {0} (FE Crate {1}, Slot {2})".format(qid, at.fe_crate, at.fe_slot)
-	if noerr == []:
-		print "[OK] There were no errors!"
-	else:
-		print "[!!] Errors:"
-		for r in registers:
-			if errd[r.name] != []:
-				print "\t*Register:", str(r.name) + ";", "Data:",
-				for i in range(len(errd[r.name])):
-					print str(tuple(errd[r.name][i])) + ";",
-				print "\b\b",
-				print ""
-	print "==========================================="
-#---------------Create histogram-----------------------
-	create_plots(at, names, tex, 8)
-
-def getRandomValue( regSize=1 ) : 
-
-	### 
-	# the 47 should not be hardcoded and should instead
-	# be taken from register.size.  However, this needs to 
-	# be done carefully so taht the bits are divided up
-	# into 24 bit chunks correctly...
-	###
-
-	output = ""
-
-	if regSize % 32:
-		output += str(hex(random.randint(0, 2**(regSize % 32-1))) + " ")
-
-	for i in range(int(regSize/32)):
-		output += str(hex(random.randint(0, 2**32-1))) + " "
-	output = output[:-1]
-
-	return output
-
-#	randomInt = str(hex(random.randint(0,2**regSize-1)))
-#	return randomInt
-	
-def format_random_value(d):
-	ab=[]
-	a="0x"
-	b="0x"
-	c = getRandomValue(int(d))
-	#c = d
-	if (len(c) >= 18):
-		for i in xrange(2,10):
-			a +=str(c[i])
-			#print ( int(a) % 32)
-		for i in xrange(10,18):
-			b +=str(c[i])
-		#print len(c), c
-		
-	else:
-		r = 18 - len(c)
-		if (r >= 9):
-			rr= 10 - len(c)
-			for i in xrange(8):
-				a +=str(0)
-			for i in xrange(rr):
-				b +=str(0)
-
-
-			for i in xrange((2),(10-rr)):
-				b +=str(c[i])
-			#print len(c), c
-
-		else:
-			
-			for i in xrange(r):
-				a +=str(0)
-			for i in xrange(2,(10-r)):
-				a +=str(c[i])
-				
-			for i in xrange((10-r),(18-r)):
-				b +=str(c[i])
-			#print len(c), c
-			
-	ab.append(a)
-	ab.append(b)
-	return ab
-
-
-def testRandomValue( register ):
-
-	randomValue = getRandomValue( register.size )
-
-	testValues = [ randomValue[0:8] , 
-		       '0x'+randomValue[8:16]
-		       ]
-
-	#print "testing:",testValues
-	value = ''
-	register.write(testValues[1] + " " + testValues[0])
-	value = register.read()
-
-	if value.find("ERROR") != -1:
-		print "ERROR in results"
-		return False
-
-	values = value.split("'")[1].split()
-	#print "result:",values
-	if values == testValues : 
-		return True
-	else : 
-		return False 
-
-
-def create_plots(at=None, names = None, dic = None, n = 1):
-#	tf = TFile("AT_REG.root", "RECREATE")
+def create_plots(at = None, names = None, dic = None, k = 1):
 	gROOT.SetStyle("Plain")
 	gStyle.SetOptStat(0)
-#	c1 = TCanvas("c1", "Register Test", 500, 500)
-#	c1.Divide(1, n)
-	at.canvas.Divide(1, n)
-#	c1.SetTitle("")
-	totals = []
-	errs = []
-	execs = []
+	at.canvas.Divide(1, k)
+	tothist = []
+	rwhist = []
+	xhist = []
 	stacks = []
-	for i in range(n):
-		namespart = names[i*len(names)/n:(i+1)*len(names)/n]	# On (i+1)*len(names)/n, first i*len(names) is done, then the division by n. By that way, i = n - 1 => (i+1)*len(names)/n = len(names). So we don't lose any bins because of integer division.
-		totals.append(TH1F("Total_{0}".format(i+1), "", len(namespart), -0.5, len(namespart)-0.5))
-		errs.append(TH1F("Err_{0}".format(i+1), "", len(namespart), -0.5, len(namespart)-0.5))
-		execs.append(TH1F("Exec_{0}".format(i+1), "", len(namespart), -0.5, len(namespart)-0.5))
+	for i in range(k):
+		namespart = names[i*len(names)/k: (i+1)*len(names)/k]	# On (i+1)*len(names)/n, first i*len(names) is done, then the division by n. By that way, i = k - 1 => (i+1)*len(names)/k = len(names). So we don't lose any bins because of integer division.
+		tothist.append(TH1F("Total_{0}".format(i+1), "", len(namespart), -0.5, len(namespart)-0.5))
+		rwhist.append(TH1F("R/W_{0}".format(i+1), "", len(namespart), -0.5, len(namespart)-0.5))
+		xhist.append(TH1F("Exec_{0}".format(i+1), "", len(namespart), -0.5, len(namespart)-0.5))
 		stacks.append(THStack("Error_{0}".format(i+1), ""))
-		totals[i].SetFillColor(kGreen)
-		errs[i].SetFillColor(kRed)
-		execs[i].SetFillColor(kOrange)
+		tothist[i].SetFillColor(kGreen)
+		rwhist[i].SetFillColor(kRed)
+		xhist[i].SetFillColor(kOrange)
 		for j, name in enumerate(namespart):
-			totals[i].GetXaxis().SetBinLabel(j+1, name) 
-			errs[i].GetXaxis().SetBinLabel(j+1, name)
-			execs[i].GetXaxis().SetBinLabel(j+1, name)
-			totals[i].Fill(j, dic[name][0])
-			errs[i].Fill(j, dic[name][1])
-			execs[i].Fill(j, dic[name][2])
-		totals[i].GetXaxis().LabelsOption("vd")
-		errs[i].GetXaxis().LabelsOption("vd")
-		execs[i].GetXaxis().LabelsOption("vd")
-#		c1.cd(i+1)
-#		c1.SetTitle("")
+			tothist[i].GetXaxis().SetBinLabel(j+1, name)
+			rwhist[i].GetXaxis().SetBinLabel(j+1, name)
+			xhist[i].GetXaxis().SetBinLabel(j+1, name)
+			tothist[i].Fill(j, dic[name][1][0])
+			rwhist[i].Fill(j, dic[name][1][1])
+			xhist[i].Fill(j, dic[name][1][2])
+		tothist[i].GetXaxis().LabelsOption("vd")
+		rwhist[i].GetXaxis().LabelsOption("vd")
+		xhist[i].GetXaxis().LabelsOption("vd")
 		at.canvas.cd(i + 1)
 #		gPad.SetBottomMargin(-10)
-		gPad.SetLogy(1)
-		totals[i].GetXaxis().SetLabelOffset(0.02)
-		totals[i].Write()
-		errs[i].Write()
-		execs[i].Write()
-		stacks[i].Add(errs[i])
-		stacks[i].Add(execs[i])
+#		gPad.SetLogy(1)
+		tothist[i].GetXaxis().SetLabelOffset(0.02)
+		tothist[i].Write()
+		rwhist[i].Write()
+		xhist[i].Write()
+		stacks[i].Add(rwhist[i])
+		stacks[i].Add(xhist[i])
 		stacks[i].Write()
-		totals[i].Draw()
+		tothist[i].SetMaximum(1.15*n)
+		tothist[i].SetMinimum(0)
+		stacks[i].SetMaximum(1.15*n)
+		stacks[i].SetMinimum(0)
+		tothist[i].Draw()
 		stacks[i].Draw("SAME")
-#		at.canvas.SaveAs("test.pdf")
-#	c1.Write()
-#	c1.SaveAs("AT_REG.pdf")
 	at.write()
 #	return 0
 
-# /FUNCTIONS
+def main():
+	at.start(nouid=True)
+	print
 
-# MAIN:
+	for i_qie in range(1, 25):
+		registers.extend(
+			register("HF{0}-{1}-QIE{2}_Lvds".format(fe_crate, fe_slot, i_qie), 1, n) +			# 1 bit
+			register("HF{0}-{1}-QIE{2}_Trim".format(fe_crate, fe_slot, i_qie), 2, n) +			# 2 bits
+			register("HF{0}-{1}-QIE{2}_DiscOn".format(fe_crate, fe_slot, i_qie), 1, n) +			# 1 bit
+			register("HF{0}-{1}-QIE{2}_TGain".format(fe_crate, fe_slot, i_qie), 1, n) +			# 1 bit
+			register("HF{0}-{1}-QIE{2}_TimingThresholdDAC".format(fe_crate, fe_slot, i_qie), 8, n) +	# 8 bits
+			register("HF{0}-{1}-QIE{2}_TimingIref".format(fe_crate, fe_slot, i_qie), 3, n) +		# 3 bits
+			register("HF{0}-{1}-QIE{2}_PedestalDAC".format(fe_crate, fe_slot, i_qie), 6, n) +		# 6 bits
+			register("HF{0}-{1}-QIE{2}_CapID0pedestal".format(fe_crate, fe_slot, i_qie), 4, n) +		# 4 bits
+			register("HF{0}-{1}-QIE{2}_CapID1pedestal".format(fe_crate, fe_slot, i_qie), 4, n) +		# 4 bits
+			register("HF{0}-{1}-QIE{2}_CapID2pedestal".format(fe_crate, fe_slot, i_qie), 4, n) +		# 4 bits
+			register("HF{0}-{1}-QIE{2}_CapID3pedestal".format(fe_crate, fe_slot, i_qie), 4, n) +		# 4 bits
+			register("HF{0}-{1}-QIE{2}_FixRange".format(fe_crate, fe_slot, i_qie), 1, n) +			# 1 bit
+			register("HF{0}-{1}-QIE{2}_RangeSet".format(fe_crate, fe_slot, i_qie), 2, n) +			# 2 bits
+			register("HF{0}-{1}-QIE{2}_ChargeInjectDAC".format(fe_crate, fe_slot, i_qie), 3, n) +		# 3 bits
+			register("HF{0}-{1}-QIE{2}_RinSel".format(fe_crate, fe_slot, i_qie), 4, n) +			# 4 bits
+			register("HF{0}-{1}-QIE{2}_Idcset".format(fe_crate, fe_slot, i_qie), 5, n) +			# 5 bits
+			register("HF{0}-{1}-QIE{2}_CalMode".format(fe_crate, fe_slot, i_qie), 1, n) +			# 1 bit
+			register("HF{0}-{1}-QIE{2}_CkOutEn".format(fe_crate, fe_slot, i_qie), 1, n) +			# 1 bit
+			register("HF{0}-{1}-QIE{2}_TDCMode".format(fe_crate, fe_slot, i_qie), 1, n) +			# 1 bit
+			register("HF{0}-{1}-Qie{2}_ck_ph".format(fe_crate, fe_slot, i_qie), 4, n)			# 4 bits
+		)
+
+	registers.extend(
+		### Top:
+		register("HF{0}-{1}-iTop_CntrReg_CImode".format(fe_crate, fe_slot), 1, n) +			# 1 bit
+		register("HF{0}-{1}-iTop_CntrReg_InternalQIER".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iTop_CntrReg_OrbHistoClear".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iTop_CntrReg_OrbHistoRun".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iTop_CntrReg_WrEn_InputSpy".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iTop_AddrToSERDES".format(fe_crate, fe_slot), 16, n) +			# 16 bits
+		register("HF{0}-{1}-iTop_CtrlToSERDES_i2c_go".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iTop_CtrlToSERDES_i2c_write".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iTop_DataToSERDES".format(fe_crate, fe_slot), 32, n) +			# 32 bits
+		register("HF{0}-{1}-iTop_LinkTestMode".format(fe_crate, fe_slot), 8, n) +			# 8 bits
+		register("HF{0}-{1}-iTop_LinkTestPattern".format(fe_crate, fe_slot), 32, n) +			# 32 bits
+		register("HF{0}-{1}-iTop_scratch".format(fe_crate, fe_slot), 32, n) +				# 32 bits
+		register("HF{0}-{1}-iTop_UniqueID".format(fe_crate, fe_slot), 64, n) +				# 64 bits
+		### Bottom:
+		register("HF{0}-{1}-iBot_CntrReg_CImode".format(fe_crate, fe_slot), 1, n) +			# 1 bit
+		register("HF{0}-{1}-iBot_CntrReg_InternalQIER".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iBot_CntrReg_OrbHistoClear".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iBot_CntrReg_OrbHistoRun".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iBot_CntrReg_WrEn_InputSpy".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iBot_AddrToSERDES".format(fe_crate, fe_slot), 16, n) +			# 16 bits
+		register("HF{0}-{1}-iBot_CtrlToSERDES_i2c_go".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iBot_CtrlToSERDES_i2c_write".format(fe_crate, fe_slot), 1, n) +		# 1 bit
+		register("HF{0}-{1}-iBot_DataToSERDES".format(fe_crate, fe_slot), 32, n) +			# 32 bits
+		register("HF{0}-{1}-iBot_LinkTestMode".format(fe_crate, fe_slot), 8, n) +			# 8 bits
+		register("HF{0}-{1}-iBot_LinkTestPattern".format(fe_crate, fe_slot), 32, n) +			# 32 bits
+		register("HF{0}-{1}-iBot_scratch".format(fe_crate, fe_slot), 32, n) +				# 32 bits
+		register("HF{0}-{1}-iBot_UniqueID".format(fe_crate, fe_slot), 64, n)				# 64 bits
+		)
+
+	for reg in registers[1::2*n]:
+		names.extend([reg[4:]])
+
+	output = ngfec.send_commands(ts, cmds = registers, script = False, progbar = True)
+
+	errlist = []
+	totaltests = 0
+	rwerr = 0
+	xerr = 0
+	for i, (put, get) in enumerate(zip(output[::2], output[1::2])):
+#		if ' '.join(put['cmd'].split()[2:]).replace('0x', '') == get['result'].replace('0x', ''):
+		totaltests += 1
+		if 'ERROR' in put['result'] or 'ERROR' in get['result']:
+			xerr += 1
+		elif ' '.join(put['cmd'].split()[2:]).replace('0x', '') != get['result'].replace('0x', ''):
+			rwerr += 1
+			errlist.append([' '.join(put['cmd'].split()[2:]).replace('0x', ''), get['result'].replace('0x', '')])
+		if 'ERROR' in put['result']:
+			errlist.append([put['cmd'], put['result']])
+		if 'ERROR' in get['result']:
+			errlist.append([get['cmd'], get['result']])
+		if not (i+1) % n:
+			errdic.update({get['cmd'][4:]: [errlist, [totaltests, rwerr, xerr]]})
+			errlist = []
+			totaltests = 0
+			rwerr = 0
+			xerr = 0
+
+#---------------Last report of errors------------------
+	print "\n====== SUMMARY ============================"
+	if errdic.values().count([[], [n, 0, 0]]) == len(names):
+		print '[OK] There were no errors.'
+	else:
+		print 'R/W errors (put != get):'
+		for name in names:
+			for error in errdic[name][0]:
+				if (error[0] != error[1] and not 'ERROR' in error[1]):
+					print '\t*Register: ' + name + ' -> Data: 0x' + error[0].replace(' ', ' 0x') + ' != 0x' + error[1].replace(' ', ' 0x')
+
+		print '\nExecution errors:'
+		for name in names:
+			for error in errdic[name][0]:
+				if 'ERROR' in error[1]:
+					print '\t*Command: ' + error[0] + ' -> Result: ' + error[1]
+	print "\n===========================================\n"
+
+#---------------Create histogram-----------------------
+	create_plots(at, names, errdic, 8)
+
+	if v:
+		for put, get in zip(output[::2], output[1::2]):
+			if ' '.join(put['cmd'].split()[2:]).replace('0x', '') == get['result'].replace('0x', '') and not 'ERROR' in put['result']:
+				at.silentlog('[OK] :: {0} -> {1} == {2} -> {3}\n'.format(put['cmd'], put['result'], get['cmd'], '0x' + get['result'].replace('0x', '').replace(' ', ' 0x')))
+			elif 'ERROR' in get['result']:
+				at.silentlog('[!!] :: {0} -> {1} != {2} -> {3}\n'.format(put['cmd'], put['result'], get['cmd'], get['result']))
+			elif ' '.join(put['cmd'].split()[2:]).replace('0x', '') == get['result'].replace('0x', '') and 'ERROR' in put['result']:
+				at.silentlog('[!!] :: {0} -> {1} == {2} -> {3}\n'.format(put['cmd'], put['result'], get['cmd'], '0x' + get['result'].replace('0x', '').replace(' ', ' 0x')))
+			else:
+				at.silentlog('[!!] :: {0} -> {1} != {2} -> {3}\n'.format(put['cmd'], put['result'], get['cmd'], '0x' + get['result'].replace('0x', '').replace(' ', ' 0x')))
+		print '\nPrinting raw comparisons into file: [OK]'
+	else:
+		print
 if __name__ == "__main__":
 	main()
-# /MAIN
