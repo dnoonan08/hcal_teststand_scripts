@@ -466,6 +466,7 @@ def get_temps(ts=False):		# It's more flexible to not have the input be a testst
 			for slot in slots:
 				cmds = [
 					"get HF{0}-{1}-bkp_temp_f".format(crate, slot),		# The temperature sensor on the QIE card, near the bottom, labeled "U40".
+					"get HF{0}-{1}-B_SHT1_temp_f".format(crate,slot)
 				]
 				output[crate] += ngfec.send_commands(ts=ts, cmds=cmds)
 		return output
