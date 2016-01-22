@@ -86,7 +86,7 @@ if __name__ == "__main__":
 			at.out.WriteTObject(temp)
 			for i_cid in range(4):
 				name = 'QIE{0}_CapID{1}'.format(i_qie,i_cid)
-				th1s[i_qie,i_cid]=TH1F(name,name,64,0,63)
+				th1s[i_qie,i_cid]=TH1F(name,name,64,0,64)
 				fill(temp, th1s, i_qie, i_cid)
 				if i_cid == 0 :
 					xs_cid0.append(((i_qie-1)*4+i_cid)+1) 
