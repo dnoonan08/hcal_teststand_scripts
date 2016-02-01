@@ -70,7 +70,7 @@ class uhtr:
 	def send_commands(self, cmds=cmds_default, script=False):
 		return send_commands(control_hub=self.control_hub, ip=self.ip, cmds=cmds, script=script)
 	
-	def setup(self, orbit_delay=3502):
+	def setup(self, orbit_delay=""):
 		return setup(ip=self.ip, control_hub=self.control_hub, orbit_delay=orbit_delay)
 	# /Methods
 
@@ -219,7 +219,7 @@ def send_commands(ts=None, crate=None, slot=None, ip=None, control_hub=None, cmd
 	else:
 		return False
 
-def setup(ts=None, crate=None, slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=3500):
+def setup(ts=None, crate=None, slot=None, ip=None, control_hub=None, auto_realign=1, orbit_delay=""):
 # Set up any number of uHTRs. Specify a group of uHTRs by the crates and slots or by the IPs. If you specify the ts and nothing else it will set up all of them.
 	# Arguments:
 	ips = meta.parse_args_ip(ts=ts, crate=crate, slot=slot, ip=ip)
@@ -622,7 +622,7 @@ def get_raw_err(ts=None, crate=None, slot=None, ip=None, control_hub=None, scrip
 		'88000',
 		'1',
 		'1',
-		'3500',
+		'',		# Align BCN
 		'0',
 		'0',
 		'0',
