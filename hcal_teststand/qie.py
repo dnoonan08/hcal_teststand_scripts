@@ -751,7 +751,9 @@ def set_mode(ts=None, crate=None, slot=None, mode=0, control_hub=None, port=ngfe
 		elif mode == 1:
 			n = 1
 		elif mode == 2:
-			n = 7
+			n = 3
+		elif mode == 3:
+			n = 5
 		else:
 			print "ERROR (qie.set_mode): I don't understand mode = {0}.".format(mode)
 			return False
