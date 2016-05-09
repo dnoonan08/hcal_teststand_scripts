@@ -346,7 +346,7 @@ if __name__ == "__main__":
             
         bufflist_dict = readIglooSpy(tstype,options.numts)
         
-        f = open(path,'w')
+#        f = open(path,'w')
         #emailbody = ""
             
         for crate_slot, bufflist in bufflist_dict.iteritems():
