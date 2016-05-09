@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<connections>
+	<connection id="0.T1" uri="chtcp-2.0://localhost:10203?target=192.168.1.139:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1.xml" />
+	<connection id="0.T2" uri="chtcp-2.0://localhost:10203?target=192.168.1.138:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2.xml" />
+	<connection id="1.T1" uri="chtcp-2.0://localhost:10203?target=192.168.1.137:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T1.xml" />
+	<connection id="1.T2" uri="chtcp-2.0://localhost:10203?target=192.168.1.136:50001" address_table="file:///opt/cactus/etc/amc13/AMC13XG_T2.xml" />
+</connections>

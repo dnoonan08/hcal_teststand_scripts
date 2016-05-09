@@ -318,7 +318,7 @@ if __name__ == "__main__":
                       help="Sleep for %metavar minutes in between data runs (default: %default)",
                       )
     parser.add_option("-t", "--teststand", dest="tstype",
-                      default = "igloo_spy"
+                      default = "igloo_spy",
                       type="string",
                       help="Which teststand to set up?"
                       )
