@@ -65,6 +65,8 @@ def readIglooSpy(tsname,numts):
                          "get HF{0}-{1}-iTop_StatusReg_InputSpyWordNum".format(crate, slot)]
                 #print cmds1
                 output = hcal_teststand.ngfec.send_commands(ts=ts, cmds=cmds1, script=True)#, time_out=200)
+                for each in output:
+                    print "Command: " + each['cmd'] + ", Result: " + each['result']
                 #print output
                 nsamples = output[-1]["result"]
                     #print "nsamples: ", int(nsamples,16)
@@ -82,8 +84,9 @@ def readIglooSpy(tsname,numts):
                 while "wait" in cmds2[-1]:
                     cmds2 = cmds2[:-1]
                     #cmds2 = ["get HE{0}-{1}-{2}-i_inputSpy".format(crate, slot, card),
-                    #         "wait 200"]*(10)
+
                 output_all = hcal_teststand.ngfec.send_commands(ts=ts, cmds=cmds2, script=True)#, time_out=600)
+
                 results[crate, slot] = [out["result"] for out in output_all if not out["result"] == "OK"]
                 #print results
             except Exception as ex:
@@ -92,6 +95,51 @@ def readIglooSpy(tsname,numts):
                     #just continue with the next one
 
     return results
+
+def clear_buffer(tsname):
+
+    ts = hcal_teststand.hcal_teststand.teststand(tsname)
+
+    for icrate, crate in enumerate(ts.fe_crates):
+        for slot in ts.qie_slots[icrate]:
+            try:
+    
+                wrdnum_cmd = "get HF{0}-{1}-iTop_StatusReg_InputSpyWordNum".format(crate, slot)
+
+                output_wrdnum = hcal_teststand.ngfec.send_commands(ts=ts, cmds=wrdnum_cmd, script=True)#, time_out=600)
+
+                wrd_num = int(output_wrdnum[0]['result'],16)
+
+                cmds3 = []
+                for i in range(wrd_num):
+                    cmds3.append("get HF{0}-{1}-iTop_inputSpy".format(crate, slot))
+                    cmds3.append("wait 200")
+        
+                #cmds2 = ["get HF{0}-{1}-iTop_inputSpy".format(crate, slot),
+                #         "wait 200"]*numts#(int(nsamples,16))
+        
+                
+                while "wait" in cmds3[-1]:
+                    cmds3 = cmds3[:-1]
+                    #cmds2 = ["get HE{0}-{1}-{2}-i_inputSpy".format(crate, slot, card),
+                    #         "wait 200"]*(10)
+                    #         "wait 200"]*(10)
+
+                output_null = hcal_teststand.ngfec.send_commands(ts=ts, cmds=cmds3, script=True)#, time_out=600)
+
+                print "######################################"
+                print "# Status of from HF{0} Slot {1} iTop #".format(crate, slot)
+                print "######################################"
+
+                output_wrdnum = hcal_teststand.ngfec.send_commands(ts=ts, cmds=wrdnum_cmd, script=True)#, time_out=600)
+    
+                print "Command: " + output_wrdnum[0]['cmd'] + ", Result: " + output_wrdnum[0]['result']
+                print "######################################"
+
+            except Exception as ex:
+                print "Caught exception:"
+                print ex
+                    #just continue with the next one
 
 def interleave(c0, c1):
     retval = 0;
@@ -362,6 +410,7 @@ if __name__ == "__main__":
                 #bufflist = f.readlines()
 
             parsed_info_list = getInfoFromSpy(bufflist,options.cid_only)
+            clear_buffer(tstype)
                 #print parsed_info_list
                 #f.write("Parsed info\n")
                 #f.write("\n".join([",".join(info) for info in parsed_info_list]))
