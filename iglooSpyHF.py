@@ -100,41 +100,47 @@ def clear_buffer(tsname):
 
     ts = hcal_teststand.hcal_teststand.teststand(tsname)
 
+    wrd_num = 512
+
+    print "######################################"
+    print "#  Clearing the buffer...            #"
+    print "######################################"
+
     for icrate, crate in enumerate(ts.fe_crates):
         for slot in ts.qie_slots[icrate]:
             try:
+
+                while wrd_num > 0:
     
-                wrdnum_cmd = "get HF{0}-{1}-iTop_StatusReg_InputSpyWordNum".format(crate, slot)
+                    wrdnum_cmd = "get HF{0}-{1}-iTop_StatusReg_InputSpyWordNum".format(crate, slot)
 
-                output_wrdnum = hcal_teststand.ngfec.send_commands(ts=ts, cmds=wrdnum_cmd, script=True)#, time_out=600)
+                    output_wrdnum = hcal_teststand.ngfec.send_commands(ts=ts, cmds=wrdnum_cmd, script=True)#, time_out=600)
 
-                wrd_num = int(output_wrdnum[0]['result'],16)
+                    wrd_num = int(output_wrdnum[0]['result'],16)
 
-                cmds3 = []
-                for i in range(wrd_num):
-                    cmds3.append("get HF{0}-{1}-iTop_inputSpy".format(crate, slot))
-                    cmds3.append("wait 200")
+                    cmds3 = []
+                    for i in range(wrd_num):
+                        cmds3.append("get HF{0}-{1}-iTop_inputSpy".format(crate, slot))
+                        cmds3.append("wait 200")
         
                 #cmds2 = ["get HF{0}-{1}-iTop_inputSpy".format(crate, slot),
                 #         "wait 200"]*numts#(int(nsamples,16))
         
                 
-                while "wait" in cmds3[-1]:
-                    cmds3 = cmds3[:-1]
+                    while "wait" in cmds3[-1]:
+                        cmds3 = cmds3[:-1]
                     #cmds2 = ["get HE{0}-{1}-{2}-i_inputSpy".format(crate, slot, card),
                     #         "wait 200"]*(10)
                     #         "wait 200"]*(10)
 
-                output_null = hcal_teststand.ngfec.send_commands(ts=ts, cmds=cmds3, script=True)#, time_out=600)
+                    output_null = hcal_teststand.ngfec.send_commands(ts=ts, cmds=cmds3, script=True)#, time_out=600)
 
-                print "######################################"
-                print "# Status of from HF{0} Slot {1} iTop #".format(crate, slot)
-                print "######################################"
-
-                output_wrdnum = hcal_teststand.ngfec.send_commands(ts=ts, cmds=wrdnum_cmd, script=True)#, time_out=600)
+                    output_wrdnum = hcal_teststand.ngfec.send_commands(ts=ts, cmds=wrdnum_cmd, script=True)#, time_out=600)
     
-                print "Command: " + output_wrdnum[0]['cmd'] + ", Result: " + output_wrdnum[0]['result']
-                print "######################################"
+                    print "Command: " + output_wrdnum[0]['cmd'] + ", Result: " + output_wrdnum[0]['result']
+                    print "######################################"
+
+                    wrd_num = int(output_wrdnum[0]['result'],16)
 
             except Exception as ex:
                 print "Caught exception:"
