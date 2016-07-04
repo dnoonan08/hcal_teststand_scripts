@@ -169,8 +169,8 @@ class teststand:
 	## General:
 	def update(self):
 		results = []
-		for be_crate, amc13 in self.amc13s.iteritems():
-			results.append(amc13.update())
+		# for be_crate, amc13 in self.amc13s.iteritems():
+		# 	results.append(amc13.update())
 		for n, fc7 in self.fc7s.iteritems():
 			results.append(fc7.update())
 		for crate_slot, uhtr in self.uhtrs.iteritems():

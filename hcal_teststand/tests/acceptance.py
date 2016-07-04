@@ -100,7 +100,7 @@ class acceptance:
 		
 		# Other variables:
 		## Unique ID:
-		qid_result = get_unique_id(crate=self.fe_crate, slot=self.fe_slot, control_hub="hcal904daq01")
+		qid_result = get_unique_id(crate=self.fe_crate, slot=self.fe_slot, control_hub="hcal904daq01", script=True)
 		qid_list = qid_result[self.fe_crate, self.fe_slot]
 		if qid_list:
 			self.qid = qid_list[0] + " " + qid_list[1]
@@ -112,15 +112,15 @@ class acceptance:
 		
 		## Output location:
 		self.time_string = time_string()[:-4]
-		self.path = "/nfshome0/elhughes/public/data/at_results/{0}".format(self.qid.replace(" ", "_"))
+		self.path = "/nfshome0/dnoonan/data/at_results/{0}".format(self.qid.replace(" ", "_"))
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 			os.chmod(self.path, 0777)
-		self.path = "/nfshome0/elhughes/public/data/at_results/{0}/at_{1}".format(self.qid.replace(" ", "_"), self.name)
+		self.path = "/nfshome0/dnoonan/data/at_results/{0}/at_{1}".format(self.qid.replace(" ", "_"), self.name)
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 			os.chmod(self.path, 0777)
-		self.path = "/nfshome0/elhughes/public/data/at_results/{0}/at_{1}/{2}".format(self.qid.replace(" ", "_"), self.name, self.time_string)
+		self.path = "/nfshome0/dnoonan/data/at_results/{0}/at_{1}/{2}".format(self.qid.replace(" ", "_"), self.name, self.time_string)
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)		# Sometimes the "umask" prevents setting the permissions here, so I do it on the next line.
 			os.chmod(self.path, 0777)
@@ -145,6 +145,7 @@ class acceptance:
 		self.qie = self.ts.qies.values()[0]
 		self.uhtr = self.ts.uhtrs.values()[0]
 		self.ngccm = self.ts.ngccms.values()[0]
+
 		self.amc13 = self.ts.amc13s.values()[0]
 		if self.ts.fc7s:
 			self.fc7 = self.ts.fc7s.values()[0]
@@ -201,7 +202,7 @@ class acceptance:
 				else:
 					ngccm_id = "?"
 				print "\t[OK] ngCCM: FW = {0}, ID = {1}".format(self.ngccm.fw, ngccm_id)
-				print "\t[OK] AMC13: FW = {0}, SW = {1}".format(self.amc13.fw, self.amc13.sw)
+				# print "\t[OK] AMC13: FW = {0}, SW = {1}".format(self.amc13.fw, self.amc13.sw)
 				if self.fc7:
 					print "\t[OK] FC7: FW = {0} {1}".format(".".join(["{0:02d}".format(i) for i in self.fc7.fw[0]]), self.fc7.fw[1])
 				print "Checking the unique ID ..."

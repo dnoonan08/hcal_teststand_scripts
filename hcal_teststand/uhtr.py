@@ -198,7 +198,9 @@ def send_commands(ts=None, crate=None, slot=None, ip=None, control_hub=None, cmd
 		# Send the commands:
 		for uhtr_ip, crate_slot in ips.iteritems():
 			# Prepare the uHTRtool arguments:
-			uhtr_cmd = "uHTRtool.exe {0}".format(uhtr_ip)
+			crate = uhtr_ip.split('.')[2]
+			slot = int(uhtr_ip.split('.')[3])/4
+			uhtr_cmd = "uHTRtool.exe -c {0}:{1}".format(crate,slot)
 			if control_hub:
 				uhtr_cmd += " -o {0}".format(control_hub)
 		
@@ -306,8 +308,8 @@ def get_info(ts=None, crate=None, slot=None, ip=None, control_hub=None):		# Retu
 			
 			## Find the version info from the raw output:
 			## "HF-4800 (41) 00.0f.00" => FW = [00, 0f, 00], FW_type = [HF-4800, 41] (repeat for "back")
-			match_front = search("Front Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
-			match_back = search("Back Firmware revision : (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
+			match_front = search("Front Firmware revision: (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
+			match_back = search("Back Firmware revision:  (HF-\d+|BHM) \((\d+)\) ([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f]{2})", raw_output)
 			if match_front and match_back:
 				data[key] = {
 					"fw_type_front": [match_front.group(1), int(match_front.group(2))],
